@@ -65,6 +65,7 @@ export default function AdminPage() {
               <TableRow>
                 <TableHead>TikTok Username</TableHead>
                 <TableHead>Linked US Number</TableHead>
+                <TableHead>Verification Code</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -73,6 +74,7 @@ export default function AdminPage() {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">@{user.tiktokUsername}</TableCell>
                   <TableCell>{getPhoneNumber(user.phoneNumberId)}</TableCell>
+                  <TableCell>{user.verificationCode}</TableCell>
                   <TableCell>
                     <Badge variant={user.isVerified ? 'default' : 'secondary'}>
                       {user.isVerified ? 'Active' : 'Pending'}
