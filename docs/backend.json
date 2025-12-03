@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "TikTokUser": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TikTokUser",
+      "type": "object",
+      "description": "Represents a TikTok user who is using the monetization bridge.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TikTokUser entity."
+        },
+        "tiktokUsername": {
+          "type": "string",
+          "description": "The TikTok username provided by the user."
+        },
+        "termsAccepted": {
+          "type": "boolean",
+          "description": "Indicates whether the user has accepted the terms and conditions."
+        },
+        "phoneNumberId": {
+          "type": "string",
+          "description": "Reference to PhoneNumber entity. (Relationship: TikTokUser 1:1 PhoneNumber)"
+        },
+        "verificationCode": {
+          "type": "string",
+          "description": "Verification code sent to the user."
+        },
+        "isVerified": {
+          "type": "boolean",
+          "description": "Whether the user has been verified via phone."
+        }
+      },
+      "required": [
+        "id",
+        "tiktokUsername",
+        "termsAccepted",
+        "phoneNumberId"
+      ]
+    },
+    "PhoneNumber": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PhoneNumber",
+      "type": "object",
+      "description": "Represents a US phone number available for users to select.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PhoneNumber entity."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The actual US phone number."
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Indicates whether the phone number is currently available for assignment."
+        }
+      },
+      "required": [
+        "id",
+        "phoneNumber",
+        "isAvailable"
+      ]
+    },
+    "Admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Admin",
+      "type": "object",
+      "description": "Represents an admin user who manages the website and control panel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Admin entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "The admin's username for logging into the control panel."
+        }
+      },
+      "required": [
+        "id",
+        "username"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "tiktok_users/{tiktokUserId}",
+        "definition": {
+          "entityName": "TikTokUser",
+          "schema": {
+            "$ref": "#/backend/entities/TikTokUser"
+          },
+          "description": "Stores TikTok user data. Includes denormalized 'phoneNumberId' for authorization independence.",
+          "params": [
+            {
+              "name": "tiktokUserId",
+              "description": "The unique identifier for the TikTok user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "phone_numbers/{phoneNumberId}",
+        "definition": {
+          "entityName": "PhoneNumber",
+          "schema": {
+            "$ref": "#/backend/entities/PhoneNumber"
+          },
+          "description": "Stores US phone numbers and their availability status.",
+          "params": [
+            {
+              "name": "phoneNumberId",
+              "description": "The unique identifier for the phone number."
+            }
+          ]
+        }
+      },
+      {
+        "path": "admins/{adminId}",
+        "definition": {
+          "entityName": "Admin",
+          "schema": {
+            "$ref": "#/backend/entities/Admin"
+          },
+          "description": "Stores admin user credentials for control panel access.",
+          "params": [
+            {
+              "name": "adminId",
+              "description": "The unique identifier for the admin user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed to support the TikTok Bridge application, focusing on secure user data management and admin control. It separates TikTok user data, phone number assignments, and admin credentials into distinct collections with clear ownership and access control. The structure emphasizes authorization independence, enabling robust security rules and atomic operations.\n\n*   **Authorization Independence:** The `tiktok_users/{tiktokUserId}` collection stores all necessary user information directly within each document. This avoids the need for `get()` calls to parent documents during authorization checks, particularly for access to associated `phone_numbers`. The `phoneNumberId` is stored directly on the `TikTokUser` document, denormalizing the relationship.\n*   **Structural Segregation:** User data (`tiktok_users`) and admin data (`admins`) are stored in separate top-level collections, reflecting their distinct security requirements. This allows for simpler and more targeted security rules.  The available phone numbers are placed in a separate collection, allowing easier management and assignment.\n*   **Access Modeling:** Users 'own' their TikTok user data through path-based ownership (`tiktok_users/{tiktokUserId}`).  Admins are managed via a dedicated `admins` collection, leveraging existence-based roles. Available phone numbers are managed via a collection and an `isAvailable` boolean field.\n*   **QAPs (Rules are not Filters):** List operations are secured because each collection contains data with uniform security requirements. Rules can efficiently filter based on explicit fields like `isAvailable` for phone numbers, without complex logic.\n*   **Invariants:** Timestamps and denormalized data (`phoneNumberId`) can be enforced through security rules to maintain data integrity.\n\nThis structure directly addresses the user request by:\n\n*   Separating Admin Access: Storing admin data in the `/admins/{adminId}` collection with dedicated security rules ensures that standard users cannot access the control panel or modify admin data."
+  }
+}

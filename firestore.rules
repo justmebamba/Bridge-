@@ -1,0 +1,126 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict two-tier access model: regular users and administrators.
+ * Users have exclusive ownership over their own data within the `/tiktok_users` collection. Administrators,
+ * identified by the existence of a document in the `/admins` collection, have privileged access to manage
+ * system-wide resources like the list of available phone numbers.
+ *
+ * Data Structure: The data is organized into three distinct top-level collections to segregate user data,
+ * administrative data, and shared resources, simplifying security logic.
+ * - /tiktok_users/{tiktokUserId}: Contains private user profile data.
+ * - /phone_numbers/{phoneNumberId}: A list of phone numbers available to users, managed by admins.
+ * - /admins/{adminId}: An access control list where document IDs correspond to the UIDs of admin users.
+ *
+ * Key Security Decisions:
+ * - Admin Role Management: A user is considered an admin if their UID matches a document ID in the `/admins`
+ *   collection. This provides a simple and secure role-based access control (RBAC) mechanism.
+ * - User Data Privacy: Users can only read and write their own document within `/tiktok_users`. Listing
+ *   the entire collection is explicitly forbidden to prevent user data enumeration.
+ * - Publicly Readable, Admin-Managed Resources: The `/phone_numbers` collection is readable by any
+ *   signed-in user so they can select a number, but all write operations (create, update, delete) are
+ *   restricted to administrators.
+ * - Default Deny: Access is implicitly denied unless an explicit `allow` rule grants it.
+ *
+ * Denormalization for Authorization: The primary authorization mechanism is role-based, achieved by using the
+ * `/admins` collection as a lookup table. The `isAdmin()` function performs an `exists()` check against this
+ * collection. This is highly performant and avoids storing role information on every user document.
+ *
+ * Structural Segregation: User data (`tiktok_users`), admin role definitions (`admins`), and system resources
+ * (`phone_numbers`) are stored in separate top-level collections. This clear separation is fundamental to the
+ * security model, ensuring that rules for one type of data do not inadvertently affect another.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the foundation of the user-ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if a document exists. Used to protect update/delete operations.
+     */
+    function isExistingDoc() {
+      return resource != null;
+    }
+
+    /**
+     * A robust check for update/delete, ensuring the user is the owner AND the document exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && isExistingDoc();
+    }
+
+    /**
+     * Role-based check: returns true if the user's UID exists as a document
+     * in the /admins collection. This is the gatekeeper for all admin actions.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection Rules
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Manages admin role assignments. Only existing admins can read or modify this list.
+     * @path /admins/{adminId}
+     * @allow An admin (auth.uid='admin_abc') lists all admin documents. (list)
+     * @deny A regular user (auth.uid='user_123') tries to read an admin document. (get)
+     * @principle Enforces role-based access control (RBAC), allowing admins to manage other admins.
+     */
+    match /admins/{adminId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
+    }
+
+    /**
+     * @description Manages the pool of available phone numbers. All users can view them, but only admins can manage the list.
+     * @path /phone_numbers/{phoneNumberId}
+     * @allow Any signed-in user (auth.uid='user_123') lists all phone numbers to choose one. (list)
+     * @deny A regular user (auth.uid='user_123') tries to add a new phone number. (create)
+     * @principle Segregates public read access from privileged write access for system resources.
+     */
+    match /phone_numbers/{phoneNumberId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
+    }
+
+    /**
+     * @description Secures a TikTok user's private data, restricting all access to the user themselves.
+     * @path /tiktok_users/{tiktokUserId}
+     * @allow The user (auth.uid='user_123') creates their own profile document at /tiktok_users/user_123. (create)
+     * @deny A different user (auth.uid='user_456') tries to read the profile of 'user_123'. (get)
+     * @deny Any user, including the owner, tries to list all documents in the collection. (list)
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /tiktok_users/{tiktokUserId} {
+      allow get: if isOwner(tiktokUserId);
+      allow list: if false;
+      allow create: if isOwner(tiktokUserId) && request.resource.data.id == tiktokUserId;
+      allow update: if isExistingOwner(tiktokUserId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(tiktokUserId);
+    }
+  }
+}
