@@ -100,7 +100,7 @@ export function TikTokBridgeForm() {
                 
                 const userDocRef = doc(firestore, 'tiktok_users', user.uid);
                 
-                setDocumentNonBlocking(userDocRef, newTikTokUser, { merge: false });
+                setDocumentNonBlocking(userDocRef, newTikTokUser, { merge: true });
 
                 await new Promise(res => setTimeout(res, 1500));
                 api.scrollNext();
