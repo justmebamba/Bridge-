@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, FileText, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +54,10 @@ export function TikTokBridgeForm() {
   const auth = useAuth();
   const firestore = useFirestore();
 
-  const phoneNumbersQuery = useMemoFirebase(() => collection(firestore, 'phone_numbers'), [firestore]);
+  const phoneNumbersQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'phone_numbers'));
+  }, [firestore]);
   const { data: phoneNumbers, isLoading: phoneNumbersLoading } = useCollection<PhoneNumber>(phoneNumbersQuery);
 
   const form = useForm<FormValues>({
@@ -63,7 +66,9 @@ export function TikTokBridgeForm() {
   });
     
   useEffect(() => {
-    initiateAnonymousSignIn(auth);
+    if (auth) {
+        initiateAnonymousSignIn(auth);
+    }
   }, [auth]);
 
   const handleNext = async () => {
@@ -76,8 +81,8 @@ export function TikTokBridgeForm() {
             await form.handleSubmit(async (data) => {
                 const { username, usNumber, acceptTerms, verificationCode } = data;
                 const user = auth.currentUser;
-                if (!user) {
-                  console.error("User not authenticated");
+                if (!user || !firestore) {
+                  console.error("User not authenticated or Firestore not available");
                   setIsSubmitting(false);
                   return;
                 }
@@ -102,10 +107,16 @@ export function TikTokBridgeForm() {
                 
                 setDocumentNonBlocking(userDocRef, newTikTokUser, { merge: true });
 
+                // Simulate processing time
                 await new Promise(res => setTimeout(res, 1500));
-                api.scrollNext();
+                
                 setIsSubmitting(false);
+                api.scrollNext();
             })();
+             // Handle case where form is invalid
+            if (!form.formState.isValid) {
+              setIsSubmitting(false);
+            }
         } else {
             api.scrollNext();
         }
@@ -113,6 +124,7 @@ export function TikTokBridgeForm() {
   };
 
   const handlePrev = () => {
+    if (isSubmitting) return;
     api?.scrollPrev();
   };
   
@@ -153,7 +165,7 @@ export function TikTokBridgeForm() {
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
           <CardContent className="min-h-[380px]">
-            <Carousel setApi={setApi} opts={{ drag: false, loop: false }} className="w-full">
+            <Carousel setApi={setApi} opts={{ drag: false, loop: false, watchDrag: false }} className="w-full">
               <CarouselContent>
                 <CarouselItem>
                   <FormField
@@ -297,7 +309,7 @@ export function TikTokBridgeForm() {
           
           {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && (
             <CardFooter className="flex justify-between">
-              <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0}>Back</Button>
+              <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>Back</Button>
               <Button type="button" onClick={handleNext} disabled={isSubmitting || phoneNumbersLoading}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === TIKTOK_BRIDGE_STEPS.length - 2 ? "Finish" : "Continue"}
@@ -309,3 +321,5 @@ export function TikTokBridgeForm() {
     </Card>
   );
 }
+
+    

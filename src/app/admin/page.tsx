@@ -24,10 +24,16 @@ export default function AdminPage() {
   const auth = useAuth();
   const router = useRouter();
 
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'tiktok_users')), [firestore]);
+  const usersQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'tiktok_users'));
+    }, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
 
-  const phoneNumbersQuery = useMemoFirebase(() => query(collection(firestore, 'phone_numbers')), [firestore]);
+  const phoneNumbersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'phone_numbers'));
+  }, [firestore]);
   const { data: phoneNumbers, isLoading: phoneNumbersLoading } = useCollection(phoneNumbersQuery);
 
   const getPhoneNumber = (phoneNumberId: string) => {
@@ -35,6 +41,7 @@ export default function AdminPage() {
   }
 
   const handleLogout = async () => {
+    if (!auth) return;
     await auth.signOut();
     router.push('/login');
   };
@@ -90,3 +97,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
