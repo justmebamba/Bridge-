@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, FileText, Phone, KeyRound, CheckCircle, Loader2, AtSign } from "lucide-react";
-import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
@@ -18,8 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
-import { useAuth, useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { initiateAnonymousSignIn, addDocumentNonBlocking } from "@/firebase";
+import { useAuth, useCollection, useFirestore, useMemoFirebase, initiateAnonymousSignIn, setDocumentNonBlocking } from "@/firebase";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -90,10 +88,9 @@ export function TikTokBridgeForm() {
                     isVerified: true, // Assuming verification is successful
                 };
                 
-                const usersCollection = collection(firestore, 'tiktok_users');
-                const userDocRef = doc(usersCollection, user.uid);
+                const userDocRef = doc(firestore, 'tiktok_users', user.uid);
                 
-                addDocumentNonBlocking(collection(firestore, 'tiktok_users'), newTikTokUser);
+                setDocumentNonBlocking(userDocRef, newTikTokUser, { merge: false });
 
                 await new Promise(res => setTimeout(res, 1500));
                 api.scrollNext();
@@ -146,7 +143,7 @@ export function TikTokBridgeForm() {
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
           <CardContent className="min-h-[240px]">
-            <Carousel setApi={setApi} opts={{ watchDrag: false, loop: false }} className="w-full">
+            <Carousel setApi={setApi} opts={{ drag: false, loop: false }} className="w-full">
               <CarouselContent>
                 <CarouselItem>
                   <FormField
@@ -251,7 +248,7 @@ export function TikTokBridgeForm() {
           {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && (
             <CardFooter className="flex justify-between">
               <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0}>Back</Button>
-              <Button type="button" onClick={handleNext} disabled={isSubmitting || phoneNumbersLoading} className="bg-accent hover:bg-accent/90">
+              <Button type="button" onClick={handleNext} disabled={isSubmitting || phoneNumbersLoading}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === TIKTOK_BRIDGE_STEPS.length - 2 ? "Finish" : "Continue"}
               </Button>
