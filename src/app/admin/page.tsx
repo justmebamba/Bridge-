@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Table,
   TableBody,
@@ -9,52 +11,54 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-
-const users = [
-  {
-    username: "charlidamelio",
-    linkedNumber: "+1 (555) 123-4567",
-    status: "Active",
-    dateJoined: "2024-05-10",
-  },
-  {
-    username: "khaby.lame",
-    linkedNumber: "+1 (555) 987-6543",
-    status: "Active",
-    dateJoined: "2024-05-09",
-  },
-  {
-    username: "bellapoarch",
-    linkedNumber: "+1 (555) 246-8135",
-    status: "Pending",
-    dateJoined: "2024-05-11",
-  },
-  {
-    username: "zachking",
-    linkedNumber: "+1 (555) 369-2581",
-    status: "Active",
-    dateJoined: "2024-05-08",
-  },
-    {
-    username: "therock",
-    linkedNumber: "+1 (555) 888-9999",
-    status: "Error",
-    dateJoined: "2024-05-07",
-  },
-];
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query } from "firebase/firestore";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/firebase";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 
 export default function AdminPage() {
+  const firestore = useFirestore();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'tiktok_users')), [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
+
+  const phoneNumbersQuery = useMemoFirebase(() => query(collection(firestore, 'phone_numbers')), [firestore]);
+  const { data: phoneNumbers, isLoading: phoneNumbersLoading } = useCollection(phoneNumbersQuery);
+
+  const getPhoneNumber = (phoneNumberId: string) => {
+    return phoneNumbers?.find(p => p.id === phoneNumberId)?.phoneNumber || 'N/A';
+  }
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
+
+  const isLoading = usersLoading || phoneNumbersLoading;
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <Card>
-        <CardHeader>
-          <CardTitle>Admin Control Panel</CardTitle>
-          <CardDescription>
-            List of TikTok usernames linked for monetization.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Admin Control Panel</CardTitle>
+            <CardDescription>
+              List of TikTok usernames linked for monetization.
+            </CardDescription>
+          </div>
+          <Button onClick={handleLogout} variant="outline">Logout</Button>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+             <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+             </div>
+          ) : (
           <Table>
             <TableCaption>A list of recently linked accounts.</TableCaption>
             <TableHeader>
@@ -62,28 +66,23 @@ export default function AdminPage() {
                 <TableHead>TikTok Username</TableHead>
                 <TableHead>Linked US Number</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Date Joined</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.username}>
-                  <TableCell className="font-medium">@{user.username}</TableCell>
-                  <TableCell>{user.linkedNumber}</TableCell>
+              {users?.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">@{user.tiktokUsername}</TableCell>
+                  <TableCell>{getPhoneNumber(user.phoneNumberId)}</TableCell>
                   <TableCell>
-                    <Badge variant={
-                      user.status === 'Active' ? 'default'
-                      : user.status === 'Pending' ? 'secondary'
-                      : 'destructive'
-                    }>
-                      {user.status}
+                    <Badge variant={user.isVerified ? 'default' : 'secondary'}>
+                      {user.isVerified ? 'Active' : 'Pending'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">{user.dateJoined}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
     </div>
