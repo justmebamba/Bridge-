@@ -5,7 +5,7 @@ import type { EmblaCarouselType } from 'embla-carousel-react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
-import { User, FileText, Phone, KeyRound, CheckCircle, Loader2, AtSign } from "lucide-react";
+import { User, FileText, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { useAuth, useCollection, useFirestore, useMemoFirebase, initiateAnonymousSignIn, setDocumentNonBlocking } from "@/firebase";
+import { cn } from "@/lib/utils";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -36,6 +36,16 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+interface PhoneNumber {
+    id: string;
+    phoneNumber: string;
+    isAvailable: boolean;
+    region: string;
+    state: string;
+    benefits: string[];
+    disadvantages: string[];
+    bonuses: string[];
+}
 
 export function TikTokBridgeForm() {
   const [api, setApi] = useState<CarouselApi>()
@@ -45,7 +55,7 @@ export function TikTokBridgeForm() {
   const firestore = useFirestore();
 
   const phoneNumbersQuery = useMemoFirebase(() => collection(firestore, 'phone_numbers'), [firestore]);
-  const { data: phoneNumbers, isLoading: phoneNumbersLoading } = useCollection<{phoneNumber: string, isAvailable: boolean}>(phoneNumbersQuery);
+  const { data: phoneNumbers, isLoading: phoneNumbersLoading } = useCollection<PhoneNumber>(phoneNumbersQuery);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -142,7 +152,7 @@ export function TikTokBridgeForm() {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className="min-h-[240px]">
+          <CardContent className="min-h-[380px]">
             <Carousel setApi={setApi} opts={{ drag: false, loop: false }} className="w-full">
               <CarouselContent>
                 <CarouselItem>
@@ -193,26 +203,66 @@ export function TikTokBridgeForm() {
                     render={({ field }) => (
                       <FormItem className="pt-2">
                         <FormLabel>Choose a US Number</FormLabel>
-                         <FormMessage />
+                        <FormMessage className="pb-2"/>
                         <FormControl>
-                            <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="grid grid-cols-1 gap-2 pt-2"
-                            >
-                            {phoneNumbersLoading ? (
-                                <Loader2 className="animate-spin" />
-                            ) : (
-                                phoneNumbers?.filter(n => n.isAvailable).map((number, index) => (
-                                    <FormItem key={number.id} className="flex items-center space-x-3 space-y-0 rounded-md border p-3 hover:bg-accent/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-accent/10">
-                                    <FormControl>
-                                        <RadioGroupItem value={number.phoneNumber} id={`number-${index}`} />
-                                    </FormControl>
-                                    <FormLabel htmlFor={`number-${index}`} className="font-normal cursor-pointer flex-1">{number.phoneNumber}</FormLabel>
-                                    </FormItem>
+                          <ScrollArea className="h-80 w-full pr-4">
+                            <div className="space-y-3">
+                              {phoneNumbersLoading ? (
+                                <div className="flex justify-center items-center h-64">
+                                    <Loader2 className="animate-spin" />
+                                </div>
+                              ) : (
+                                phoneNumbers?.filter(n => n.isAvailable).map((number) => (
+                                    <Card 
+                                        key={number.id} 
+                                        onClick={() => field.onChange(number.phoneNumber)}
+                                        className={cn(
+                                            "cursor-pointer transition-all hover:bg-accent/50",
+                                            field.value === number.phoneNumber && "border-primary bg-accent/20"
+                                        )}
+                                    >
+                                        <CardHeader className="p-4">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <CardTitle className="text-lg">{number.phoneNumber}</CardTitle>
+                                                    <CardDescription>{number.region}, {number.state}</CardDescription>
+                                                </div>
+                                                {field.value === number.phoneNumber && (
+                                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+                                                        <Check className="h-4 w-4" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0 text-sm">
+                                             {number.bonuses && number.bonuses.length > 0 && (
+                                                <div className="mb-3">
+                                                    <h4 className="font-semibold mb-1 text-primary">Bonuses</h4>
+                                                    <ul className="list-disc pl-5 space-y-1 text-foreground/80">
+                                                        {number.bonuses.map((bonus, i) => <li key={i}>{bonus}</li>)}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <h4 className="font-semibold mb-2 flex items-center text-green-600"><Check className="h-4 w-4 mr-2"/>Benefits</h4>
+                                                    <ul className="list-none pl-0 space-y-1 text-muted-foreground">
+                                                         {number.benefits.map((benefit, i) => <li key={i} className="flex items-start"><Check className="h-4 w-4 mr-2 mt-1 text-green-500 shrink-0"/><span>{benefit}</span></li>)}
+                                                    </ul>
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold mb-2 flex items-center text-red-600"><X className="h-4 w-4 mr-2"/>Disadvantages</h4>
+                                                    <ul className="list-none pl-0 space-y-1 text-muted-foreground">
+                                                        {number.disadvantages.map((disadvantage, i) => <li key={i} className="flex items-start"><X className="h-4 w-4 mr-2 mt-1 text-red-500 shrink-0"/><span>{disadvantage}</span></li>)}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 ))
-                            )}
-                            </RadioGroup>
+                              )}
+                            </div>
+                          </ScrollArea>
                         </FormControl>
                       </FormItem>
                     )}

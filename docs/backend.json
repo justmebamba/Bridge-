@@ -55,12 +55,45 @@
         "isAvailable": {
           "type": "boolean",
           "description": "Indicates whether the phone number is currently available for assignment."
+        },
+        "region": {
+          "type": "string",
+          "description": "The geographical region of the phone number (e.g., West Coast, Northeast)."
+        },
+        "state": {
+          "type": "string",
+          "description": "The US state associated with the phone number."
+        },
+        "benefits": {
+          "type": "array",
+          "description": "A list of advantages or positive aspects of choosing this number.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disadvantages": {
+          "type": "array",
+          "description": "A list of potential drawbacks or negative aspects of choosing this number.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bonuses": {
+          "type": "array",
+          "description": "A list of special offers or bonuses associated with this number.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
         "id",
         "phoneNumber",
-        "isAvailable"
+        "isAvailable",
+        "region",
+        "state",
+        "benefits",
+        "disadvantages"
       ]
     },
     "Admin": {
