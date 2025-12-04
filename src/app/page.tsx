@@ -1,4 +1,5 @@
 import { TikTokBridgeHero } from "@/components/tiktok-bridge-hero";
+import { SuccessStoriesSection } from "@/components/success-stories-section";
 import { WhyBridgeSection } from "@/components/why-bridge-section";
 
 export default function Home() {
@@ -6,6 +7,7 @@ export default function Home() {
     <div>
       <TikTokBridgeHero />
       <WhyBridgeSection />
+      <SuccessStoriesSection />
     </div>
   );
 }
