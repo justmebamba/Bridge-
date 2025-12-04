@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.Node;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -29,7 +29,9 @@ export default function RootLayout({
           <div className="relative flex min-h-dvh flex-col bg-background">
             <SiteHeader />
             <main className="flex-1">{children}</main>
-            <SiteFooter />
+            <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
+                <SiteFooter />
+            </div>
           </div>
         </FirebaseClientProvider>
         <Toaster />
