@@ -11,11 +11,11 @@ export function SuccessStoriesSection() {
           </h2>
         </div>
         <div className="mt-16">
-          <div className="relative aspect-[4/3] w-full max-w-3xl lg:max-w-4xl mx-auto">
+          <div className="relative aspect-[9/16] w-full max-w-sm mx-auto">
              <Image 
-                src="https://picsum.photos/seed/product/800/600"
-                alt="Showcase of a creator's product"
-                data-ai-hint="product showcase"
+                src="https://picsum.photos/seed/bahamas/600/900"
+                alt="A creator enjoying a vacation"
+                data-ai-hint="man vacation"
                 fill
                 className="rounded-xl object-cover shadow-lg"
              />
