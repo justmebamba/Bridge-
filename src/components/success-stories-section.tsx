@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { SuccessCarousel } from "./success-carousel";
 
 export function SuccessStoriesSection() {
   return (
@@ -21,6 +22,7 @@ export function SuccessStoriesSection() {
           </div>
         </div>
       </div>
+      <SuccessCarousel />
     </section>
   );
 }
