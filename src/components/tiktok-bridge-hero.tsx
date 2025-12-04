@@ -11,9 +11,9 @@ export function TikTokBridgeHero() {
 
   return (
     <>
-      <section className="mx-auto grid max-w-screen-xl grid-cols-1 items-center gap-8 px-4 py-8 md:grid-cols-2 md:py-12 lg:py-24">
-        <div className="flex flex-col items-start gap-4">
-          <h1 className="text-3xl font-bold leading-tight tracking-tighter md:text-5xl lg:text-6xl lg:leading-[1.1]">
+      <section className="mx-auto grid max-w-screen-xl grid-cols-1 items-center gap-12 px-4 py-8 md:grid-cols-2 md:py-12 lg:py-24">
+        <div className="flex flex-col items-start gap-6">
+          <h1 className="text-4xl font-bold leading-tight tracking-tighter md:text-5xl lg:text-6xl lg:leading-[1.1]">
             Welcome to the <br className="hidden md:block" />
             <span className="text-primary">TikTok Bridge</span>
           </h1>
@@ -26,18 +26,14 @@ export function TikTokBridgeHero() {
             </Button>
           </div>
         </div>
-        <div className="relative flex h-full min-h-[300px] w-full items-center justify-center">
+        <div className="relative flex h-full min-h-[400px] w-full items-center justify-center">
             <Image 
-                src="https://picsum.photos/seed/shop/600/800" 
-                alt="Person using phone while shopping" 
-                data-ai-hint="shopping"
+                src="https://picsum.photos/seed/creator/800/600" 
+                alt="Creator painting a glass" 
+                data-ai-hint="creator painting"
                 fill
                 className="rounded-xl object-cover"
             />
-            <div className="absolute bottom-8 left-8 z-10 rounded-2xl border border-border/20 bg-background/80 p-4 shadow-lg backdrop-blur-sm">
-                <p className="font-semibold">Thank you, Jasmin!</p>
-                <Button variant="link" className="p-0 text-foreground/80">View Order Confirmation &rarr;</Button>
-            </div>
         </div>
       </section>
 
