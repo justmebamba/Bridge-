@@ -17,6 +17,8 @@ import { Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 
 export default function AdminPage() {
@@ -36,10 +38,20 @@ export default function AdminPage() {
     router.push('/login');
   };
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = (userId: string) => {
     if (!firestore) return;
     const userDocRef = doc(firestore, 'tiktok_users', userId);
-    await updateDoc(userDocRef, { isVerified: true });
+    updateDoc(userDocRef, { isVerified: true })
+        .catch(error => {
+            errorEmitter.emit(
+                'permission-error',
+                new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'update',
+                    requestResourceData: { isVerified: true }
+                })
+            )
+        });
   }
 
   return (
