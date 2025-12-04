@@ -2,11 +2,12 @@
 
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
-import { Landmark, Loader2, User, Phone } from "lucide-react";
+import { Loader2, User, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { TikTokLogo } from "@/components/icons/tiktok-logo";
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -45,7 +46,7 @@ export default function DashboardPage() {
     <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-2xl">
         <div className="flex flex-col items-center justify-center space-y-4 mb-8">
-          <Landmark className="h-16 w-16 text-primary" />
+          <TikTokLogo className="h-16 w-16" />
           <h1 className="text-3xl font-bold tracking-tighter text-center font-headline">Your Dashboard</h1>
           <p className="text-muted-foreground text-center max-w-xs">
             Welcome to your monetization bridge!
