@@ -12,7 +12,7 @@ export function TikTokBridgeHero() {
   return (
     <>
       <section className="relative">
-        <div className="bg-black pb-24 md:pb-32">
+        <div className="bg-black pb-32 md:pb-48">
             <div className="container px-4 pt-16 sm:pt-24 lg:pt-32">
                 <div className="max-w-xl">
                 <h1 className="text-4xl font-bold leading-tight tracking-tighter text-white md:text-5xl lg:text-6xl lg:leading-[1.1]">
@@ -27,7 +27,7 @@ export function TikTokBridgeHero() {
         </div>
 
         <div className="container px-4">
-            <div className="relative h-64 md:h-96 w-full -mt-24 md:-mt-32">
+            <div className="relative h-64 md:h-96 w-full -mt-32 md:-mt-48">
                 <Image 
                     src="https://picsum.photos/seed/creator/1200/600" 
                     alt="Creator painting a glass" 
@@ -39,7 +39,7 @@ export function TikTokBridgeHero() {
         </div>
         
         <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
-            <div className="container px-4 pt-12 pb-12 text-center">
+            <div className="container px-4 pt-16 pb-16 text-center">
                  <Button size="lg" className="rounded-full px-8 text-lg" onClick={() => setIsFormOpen(true)}>
                   Get started
                 </Button>
