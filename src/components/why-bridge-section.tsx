@@ -9,7 +9,7 @@ const stats = [
     description: "of brands seek authentic creator partnerships for campaigns.",
   },
   {
-    value: "91%",
+    value: "61%",
     description: "of users prefer a simplified, direct way to engage with monetization opportunities.",
   },
 ];
