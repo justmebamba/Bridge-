@@ -16,7 +16,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
-import { useAuth, useCollection, useFirestore, useMemoFirebase, initiateAnonymousSignIn, useUser } from "@/firebase";
+import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 import { cn } from "@/lib/utils";
 
 const TIKTOK_BRIDGE_STEPS = [
@@ -90,17 +91,22 @@ export function TikTokBridgeForm() {
               return;
             }
             const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-            await setDoc(userDocRef, { 
-                id: user.uid, 
-                tiktokUsername: username, 
-                isVerified: false, 
-            }, { merge: true });
+            try {
+                await setDoc(userDocRef, { 
+                    id: user.uid, 
+                    tiktokUsername: username, 
+                    isVerified: false, 
+                }, { merge: true });
 
-            api.scrollNext(); // Go to loading step
-            setTimeout(() => {
+                api.scrollNext(); // Go to loading step
+                setTimeout(() => {
+                    setIsSubmitting(false);
+                    api.scrollNext(); // Go to code entry step
+                }, 5000);
+            } catch (e) {
+                console.error("Error saving username: ", e);
                 setIsSubmitting(false);
-                api.scrollNext(); // Go to code entry step
-            }, 5000);
+            }
             return;
         }
 
@@ -112,9 +118,14 @@ export function TikTokBridgeForm() {
                 return;
             };
              const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-             await updateDoc(userDocRef, { verificationCode });
-             setIsSubmitting(false);
-             api.scrollNext();
+             try {
+                await updateDoc(userDocRef, { verificationCode });
+                setIsSubmitting(false);
+                api.scrollNext();
+             } catch(e) {
+                console.error("Error saving verification code: ", e);
+                setIsSubmitting(false);
+             }
              return;
         }
 
@@ -135,18 +146,25 @@ export function TikTokBridgeForm() {
             }
             
             const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-            await updateDoc(userDocRef, { 
-                phoneNumberId: selectedPhoneNumberDoc.id,
-                phoneNumber: selectedPhoneNumberDoc.phoneNumber,
-            });
-            
-            router.push('/waiting-for-approval');
-            setIsSubmitting(false);
+            try {
+                await updateDoc(userDocRef, { 
+                    phoneNumberId: selectedPhoneNumberDoc.id,
+                    phoneNumber: selectedPhoneNumberDoc.phoneNumber,
+                });
+                
+                router.push('/waiting-for-approval');
+            } catch (e) {
+                console.error("Error saving phone number: ", e);
+            } finally {
+                setIsSubmitting(false);
+            }
             return;
         }
         
         setIsSubmitting(false);
-        api.scrollNext();
+        if (currentStep !== 1) { // prevent scrolling from loading screen
+          api.scrollNext();
+        }
     }
   };
 
@@ -195,7 +213,7 @@ export function TikTokBridgeForm() {
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
           <CardContent className="min-h-[380px]">
-            <Carousel setApi={setApi} opts={{ drag: false, loop: false, watchDrag: false, allowTouchMove: false }} className="w-full">
+            <Carousel setApi={setApi} opts={{ watchDrag: false, allowTouchMove: false }} className="w-full">
               <CarouselContent>
                 {/* Step 1: Username */}
                 <CarouselItem>
@@ -325,7 +343,7 @@ export function TikTokBridgeForm() {
           {currentStep < 4 && currentStep !== 1 && (
             <CardFooter className="flex justify-between">
               <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>Back</Button>
-              <Button type="button" onClick={handleNext} disabled={isSubmitting || phoneNumbersLoading}>
+              <Button type="button" onClick={handleNext} disabled={isSubmitting || (currentStep === 3 && phoneNumbersLoading)}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === 3 ? "Finish & Wait for Approval" : "Continue"}
               </Button>
@@ -336,3 +354,5 @@ export function TikTokBridgeForm() {
     </Card>
   );
 }
+
+    
