@@ -19,7 +19,6 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { TikTokLogo } from "./icons/tiktok-logo";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -48,7 +47,7 @@ interface PhoneNumber {
     bonuses: string[];
 }
 
-export function TikTokBridgeForm() {
+export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
   const [api, setApi] = useState<CarouselApi>()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +81,7 @@ export function TikTokBridgeForm() {
     }
 
     if (!api) return;
-
+    
     setIsSubmitting(true);
 
     try {
@@ -90,6 +89,7 @@ export function TikTokBridgeForm() {
         
         if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
+            // Using addDoc for non-blocking operation
             const docRef = await addDoc(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
@@ -97,19 +97,20 @@ export function TikTokBridgeForm() {
             });
             setSubmissionId(docRef.id);
             localStorage.setItem('submissionId', docRef.id);
-
+            
             api.scrollNext(); // Go to processing
             setTimeout(() => {
                 api.scrollNext(); // Go to enter code
                 setIsSubmitting(false);
             }, 5000);
-            return;
+            return; // Important to return here to not reset submitting state
         }
         
         if (currentStep === 2) { // Submitting verification code
             if (!submissionId) throw new Error("Submission ID not found");
             const { verificationCode } = form.getValues();
             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
+            // Using updateDoc for non-blocking operation
             await updateDoc(submissionDocRef, { verificationCode });
             api.scrollNext();
         }
@@ -126,9 +127,10 @@ export function TikTokBridgeForm() {
                 phoneNumberId: selectedPhoneNumberDoc.id,
                 phoneNumber: selectedPhoneNumberDoc.phoneNumber,
             };
-
+            // Using updateDoc for non-blocking operation
             await updateDoc(submissionDocRef, finalData);
             
+            onFinished(); // Close the modal
             // Redirect to waiting page
             router.push(`/waiting-for-approval`);
             return; 
@@ -137,7 +139,8 @@ export function TikTokBridgeForm() {
     } catch (e) {
         console.error("An error occurred: ", e);
     } finally {
-        if (currentStep !== 0) { // Don't reset submitting state for the async step 0
+        // Only set submitting to false if it's not the username step
+        if (currentStep !== 0) {
             setIsSubmitting(false);
         }
     }
@@ -168,7 +171,7 @@ export function TikTokBridgeForm() {
   const progressValue = Math.max(0, ((currentStep - (currentStep > 1 ? 1: 0)) / (TIKTOK_BRIDGE_STEPS.length - 2)) * 100);
 
   return (
-    <Card className="rounded-2xl shadow-xl border-t">
+    <Card className="rounded-2xl shadow-xl border-t w-full">
       <CardHeader>
         <Progress value={progressValue} className="mb-4 h-1.5" />
         <div className="flex items-center space-x-4 min-h-[48px]">
@@ -188,7 +191,7 @@ export function TikTokBridgeForm() {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className="min-h-[96px]">
+          <CardContent className="min-h-[96px] adaptive-height">
             <Carousel setApi={setApi} opts={{ watchDrag: false, allowTouchMove: false }} className="w-full">
               <CarouselContent>
                 <CarouselItem>
