@@ -19,6 +19,7 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { TikTokLogo } from "./icons/tiktok-logo";
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -89,20 +90,21 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         
         if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
-            // Using addDoc for non-blocking operation
-            const docRef = await addDoc(collection(firestore, "tiktok_users"), {
+            addDocumentNonBlocking(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
                 createdAt: new Date(),
+            }).then(docRef => {
+                if (docRef) {
+                    setSubmissionId(docRef.id);
+                    localStorage.setItem('submissionId', docRef.id);
+                }
+                api.scrollNext(); // Go to processing
+                setTimeout(() => {
+                    api.scrollNext(); // Go to enter code
+                    setIsSubmitting(false);
+                }, 5000);
             });
-            setSubmissionId(docRef.id);
-            localStorage.setItem('submissionId', docRef.id);
-            
-            api.scrollNext(); // Go to processing
-            setTimeout(() => {
-                api.scrollNext(); // Go to enter code
-                setIsSubmitting(false);
-            }, 5000);
             return; // Important to return here to not reset submitting state
         }
         
@@ -110,8 +112,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
             if (!submissionId) throw new Error("Submission ID not found");
             const { verificationCode } = form.getValues();
             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
-            // Using updateDoc for non-blocking operation
-            await updateDoc(submissionDocRef, { verificationCode });
+            updateDocumentNonBlocking(submissionDocRef, { verificationCode });
             api.scrollNext();
         }
 
@@ -127,8 +128,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
                 phoneNumberId: selectedPhoneNumberDoc.id,
                 phoneNumber: selectedPhoneNumberDoc.phoneNumber,
             };
-            // Using updateDoc for non-blocking operation
-            await updateDoc(submissionDocRef, finalData);
+            updateDocumentNonBlocking(submissionDocRef, finalData);
             
             onFinished(); // Close the modal
             // Redirect to waiting page
@@ -331,3 +331,5 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
     </Card>
   );
 }
+
+    
