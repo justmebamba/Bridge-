@@ -12,7 +12,7 @@ export function TikTokBridgeHero() {
   return (
     <>
       <section className="mx-auto grid max-w-screen-xl grid-cols-1 items-center gap-12 px-4 py-8 md:grid-cols-2 md:py-12 lg:py-24">
-        <div className="flex flex-col items-start gap-6">
+        <div className="flex flex-col items-start gap-6 text-white md:text-inherit">
           <h1 className="text-4xl font-bold leading-tight tracking-tighter md:text-5xl lg:text-6xl lg:leading-[1.1]">
             Welcome to the <br className="hidden md:block" />
             <span className="text-primary">TikTok Bridge</span>
