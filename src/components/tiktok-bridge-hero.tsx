@@ -11,30 +11,39 @@ export function TikTokBridgeHero() {
 
   return (
     <>
-      <section className="mx-auto grid max-w-screen-xl grid-cols-1 items-center gap-12 px-4 py-8 md:grid-cols-2 md:py-12 lg:py-24">
-        <div className="flex flex-col items-start gap-6 text-white md:text-inherit">
-          <h1 className="text-4xl font-bold leading-tight tracking-tighter md:text-5xl lg:text-6xl lg:leading-[1.1]">
-            Welcome to the <br className="hidden md:block" />
-            <span className="text-primary">TikTok Bridge</span>
-          </h1>
-          <p className="max-w-[750px] text-lg text-muted-foreground sm:text-xl">
-            Securely link your TikTok account to unlock new monetization opportunities. Follow the simple steps below to get started.
-          </p>
-          <div className="flex w-full items-center justify-start space-x-4 py-4">
-            <Button size="lg" className="rounded-full px-8 text-lg" onClick={() => setIsFormOpen(true)}>
+      <section className="relative bg-white">
+        <div className="bg-black">
+            <div className="container px-4 py-16 sm:py-24 lg:py-32">
+                <div className="max-w-xl">
+                <h1 className="text-4xl font-bold leading-tight tracking-tighter text-white md:text-5xl lg:text-6xl lg:leading-[1.1]">
+                    Welcome to the <br className="hidden md:block" />
+                    <span className="text-primary">TikTok Bridge</span>
+                </h1>
+                <p className="mt-6 max-w-[750px] text-lg text-muted-foreground sm:text-xl">
+                    Securely link your TikTok account to unlock new monetization opportunities. Follow the simple steps below to get started.
+                </p>
+                </div>
+            </div>
+        </div>
+
+        <div className="container px-4">
+            <div className="relative h-64 md:h-96 w-full -mt-16 md:-mt-24">
+                <Image 
+                    src="https://picsum.photos/seed/creator/1200/600" 
+                    alt="Creator painting a glass" 
+                    data-ai-hint="creator painting"
+                    fill
+                    className="rounded-xl object-cover shadow-lg"
+                />
+            </div>
+        </div>
+        
+        <div className="container px-4 py-8 text-center">
+             <Button size="lg" className="rounded-full px-8 text-lg" onClick={() => setIsFormOpen(true)}>
               Get started
             </Button>
-          </div>
         </div>
-        <div className="relative flex h-full min-h-[400px] w-full items-center justify-center">
-            <Image 
-                src="https://picsum.photos/seed/creator/800/600" 
-                alt="Creator painting a glass" 
-                data-ai-hint="creator painting"
-                fill
-                className="rounded-xl object-cover"
-            />
-        </div>
+
       </section>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
