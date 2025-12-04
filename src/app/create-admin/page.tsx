@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Lock, Mail, UserPlus } from 'lucide-react';
+import { Lock, Mail, UserPlus, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -13,9 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query } from 'firebase/firestore';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -31,6 +31,20 @@ export default function CreateAdminPage() {
   const { toast } = useToast();
   const auth = useAuth();
   const firestore = useFirestore();
+
+  // Check if any admins already exist
+  const adminsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'admins'));
+  }, [firestore]);
+  const { data: admins, isLoading: adminsLoading } = useCollection(adminsQuery);
+
+  useEffect(() => {
+    if (!adminsLoading && admins && admins.length > 0) {
+      // If admins exist, redirect to login page.
+      router.replace('/login');
+    }
+  }, [admins, adminsLoading, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -79,6 +93,14 @@ export default function CreateAdminPage() {
         setIsLoading(false);
     }
   };
+
+  if (adminsLoading || (admins && admins.length > 0)) {
+     return (
+        <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </main>
+     )
+  }
 
   if (isSuccess) {
     return (
