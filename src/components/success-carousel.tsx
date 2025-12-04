@@ -17,7 +17,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 const successStories = [
     {
         creator: "@nadrionthego",
-        description: "Find out how Alex was able to boost their brand deals with our US-based number.",
+        description: "Find out how he was able to boost brand deals with our US-based number.",
         stats: [
             { value: "45%", label: "increase in brand deals" },
             { value: "30%", label: "growth in affiliate sales" },
@@ -27,7 +27,7 @@ const successStories = [
     },
     {
         creator: "@dnaesoraya",
-        description: "Learn how Benny expanded their audience and secured major collaborations.",
+        description: "Learn how she expanded her audience and secured major collaborations.",
         stats: [
             { value: "60%", label: "increase in sponsorship inquiries" },
             { value: "40%", label: "growth in merchandise sales" },
@@ -37,7 +37,7 @@ const successStories = [
     },
     {
         creator: "@jenniferblinky",
-        description: "Discover how Casey turned their content into a sustainable business.",
+        description: "Discover how she turned her content into a sustainable business.",
         stats: [
             { value: "75%", label: "increase in monthly revenue" },
             { value: "55%", label: "growth in exclusive content subscribers" },
