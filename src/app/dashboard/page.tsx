@@ -1,37 +1,34 @@
 'use client';
 
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { Loader2, User, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { TikTokLogo } from "@/components/icons/tiktok-logo";
 
 export default function DashboardPage() {
-  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const submissionId = searchParams.get('id');
+
+  useEffect(() => {
+    if (!submissionId) {
+      // If there's no ID in the URL, we can't show a dashboard.
+      router.push('/');
+    }
+  }, [submissionId, router]);
 
   const userProfileRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'tiktok_users', user.uid);
-  }, [firestore, user]);
+    if (!submissionId || !firestore) return null;
+    return doc(firestore, 'tiktok_users', submissionId);
+  }, [firestore, submissionId]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/');
-    }
-    if (!isProfileLoading && userProfile === null) {
-      // If the user is logged in but has no profile, they haven't completed the flow.
-      router.push('/');
-    }
-  }, [user, isUserLoading, userProfile, isProfileLoading, router]);
-  
-  if (isUserLoading || isProfileLoading || !userProfile) {
+  if (isProfileLoading || !userProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -41,6 +38,15 @@ export default function DashboardPage() {
       </div>
     );
   }
+  
+  if (!userProfile.isVerified) {
+    // If they land here but are not verified, send them back to the waiting page.
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('submissionId', submissionId as string);
+    }
+    router.push('/waiting-for-approval');
+    return null;
+  }
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-6 md:p-8">
@@ -49,7 +55,7 @@ export default function DashboardPage() {
           <TikTokLogo className="h-16 w-16" />
           <h1 className="text-3xl font-bold tracking-tighter text-center font-headline">Your Dashboard</h1>
           <p className="text-muted-foreground text-center max-w-xs">
-            Welcome to your monetization bridge!
+            Welcome! Your account is approved and ready.
           </p>
         </div>
 
