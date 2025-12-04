@@ -16,7 +16,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const successStories = [
     {
-        creator: "Alex Monetization",
+        creator: "@nadrionthego",
         description: "Find out how Alex was able to boost their brand deals with our US-based number.",
         stats: [
             { value: "45%", label: "increase in brand deals" },
@@ -26,7 +26,7 @@ const successStories = [
         image: PlaceHolderImages.find(p => p.id === "success-1"),
     },
     {
-        creator: "Benny Boosts",
+        creator: "@dnaesoraya",
         description: "Learn how Benny expanded their audience and secured major collaborations.",
         stats: [
             { value: "60%", label: "increase in sponsorship inquiries" },
@@ -36,7 +36,7 @@ const successStories = [
         image: PlaceHolderImages.find(p => p.id === "success-2"),
     },
     {
-        creator: "Casey Creates",
+        creator: "@jenniferblinky",
         description: "Discover how Casey turned their content into a sustainable business.",
         stats: [
             { value: "75%", label: "increase in monthly revenue" },

@@ -2,21 +2,21 @@
   "placeholderImages": [
     {
       "id": "success-1",
-      "description": "A successful creator celebrating on a beach.",
-      "imageUrl": "https://images.unsplash.com/photo-1628430622525-48bd6f2adfe9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjcmVhdG9yJTIwYmVhY2h8ZW58MHx8fHwxNzY0ODg4Nzk0fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "creator beach"
+      "description": "A man surfing a wave in a tropical location.",
+      "imageUrl": "https://images.unsplash.com/photo-1531948334400-33a8c5a248a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtYW4lMjBzdXJmaW5nfGVufDB8fHx8MTc2NTU5ODU4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man surfing"
     },
     {
       "id": "success-2",
-      "description": "A creator working in a modern home office.",
-      "imageUrl": "https://images.unsplash.com/photo-1603201667106-0e3e0ae584c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjcmVhdG9yJTIwb2ZmaWNlfGVufDB8fHx8MTc2NDg4ODc5NHww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "creator office"
+      "description": "A young woman touring an urban city.",
+      "imageUrl": "https://images.unsplash.com/photo-1534439818861-9e5c53f47976?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx3b21hbiUyMHRvdXJpbmd8ZW58MHx8fHwxNzY1NTk4NjI3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman touring"
     },
     {
       "id": "success-3",
-      "description": "An enthusiastic creator filming a video outdoors.",
-      "imageUrl": "https://images.unsplash.com/photo-1624717369095-ebacc7d68a40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjcmVhdG9yJTIwZmlsbWluZ3xlbnwwfHx8fDE3NjQ4ODg3OTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "creator filming"
+      "description": "A female gamer with headphones on, focused on her screen.",
+      "imageUrl": "https://images.unsplash.com/photo-1542751371-adc38448a05e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxnYW1lciUyMGdpcmx8ZW58MHx8fHwxNzY1NTk4NjYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "gamer girl"
     }
   ]
 }
