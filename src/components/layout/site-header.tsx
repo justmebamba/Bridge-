@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { TikTokForBusinessLogo } from "../icons/tiktok-for-business-logo"
+import { TikTokLogo } from "../icons/tiktok-logo"
 
 export function SiteHeader() {
   return (
@@ -7,7 +7,10 @@ export function SiteHeader() {
       <div className="container flex h-14 max-w-screen-2xl items-center">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <TikTokForBusinessLogo className="h-6" />
+            <TikTokLogo className="h-8 w-8" />
+            <span className="font-bold sm:inline-block">
+              TikTok Bridge
+            </span>
           </Link>
         </div>
       </div>
