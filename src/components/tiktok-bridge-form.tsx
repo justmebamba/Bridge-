@@ -5,33 +5,32 @@ import type { EmblaCarouselType } from 'embla-carousel-react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
-import { User, FileText, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
+import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X, Clock } from "lucide-react";
 import { collection, doc, query } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
-import { useAuth, useCollection, useFirestore, useMemoFirebase, initiateAnonymousSignIn, setDocumentNonBlocking } from "@/firebase";
+import { useAuth, useCollection, useFirestore, useMemoFirebase, initiateAnonymousSignIn, setDocumentNonBlocking, useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
-  { step: 2, title: "Terms of Service", icon: FileText, fields: ['acceptTerms'] as const },
-  { step: 3, title: "Select a Number", icon: Phone, fields: ['usNumber'] as const },
-  { step: 4, title: "Verify Number", icon: KeyRound, fields: ['verificationCode'] as const },
+  { step: 2, title: "Processing...", icon: Clock, fields: [] as const },
+  { step: 3, title: "Enter Code", icon: KeyRound, fields: ['verificationCode'] as const },
+  { step: 4, title: "Select a Number", icon: Phone, fields: ['usNumber'] as const },
   { step: 5, title: "Completed", icon: CheckCircle, fields: [] as const },
 ];
 
 const formSchema = z.object({
   username: z.string().min(2, "Username must be at least 2 characters."),
-  acceptTerms: z.boolean().refine((val) => val === true, { message: "You must accept the terms and conditions." }),
-  usNumber: z.string({ required_error: "Please select a number." }),
   verificationCode: z.string().length(6, "Code must be 6 digits."),
+  usNumber: z.string({ required_error: "Please select a number." }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -51,8 +50,10 @@ export function TikTokBridgeForm() {
   const [api, setApi] = useState<CarouselApi>()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useUser();
   const auth = useAuth();
   const firestore = useFirestore();
+  const router = useRouter();
 
   const phoneNumbersQuery = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -66,65 +67,92 @@ export function TikTokBridgeForm() {
   });
     
   useEffect(() => {
-    if (auth) {
+    if (auth && !user) {
         initiateAnonymousSignIn(auth);
     }
-  }, [auth]);
+  }, [auth, user]);
 
   const handleNext = async () => {
-    const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep].fields;
-    const isValid = await form.trigger(fieldsToValidate);
+    const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep]?.fields;
+    if (fieldsToValidate) {
+        const isValid = await form.trigger(fieldsToValidate);
+        if (!isValid) return;
+    }
 
-    if (isValid && api) {
-        if (currentStep === TIKTOK_BRIDGE_STEPS.length - 2) { // Is last form step
+    if (api) {
+        // Handle Step 1 -> 2 (Username)
+        if (currentStep === 0) {
             setIsSubmitting(true);
-            await form.handleSubmit(async (data) => {
-                const { username, usNumber, acceptTerms, verificationCode } = data;
-                const user = auth.currentUser;
-                if (!user || !firestore) {
-                  console.error("User not authenticated or Firestore not available");
-                  setIsSubmitting(false);
-                  return;
-                }
-                const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
-
-                if (!selectedPhoneNumberDoc) {
-                    console.error("Selected phone number not found");
-                    setIsSubmitting(false);
-                    return;
-                }
-
-                const newTikTokUser = {
-                    id: user.uid,
-                    tiktokUsername: username,
-                    termsAccepted: acceptTerms,
-                    phoneNumberId: selectedPhoneNumberDoc.id,
-                    verificationCode,
-                    isVerified: true, // Assuming verification is successful
-                };
-                
-                const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-                
-                setDocumentNonBlocking(userDocRef, newTikTokUser, { merge: true });
-
-                // Simulate processing time
-                await new Promise(res => setTimeout(res, 1500));
-                
-                setIsSubmitting(false);
-                api.scrollNext();
-            })();
-             // Handle case where form is invalid
-            if (!form.formState.isValid) {
+            const { username } = form.getValues();
+             if (!user || !firestore) {
+              console.error("User not authenticated or Firestore not available");
               setIsSubmitting(false);
+              return;
             }
-        } else {
-            api.scrollNext();
+            const userDocRef = doc(firestore, 'tiktok_users', user.uid);
+            setDocumentNonBlocking(userDocRef, { 
+                id: user.uid, 
+                tiktokUsername: username, 
+                isVerified: false, 
+                verificationCode: '',
+                phoneNumberId: '',
+                phoneNumber: '',
+            }, { merge: true });
+
+            api.scrollNext(); // Go to loading step
+            setTimeout(() => {
+                setIsSubmitting(false);
+                api.scrollNext(); // Go to code entry step
+            }, 5000);
+            return;
         }
+
+        // Handle Step 3 -> 4 (Verification Code)
+        if (currentStep === 2) {
+             const { verificationCode } = form.getValues();
+             if (!user || !firestore) return;
+             const userDocRef = doc(firestore, 'tiktok_users', user.uid);
+             setDocumentNonBlocking(userDocRef, { verificationCode }, { merge: true });
+             api.scrollNext();
+             return;
+        }
+
+        // Handle Step 4 -> 5 (Select Number & Final Submission)
+        if (currentStep === 3) {
+            setIsSubmitting(true);
+            const { usNumber } = form.getValues();
+            if (!user || !firestore) {
+                console.error("User not authenticated or Firestore not available");
+                setIsSubmitting(false);
+                return;
+            }
+
+            const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
+            if (!selectedPhoneNumberDoc) {
+                console.error("Selected phone number not found");
+                setIsSubmitting(false);
+                return;
+            }
+            
+            const userDocRef = doc(firestore, 'tiktok_users', user.uid);
+            setDocumentNonBlocking(userDocRef, { 
+                phoneNumberId: selectedPhoneNumberDoc.id,
+                phoneNumber: selectedPhoneNumberDoc.phoneNumber,
+            }, { merge: true });
+            
+            // Wait a moment then redirect
+            await new Promise(res => setTimeout(res, 500));
+            router.push('/waiting-for-approval');
+            setIsSubmitting(false);
+            return;
+        }
+
+        api.scrollNext();
     }
   };
 
   const handlePrev = () => {
-    if (isSubmitting) return;
+    if (isSubmitting || currentStep === 1) return; // Don't allow going back from loading screen
     api?.scrollPrev();
   };
   
@@ -144,20 +172,23 @@ export function TikTokBridgeForm() {
   }, [api])
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep].icon;
-  const progress = ((currentStep + 1) / TIKTOK_BRIDGE_STEPS.length) * 100;
+  const progress = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length-2)) * 100;
   
   return (
     <Card>
       <CardHeader>
         <Progress value={progress} className="mb-4" />
         <div className="flex items-center space-x-3 min-h-[48px]">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+            <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0",
+                 currentStep === 1 && "animate-spin"
+            )}>
                 <CurrentIcon className="h-5 w-5" />
             </div>
             <div>
                 <CardTitle className="font-headline">{TIKTOK_BRIDGE_STEPS[currentStep].title}</CardTitle>
-                {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && 
-                    <CardDescription>Step {currentStep + 1} of {TIKTOK_BRIDGE_STEPS.length - 1}</CardDescription>
+                {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && currentStep !== 1 &&
+                    <CardDescription>Step {currentStep > 1 ? currentStep-1 : currentStep+1} of {TIKTOK_BRIDGE_STEPS.length - 2}</CardDescription>
                 }
             </div>
         </div>
@@ -165,8 +196,9 @@ export function TikTokBridgeForm() {
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
           <CardContent className="min-h-[380px]">
-            <Carousel setApi={setApi} opts={{ drag: false, loop: false, watchDrag: false }} className="w-full">
+            <Carousel setApi={setApi} opts={{ drag: false, loop: false, watchDrag: false, allowTouchMove: false }} className="w-full">
               <CarouselContent>
+                {/* Step 1: Username */}
                 <CarouselItem>
                   <FormField
                     control={form.control}
@@ -185,29 +217,35 @@ export function TikTokBridgeForm() {
                     )}
                   />
                 </CarouselItem>
+
+                {/* Step 2: Loading Spinner */}
                 <CarouselItem>
-                  <FormField
+                    <div className="text-center py-8 flex flex-col items-center justify-center h-[300px]">
+                        <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
+                        <h3 className="text-xl font-semibold">Processing...</h3>
+                        <p className="text-muted-foreground mt-2 max-w-[250px]">Please wait a moment.</p>
+                    </div>
+                </CarouselItem>
+
+                {/* Step 3: Verification Code */}
+                <CarouselItem>
+                   <FormField
                     control={form.control}
-                    name="acceptTerms"
+                    name="verificationCode"
                     render={({ field }) => (
                       <FormItem className="pt-2">
-                        <FormLabel>Terms and Conditions</FormLabel>
+                        <FormLabel>Verification Code</FormLabel>
                         <FormControl>
-                          <ScrollArea className="h-32 w-full rounded-md border p-4 text-sm">
-                            By using TikTok Bridge, you agree to allow us to manage monetization on your behalf through third-party solutions. This service is for users where TikTok's native monetization is unavailable. We are not affiliated with TikTok. We act as an intermediary to connect you with US-based programs. A service fee applies. Data is handled securely. You can revoke access by contacting support.
-                          </ScrollArea>
+                            <Input placeholder="123456" {...field} />
                         </FormControl>
-                         <div className="flex items-center space-x-2 pt-2">
-                            <Checkbox id="terms" checked={field.value} onCheckedChange={field.onChange} />
-                            <label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                I accept the terms and conditions
-                            </label>
-                        </div>
+                        <p className="text-sm text-muted-foreground pt-1">Enter any 6-digit code to continue.</p>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </CarouselItem>
+
+                {/* Step 4: Select Number */}
                 <CarouselItem>
                   <FormField
                     control={form.control}
@@ -280,39 +318,17 @@ export function TikTokBridgeForm() {
                     )}
                   />
                 </CarouselItem>
-                <CarouselItem>
-                   <FormField
-                    control={form.control}
-                    name="verificationCode"
-                    render={({ field }) => (
-                      <FormItem className="pt-2">
-                        <FormLabel>Verification Code</FormLabel>
-                        <FormControl>
-                            <Input placeholder="123456" {...field} />
-                        </FormControl>
-                        <p className="text-sm text-muted-foreground pt-1">Enter the 6-digit code sent to your new number.</p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CarouselItem>
-                <CarouselItem>
-                  <div className="text-center py-8 flex flex-col items-center">
-                    <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-                    <h3 className="text-xl font-semibold">Setup Complete!</h3>
-                    <p className="text-muted-foreground mt-2 max-w-[250px]">Your account is now linked and ready for monetization.</p>
-                  </div>
-                </CarouselItem>
+                
               </CarouselContent>
             </Carousel>
           </CardContent>
           
-          {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && (
+          {currentStep < 4 && currentStep !== 1 && (
             <CardFooter className="flex justify-between">
               <Button type="button" variant="ghost" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>Back</Button>
               <Button type="button" onClick={handleNext} disabled={isSubmitting || phoneNumbersLoading}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {currentStep === TIKTOK_BRIDGE_STEPS.length - 2 ? "Finish" : "Continue"}
+                {currentStep === 3 ? "Finish & Wait for Approval" : "Continue"}
               </Button>
             </CardFooter>
           )}
@@ -321,5 +337,3 @@ export function TikTokBridgeForm() {
     </Card>
   );
 }
-
-    

@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query } from "firebase/firestore";
-import { Loader2 } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
+import { collection, query, doc } from "firebase/firestore";
+import { Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -30,23 +30,17 @@ export default function AdminPage() {
     }, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
 
-  const phoneNumbersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'phone_numbers'));
-  }, [firestore]);
-  const { data: phoneNumbers, isLoading: phoneNumbersLoading } = useCollection(phoneNumbersQuery);
-
-  const getPhoneNumber = (phoneNumberId: string) => {
-    return phoneNumbers?.find(p => p.id === phoneNumberId)?.phoneNumber || 'N/A';
-  }
-
   const handleLogout = async () => {
     if (!auth) return;
     await auth.signOut();
     router.push('/login');
   };
 
-  const isLoading = usersLoading || phoneNumbersLoading;
+  const handleApprove = (userId: string) => {
+    if (!firestore) return;
+    const userDocRef = doc(firestore, 'tiktok_users', userId);
+    updateDocumentNonBlocking(userDocRef, { isVerified: true });
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -55,37 +49,50 @@ export default function AdminPage() {
           <div>
             <CardTitle>Admin Control Panel</CardTitle>
             <CardDescription>
-              List of TikTok usernames linked for monetization.
+              List of TikTok usernames pending approval.
             </CardDescription>
           </div>
           <Button onClick={handleLogout} variant="outline">Logout</Button>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {usersLoading ? (
              <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
           ) : (
           <Table>
-            <TableCaption>A list of recently linked accounts.</TableCaption>
+            <TableCaption>A list of accounts pending manual approval.</TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead>TikTok Username</TableHead>
                 <TableHead>Linked US Number</TableHead>
                 <TableHead>Verification Code</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">@{user.tiktokUsername}</TableCell>
-                  <TableCell>{getPhoneNumber(user.phoneNumberId)}</TableCell>
+                  <TableCell>{user.phoneNumber || 'Not Selected'}</TableCell>
                   <TableCell>{user.verificationCode}</TableCell>
                   <TableCell>
                     <Badge variant={user.isVerified ? 'default' : 'secondary'}>
-                      {user.isVerified ? 'Active' : 'Pending'}
+                      {user.isVerified ? 'Approved' : 'Pending'}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {!user.isVerified ? (
+                       <Button onClick={() => handleApprove(user.id)} size="sm">
+                          Approve
+                       </Button>
+                    ) : (
+                        <div className="flex items-center justify-end text-green-600">
+                           <CheckCircle className="h-5 w-5 mr-2"/>
+                           Approved
+                        </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -97,5 +104,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
