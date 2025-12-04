@@ -38,6 +38,16 @@ export default function LoginPage() {
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'Authentication service is not available.',
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       router.push('/admin');

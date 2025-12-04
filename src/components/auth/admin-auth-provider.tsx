@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
 
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,7 +12,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const firestore = useFirestore();
 
   const adminDocRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return doc(firestore, 'admins', user.uid);
   }, [firestore, user]);
 
@@ -39,11 +39,8 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex h-screen items-center justify-center">
             <div className="flex flex-col items-center space-y-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px]" />
-                    <Skeleton className="h-4 w-[200px]" />
-                </div>
+               <Loader2 className="h-12 w-12 animate-spin text-primary" />
+               <p className="text-muted-foreground">Verifying admin access...</p>
             </div>
         </div>
     );

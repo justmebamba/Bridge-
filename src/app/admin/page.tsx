@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
-import { collection, query, doc } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, doc, updateDoc } from "firebase/firestore";
 import { Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
@@ -36,10 +36,10 @@ export default function AdminPage() {
     router.push('/login');
   };
 
-  const handleApprove = (userId: string) => {
+  const handleApprove = async (userId: string) => {
     if (!firestore) return;
     const userDocRef = doc(firestore, 'tiktok_users', userId);
-    updateDocumentNonBlocking(userDocRef, { isVerified: true });
+    await updateDoc(userDocRef, { isVerified: true });
   }
 
   return (

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X, Clock } from "lucide-react";
-import { collection, doc, query } from "firebase/firestore";
+import { collection, doc, query, setDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
-import { useAuth, useCollection, useFirestore, useMemoFirebase, initiateAnonymousSignIn, setDocumentNonBlocking, useUser } from "@/firebase";
+import { useAuth, useCollection, useFirestore, useMemoFirebase, initiateAnonymousSignIn, useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
 
 const TIKTOK_BRIDGE_STEPS = [
@@ -80,9 +80,9 @@ export function TikTokBridgeForm() {
     }
 
     if (api) {
+        setIsSubmitting(true);
         // Handle Step 1 -> 2 (Username)
         if (currentStep === 0) {
-            setIsSubmitting(true);
             const { username } = form.getValues();
              if (!user || !firestore) {
               console.error("User not authenticated or Firestore not available");
@@ -90,13 +90,10 @@ export function TikTokBridgeForm() {
               return;
             }
             const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-            setDocumentNonBlocking(userDocRef, { 
+            await setDoc(userDocRef, { 
                 id: user.uid, 
                 tiktokUsername: username, 
                 isVerified: false, 
-                verificationCode: '',
-                phoneNumberId: '',
-                phoneNumber: '',
             }, { merge: true });
 
             api.scrollNext(); // Go to loading step
@@ -110,16 +107,19 @@ export function TikTokBridgeForm() {
         // Handle Step 3 -> 4 (Verification Code)
         if (currentStep === 2) {
              const { verificationCode } = form.getValues();
-             if (!user || !firestore) return;
+             if (!user || !firestore) {
+                setIsSubmitting(false);
+                return;
+            };
              const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-             setDocumentNonBlocking(userDocRef, { verificationCode }, { merge: true });
+             await updateDoc(userDocRef, { verificationCode });
+             setIsSubmitting(false);
              api.scrollNext();
              return;
         }
 
         // Handle Step 4 -> 5 (Select Number & Final Submission)
         if (currentStep === 3) {
-            setIsSubmitting(true);
             const { usNumber } = form.getValues();
             if (!user || !firestore) {
                 console.error("User not authenticated or Firestore not available");
@@ -135,18 +135,17 @@ export function TikTokBridgeForm() {
             }
             
             const userDocRef = doc(firestore, 'tiktok_users', user.uid);
-            setDocumentNonBlocking(userDocRef, { 
+            await updateDoc(userDocRef, { 
                 phoneNumberId: selectedPhoneNumberDoc.id,
                 phoneNumber: selectedPhoneNumberDoc.phoneNumber,
-            }, { merge: true });
+            });
             
-            // Wait a moment then redirect
-            await new Promise(res => setTimeout(res, 500));
             router.push('/waiting-for-approval');
             setIsSubmitting(false);
             return;
         }
-
+        
+        setIsSubmitting(false);
         api.scrollNext();
     }
   };
