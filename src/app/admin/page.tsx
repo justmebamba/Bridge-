@@ -12,13 +12,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, doc, updateDoc } from "firebase/firestore";
+import { collection, query, doc } from "firebase/firestore";
 import { Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 export default function AdminPage() {
@@ -41,21 +40,11 @@ export default function AdminPage() {
   const handleApprove = (userId: string) => {
     if (!firestore) return;
     const userDocRef = doc(firestore, 'tiktok_users', userId);
-    updateDoc(userDocRef, { isVerified: true })
-        .catch(error => {
-            errorEmitter.emit(
-                'permission-error',
-                new FirestorePermissionError({
-                    path: userDocRef.path,
-                    operation: 'update',
-                    requestResourceData: { isVerified: true }
-                })
-            )
-        });
+    updateDocumentNonBlocking(userDocRef, { isVerified: true });
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
+    <div className="container py-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>

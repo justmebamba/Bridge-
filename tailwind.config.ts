@@ -19,7 +19,6 @@ export default {
     extend: {
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
-        headline: ['Inter', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',

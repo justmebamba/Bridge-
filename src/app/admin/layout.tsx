@@ -1,4 +1,7 @@
 import { AdminAuthProvider } from "@/components/auth/admin-auth-provider";
+import { SiteHeader } from "@/components/layout/site-header";
+import { SiteFooter } from "@/components/layout/site-footer";
+
 
 export default function AdminLayout({
   children,
@@ -7,9 +10,7 @@ export default function AdminLayout({
 }) {
   return (
     <AdminAuthProvider>
-      <div className="min-h-screen bg-background">
         {children}
-      </div>
     </AdminAuthProvider>
   )
 }

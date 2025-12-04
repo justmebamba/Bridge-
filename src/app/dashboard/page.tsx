@@ -16,7 +16,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!submissionId) {
-      // If there's no ID in the URL, we can't show a dashboard.
       router.push('/');
     }
   }, [submissionId, router]);
@@ -40,7 +39,6 @@ export default function DashboardPage() {
   }
   
   if (!userProfile.isVerified) {
-    // If they land here but are not verified, send them back to the waiting page.
     if (typeof window !== 'undefined') {
         localStorage.setItem('submissionId', submissionId as string);
     }
@@ -49,11 +47,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center bg-background p-4 sm:p-6 md:p-8">
+    <div className="container flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-2xl">
         <div className="flex flex-col items-center justify-center space-y-4 mb-8">
           <TikTokLogo className="h-16 w-16" />
-          <h1 className="text-3xl font-bold tracking-tighter text-center font-headline">Your Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tighter text-center">Your Dashboard</h1>
           <p className="text-muted-foreground text-center max-w-xs">
             Welcome! Your account is approved and ready.
           </p>
@@ -82,6 +80,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }
