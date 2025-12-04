@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "success-1",
+      "description": "A successful creator celebrating on a beach.",
+      "imageUrl": "https://images.unsplash.com/photo-1628430622525-48bd6f2adfe9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjcmVhdG9yJTIwYmVhY2h8ZW58MHx8fHwxNzY0ODg4Nzk0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "creator beach"
+    },
+    {
+      "id": "success-2",
+      "description": "A creator working in a modern home office.",
+      "imageUrl": "https://images.unsplash.com/photo-1603201667106-0e3e0ae584c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjcmVhdG9yJTIwb2ZmaWNlfGVufDB8fHx8MTc2NDg4ODc5NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "creator office"
+    },
+    {
+      "id": "success-3",
+      "description": "An enthusiastic creator filming a video outdoors.",
+      "imageUrl": "https://images.unsplash.com/photo-1624717369095-ebacc7d68a40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjcmVhdG9yJTIwZmlsbWluZ3xlbnwwfHx8fDE3NjQ4ODg3OTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "creator filming"
+    }
+  ]
 }

@@ -10,17 +10,6 @@ export function SuccessStoriesSection() {
             See how these creators leveraged the TikTok Bridge to achieve their goals
           </h2>
         </div>
-        <div className="mt-16">
-          <div className="relative aspect-[9/16] w-full max-w-sm mx-auto">
-             <Image 
-                src="https://picsum.photos/seed/bahamas/600/900"
-                alt="A creator enjoying a vacation"
-                data-ai-hint="man vacation"
-                fill
-                className="rounded-xl object-cover shadow-lg"
-             />
-          </div>
-        </div>
       </div>
       <SuccessCarousel />
     </section>
