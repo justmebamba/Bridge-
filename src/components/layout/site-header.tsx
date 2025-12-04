@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { TikTokForBusinessLogo } from "../icons/tiktok-for-business-logo"
+import { TikTokLogo } from "../icons/tiktok-logo"
 import { Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
@@ -7,10 +7,13 @@ import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container flex h-20 items-center justify-between">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <TikTokForBusinessLogo className="h-7 fill-foreground" />
+            <TikTokLogo className="h-8 w-8" />
+            <span className="font-bold text-xl tracking-tight">
+              Monetization Bridge
+            </span>
           </Link>
         </div>
 
