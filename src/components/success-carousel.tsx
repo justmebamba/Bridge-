@@ -19,9 +19,9 @@ const successStories = [
         creator: "@nadrionthego",
         description: "Find out how he was able to boost brand deals with our US-based number.",
         stats: [
-            { value: "45%", label: "increase in brand deals" },
-            { value: "30%", label: "growth in affiliate sales" },
-            { value: "25%", label: "increase in follower engagement" },
+            { value: "38%", label: "increase in brand deal inquiries" },
+            { value: "22%", label: "growth in affiliate income" },
+            { value: "15%", label: "higher audience retention" },
         ],
         image: PlaceHolderImages.find(p => p.id === "success-1"),
     },
@@ -29,9 +29,9 @@ const successStories = [
         creator: "@dnaesoraya",
         description: "Learn how she expanded her audience and secured major collaborations.",
         stats: [
-            { value: "60%", label: "increase in sponsorship inquiries" },
-            { value: "40%", label: "growth in merchandise sales" },
-            { value: "50%", label: "increase in cross-platform followers" },
+            { value: "3", label: "major brand collaborations secured" },
+            { value: "25%", label: "uplift in merch sales" },
+            { value: "100k+", label: "new followers across platforms" },
         ],
         image: PlaceHolderImages.find(p => p.id === "success-2"),
     },
@@ -39,9 +39,9 @@ const successStories = [
         creator: "@jenniferblinky",
         description: "Discover how she turned her content into a sustainable business.",
         stats: [
-            { value: "75%", label: "increase in monthly revenue" },
-            { value: "55%", label: "growth in exclusive content subscribers" },
-            { value: "40%", label: "increase in audience retention" },
+            { value: "50k+", label: "new channel subscribers" },
+            { value: "60%", label: "increase in average stream viewership" },
+            { value: "2x", label: "monthly revenue from partnerships" },
         ],
         image: PlaceHolderImages.find(p => p.id === "success-3"),
     }
