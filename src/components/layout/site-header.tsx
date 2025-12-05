@@ -22,6 +22,7 @@ export function SiteHeader({ onGetStarted }: { onGetStarted: () => void }) {
             <Link href="/#features" className="text-foreground/60 transition-colors hover:text-foreground/80">Features</Link>
             <Link href="/#about" className="text-foreground/60 transition-colors hover:text-foreground/80">About</Link>
             <Link href="/#contact" className="text-foreground/60 transition-colors hover:text-foreground/80">Contact Us</Link>
+            <Link href="/#contact" className="text-foreground/60 transition-colors hover:text-foreground/80">Support</Link>
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
@@ -42,9 +43,9 @@ export function SiteHeader({ onGetStarted }: { onGetStarted: () => void }) {
                         <Link href="/#features" className="flex w-full items-center py-2 text-lg font-semibold">Features</Link>
                         <Link href="/#about" className="flex w-full items-center py-2 text-lg font-semibold">About</Link>
                         <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Contact Us</Link>
+                        <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Support</Link>
                         <hr className="my-2"/>
                         <Button onClick={onGetStarted} size="lg">Get Started</Button>
-                        <Link href="/login" className="text-center text-sm font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin Login</Link>
                     </div>
                 </SheetContent>
             </Sheet>
