@@ -15,9 +15,15 @@ export default function Home() {
   return (
     <div>
       <TikTokBridgeHero onGetStarted={() => setIsFormOpen(true)} />
-      <AboutBridgingSection onGetStarted={() => setIsFormOpen(true)} />
-      <FeaturesSection />
-      <SuccessStoriesSection />
+      <section id="about">
+        <AboutBridgingSection onGetStarted={() => setIsFormOpen(true)} />
+      </section>
+      <section id="features">
+        <FeaturesSection />
+      </section>
+      <section id="success-stories">
+        <SuccessStoriesSection />
+      </section>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-md p-0 bg-transparent border-none shadow-none">

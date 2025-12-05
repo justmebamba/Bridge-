@@ -1,3 +1,4 @@
+
 import Link from "next/link"
 import { TikTokLogo } from "../icons/tiktok-logo"
 import { Menu } from "lucide-react"
@@ -18,9 +19,9 @@ export function SiteHeader() {
         </div>
 
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link href="#" className="text-foreground/60 transition-colors hover:text-foreground/80">Features</Link>
-            <Link href="#" className="text-foreground/60 transition-colors hover:text-foreground/80">Pricing</Link>
-            <Link href="#" className="text-foreground/60 transition-colors hover:text-foreground/80">Support</Link>
+            <Link href="/#features" className="text-foreground/60 transition-colors hover:text-foreground/80">Features</Link>
+            <Link href="/#success-stories" className="text-foreground/60 transition-colors hover:text-foreground/80">Success Stories</Link>
+            <Link href="/#about" className="text-foreground/60 transition-colors hover:text-foreground/80">About</Link>
             <Link href="/login" className="text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
         </nav>
 
@@ -34,9 +35,9 @@ export function SiteHeader() {
                 </SheetTrigger>
                 <SheetContent side="right">
                     <div className="grid gap-4 py-6">
-                        <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold">Features</Link>
-                        <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold">Pricing</Link>
-                        <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold">Support</Link>
+                        <Link href="/#features" className="flex w-full items-center py-2 text-lg font-semibold">Features</Link>
+                        <Link href="/#success-stories" className="flex w-full items-center py-2 text-lg font-semibold">Success Stories</Link>
+                        <Link href="/#about" className="flex w-full items-center py-2 text-lg font-semibold">About</Link>
                         <Link href="/login" className="flex w-full items-center py-2 text-lg font-semibold">Admin</Link>
                     </div>
                 </SheetContent>
