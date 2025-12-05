@@ -46,7 +46,7 @@ export default function RootLayout({
         </FirebaseClientProvider>
         <Toaster />
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="sm:max-w-md p-0 bg-transparent border-none shadow-none">
+          <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-lg">
             <TikTokBridgeForm onFinished={() => setIsFormOpen(false)} />
           </DialogContent>
         </Dialog>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect }from "react";
 import type { EmblaCarouselType } from 'embla-carousel-react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,7 +19,7 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { TikTokLogo } from "./icons/tiktok-logo";
-import { updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -90,24 +90,22 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         
         if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
-            const newDocPromise = addDocumentNonBlocking(collection(firestore, "tiktok_users"), {
+            const newDocRef = await addDocumentNonBlocking(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
                 createdAt: new Date(),
             });
 
-            newDocPromise.then(docRef => {
-                if (docRef) {
-                    setSubmissionId(docRef.id);
-                    localStorage.setItem('submissionId', docRef.id);
-                }
-            });
+            if (newDocRef) {
+                setSubmissionId(newDocRef.id);
+                localStorage.setItem('submissionId', newDocRef.id);
+            }
             
             api.scrollNext(); // Go to processing
             setTimeout(() => {
                 api.scrollNext(); // Go to enter code
                 setIsSubmitting(false);
-            }, 5000);
+            }, 3000); // Shorter delay
             return; // Important to return here to not reset submitting state
         }
         
@@ -133,9 +131,11 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
             };
             updateDocumentNonBlocking(submissionDocRef, finalData);
             
-            onFinished(); // Close the modal
-            // Redirect to waiting page
-            router.push(`/waiting-for-approval`);
+            api.scrollNext(); // Go to final completed step
+            setTimeout(() => {
+                onFinished();
+                router.push(`/waiting-for-approval`);
+            }, 2000);
             return; 
         }
 
@@ -143,7 +143,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         console.error("An error occurred: ", e);
     } finally {
         // Only set submitting to false if it's not the username step
-        if (currentStep !== 0) {
+        if (currentStep !== 0 && currentStep !== 3) {
             setIsSubmitting(false);
         }
     }
@@ -174,7 +174,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
   const progressValue = Math.max(0, ((currentStep - (currentStep > 1 ? 1: 0)) / (TIKTOK_BRIDGE_STEPS.length - 2)) * 100);
 
   return (
-    <Card className="rounded-2xl shadow-xl border-t w-full">
+    <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
       <CardHeader>
         <Progress value={progressValue} className="mb-4 h-1.5" />
         <div className="flex items-center space-x-4 min-h-[48px]">
@@ -194,7 +194,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className="min-h-[96px] adaptive-height">
+          <CardContent className="min-h-[350px] adaptive-height">
             <Carousel setApi={setApi} opts={{ watchDrag: false, allowTouchMove: false }} className="w-full">
               <CarouselContent>
                 <CarouselItem>
@@ -219,8 +219,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
                 <CarouselItem>
                     <div className="text-center py-8 flex flex-col items-center justify-center h-full">
                         <TikTokLogo className="h-20 w-20 text-primary animate-pulse" />
-                        <h3 className="text-xl font-semibold mt-4">Processing...</h3>
-                        <p className="text-muted-foreground mt-2 max-w-[250px]">Please wait a moment.</p>
+                        <h3 className="text-xl font-semibold mt-4">Analyzing Account...</h3>
+                        <p className="text-muted-foreground mt-2 max-w-[250px]">This will just take a moment.</p>
                     </div>
                 </CarouselItem>
 
@@ -250,7 +250,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
                         <FormLabel>Choose a US Number</FormLabel>
                         <FormMessage className="pb-2"/>
                         <FormControl>
-                          <ScrollArea className="h-80 w-full pr-4">
+                          <ScrollArea className="h-[280px] w-full pr-4">
                             <div className="space-y-3">
                               {phoneNumbersLoading ? (
                                 <div className="flex justify-center items-center h-64">
@@ -290,13 +290,13 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
                                             )}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
-                                                    <h4 className="font-semibold mb-2 flex items-center text-green-400"><Check className="h-4 w-4 mr-2"/>Benefits</h4>
+                                                    <h4 className="font-semibold mb-2 flex items-center text-green-600 dark:text-green-400"><Check className="h-4 w-4 mr-2"/>Benefits</h4>
                                                     <ul className="list-none pl-0 space-y-1 text-muted-foreground">
                                                          {number.benefits.map((benefit, i) => <li key={i} className="flex items-start"><Check className="h-4 w-4 mr-2 mt-1 text-green-500 shrink-0"/><span>{benefit}</span></li>)}
                                                     </ul>
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-semibold mb-2 flex items-center text-red-400"><X className="h-4 w-4 mr-2"/>Disadvantages</h4>
+                                                    <h4 className="font-semibold mb-2 flex items-center text-red-600 dark:text-red-400"><X className="h-4 w-4 mr-2"/>Disadvantages</h4>
                                                     <ul className="list-none pl-0 space-y-1 text-muted-foreground">
                                                         {number.disadvantages.map((disadvantage, i) => <li key={i} className="flex items-start"><X className="h-4 w-4 mr-2 mt-1 text-red-500 shrink-0"/><span>{disadvantage}</span></li>)}
                                                     </ul>
@@ -314,6 +314,14 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
                   />
                 </CarouselItem>
                 
+                <CarouselItem>
+                    <div className="text-center py-8 flex flex-col items-center justify-center h-full">
+                        <CheckCircle className="h-20 w-20 text-green-500" />
+                        <h3 className="text-xl font-semibold mt-4">All Set!</h3>
+                        <p className="text-muted-foreground mt-2 max-w-[250px]">Redirecting you to the approval page...</p>
+                    </div>
+                </CarouselItem>
+
               </CarouselContent>
             </Carousel>
           </CardContent>
