@@ -5,7 +5,7 @@ import { Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
 
-export function SiteHeader() {
+export function SiteHeader({ onGetStarted }: { onGetStarted: () => void }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-20 items-center justify-between">
@@ -20,10 +20,14 @@ export function SiteHeader() {
 
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <Link href="/#features" className="text-foreground/60 transition-colors hover:text-foreground/80">Features</Link>
-            <Link href="/#success-stories" className="text-foreground/60 transition-colors hover:text-foreground/80">Success Stories</Link>
             <Link href="/#about" className="text-foreground/60 transition-colors hover:text-foreground/80">About</Link>
-            <Link href="/login" className="text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
+            <Link href="/#contact" className="text-foreground/60 transition-colors hover:text-foreground/80">Contact Us</Link>
         </nav>
+
+        <div className="hidden md:flex items-center gap-4">
+            <Button onClick={onGetStarted}>Get Started</Button>
+            <Link href="/login" className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
+        </div>
 
         <div className="md:hidden">
             <Sheet>
@@ -36,9 +40,11 @@ export function SiteHeader() {
                 <SheetContent side="right">
                     <div className="grid gap-4 py-6">
                         <Link href="/#features" className="flex w-full items-center py-2 text-lg font-semibold">Features</Link>
-                        <Link href="/#success-stories" className="flex w-full items-center py-2 text-lg font-semibold">Success Stories</Link>
                         <Link href="/#about" className="flex w-full items-center py-2 text-lg font-semibold">About</Link>
-                        <Link href="/login" className="flex w-full items-center py-2 text-lg font-semibold">Admin</Link>
+                        <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Contact Us</Link>
+                        <hr className="my-2"/>
+                        <Button onClick={onGetStarted} size="lg">Get Started</Button>
+                        <Link href="/login" className="text-center text-sm font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin Login</Link>
                     </div>
                 </SheetContent>
             </Sheet>

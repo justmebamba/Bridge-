@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "./ui/button";
-import { TikTokBridgeForm } from "./tiktok-bridge-form";
-import { Dialog, DialogContent } from "./ui/dialog";
 import Image from "next/image";
+import { Button } from "./ui/button";
 
 export function TikTokBridgeHero({ onGetStarted }: { onGetStarted: () => void }) {
 
