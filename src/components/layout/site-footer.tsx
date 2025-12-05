@@ -1,16 +1,36 @@
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { Facebook } from "lucide-react";
+import { TikTokForBusinessLogo } from "@/components/icons/tiktok-for-business-logo";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {
   return (
-    <footer className={cn("py-6 md:px-8 md:py-8", className)}>
-      <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
-        <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-          Built by your friendly neighborhood AI. The source code is available on GitHub.
-        </p>
-        <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-            Contact us at contact@example.com
-        </p>
+    <footer className={cn("py-12 md:px-8 md:py-16 bg-background", className)}>
+      <div className="container">
+        <div className="flex flex-col items-start gap-8">
+          <TikTokForBusinessLogo className="h-7 text-foreground" />
+          
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm text-muted-foreground">
+            <Link href="#" className="hover:text-primary transition-colors">
+              Terms & Policies
+            </Link>
+            <Link href="#" className="hover:text-primary transition-colors">
+              Help
+            </Link>
+            <Link href="#" className="hover:text-primary transition-colors">
+              Contact Us
+            </Link>
+            <Link href="#" className="flex items-center gap-2 hover:text-primary transition-colors">
+              Follow Us <Facebook className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <Button variant="outline" className="rounded-full">
+            English
+          </Button>
+        </div>
       </div>
     </footer>
-  )
+  );
 }
