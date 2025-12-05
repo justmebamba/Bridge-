@@ -7,6 +7,7 @@ import { SuccessStoriesSection } from "@/components/success-stories-section";
 import { AboutBridgingSection } from "@/components/about-bridging-section";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TikTokBridgeForm } from "@/components/tiktok-bridge-form";
+import { FeaturesSection } from "@/components/features-section";
 
 export default function Home() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -15,6 +16,7 @@ export default function Home() {
     <div>
       <TikTokBridgeHero onGetStarted={() => setIsFormOpen(true)} />
       <AboutBridgingSection onGetStarted={() => setIsFormOpen(true)} />
+      <FeaturesSection />
       <SuccessStoriesSection />
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
