@@ -19,7 +19,7 @@ const features = [
   },
   {
     icon: <Zap className="h-8 w-8 text-primary" />,
-    title: "Simple 5-Step Setup",
+    title: "Simple 4-Step Setup",
     description: "Our guided form makes the bridging process quick and straightforward, getting you set up in minutes.",
   },
 ];
