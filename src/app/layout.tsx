@@ -11,7 +11,6 @@ import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { TikTokBridgeForm } from '@/components/tiktok-bridge-form';
 import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
-import Home from './page';
 import { usePathname } from 'next/navigation';
 
 
@@ -35,10 +34,10 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
             <SiteHeader onGetStarted={() => setIsFormOpen(true)} />
-             {isHomePage && <TikTokBridgeHero onGetStarted={() => setIsFormOpen(true)} />}
+            {isHomePage && <TikTokBridgeHero onGetStarted={() => setIsFormOpen(true)} />}
             <main className="flex-1">
-              {isHomePage ? <Home onGetStarted={() => setIsFormOpen(true)} /> : children}
-              </main>
+              {children}
+            </main>
             <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
                 <SiteFooter />
             </div>
