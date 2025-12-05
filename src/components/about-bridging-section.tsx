@@ -1,7 +1,5 @@
 import { Button } from "./ui/button";
-import { TikTokForBusinessLogo } from "./icons/tiktok-for-business-logo";
 import { BarChart, CheckCircle, Users } from "lucide-react";
-
 
 const stats = [
     { value: "1B+", label: "Monthly Active Users", icon: Users },
@@ -9,19 +7,21 @@ const stats = [
     { value: "90%", label: "Open the app every day", icon: BarChart },
 ];
 
-export function AboutBridgingSection() {
+export function AboutBridgingSection({ onGetStarted }: { onGetStarted: () => void }) {
     return (
         <section className="bg-black text-white py-20 sm:py-32">
             <div className="container mx-auto px-4">
                 <div className="max-w-4xl text-center mx-auto">
                     <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                        About TikTok Bridging
+                        What is TikTok Bridging?
                     </h2>
                     <p className="mt-4 text-lg text-muted-foreground">
-                        Unlock global monetization opportunities by bridging your TikTok account to a US-based number.
+                        TikTok Bridging is a service that links your account to a verified, US-based phone number. 
+                        This allows creators from non-US regions to access monetization features typically reserved for the US market, like the Creator Fund and TikTok Shop. 
+                        We handle the secure setup so you can focus on what you do best: creating content.
                     </p>
                     <div className="mt-10">
-                        <Button size="lg" className="rounded-full px-8 text-lg" variant="outline">
+                        <Button size="lg" className="rounded-full px-8 text-lg" variant="outline" onClick={onGetStarted}>
                             Get Started
                         </Button>
                     </div>

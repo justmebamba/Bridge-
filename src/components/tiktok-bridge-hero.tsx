@@ -6,8 +6,7 @@ import { TikTokBridgeForm } from "./tiktok-bridge-form";
 import { Dialog, DialogContent } from "./ui/dialog";
 import Image from "next/image";
 
-export function TikTokBridgeHero() {
-  const [isFormOpen, setIsFormOpen] = useState(false);
+export function TikTokBridgeHero({ onGetStarted }: { onGetStarted: () => void }) {
 
   return (
     <>
@@ -43,19 +42,13 @@ export function TikTokBridgeHero() {
         {/* White bottom section with button */}
         <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
             <div className="container px-4 pt-16 pb-16 text-center">
-                 <Button size="lg" className="rounded-full px-8 text-lg" onClick={() => setIsFormOpen(true)}>
+                 <Button size="lg" className="rounded-full px-8 text-lg" onClick={onGetStarted}>
                   Get started
                 </Button>
             </div>
         </div>
 
       </section>
-
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-md p-0 bg-transparent border-none shadow-none">
-          <TikTokBridgeForm onFinished={() => setIsFormOpen(false)} />
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
