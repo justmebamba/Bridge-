@@ -1,4 +1,4 @@
-import { DollarSign, Store, ShieldCheck, Zap, UserCheck, LayoutDashboard } from "lucide-react";
+import { DollarSign, Store, ShieldCheck, Zap } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "./ui/card";
 
 const features = [
@@ -22,16 +22,6 @@ const features = [
     title: "Simple 5-Step Setup",
     description: "Our guided form makes the bridging process quick and straightforward, getting you set up in minutes.",
   },
-  {
-    icon: <UserCheck className="h-8 w-8 text-primary" />,
-    title: "Manual Admin Approval",
-    description: "Every application is manually reviewed by our team to ensure quality and prevent misuse of the service.",
-  },
-  {
-    icon: <LayoutDashboard className="h-8 w-8 text-primary" />,
-    title: "Personal Dashboard",
-    description: "Once approved, you get access to a personal dashboard to view your linked account details and status.",
-  },
 ];
 
 export function FeaturesSection() {
@@ -47,7 +37,7 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-2">
           {features.map((feature) => (
             <Card key={feature.title} className="text-center flex flex-col items-center">
               <CardHeader>
