@@ -76,6 +76,12 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
+    defaultValues: {
+      username: '',
+      verificationCode: '',
+      usNumber: '',
+      finalCode: '',
+    },
   });
     
   useEffect(() => {
@@ -421,3 +427,5 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
+
+    
