@@ -103,10 +103,10 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         // Step 1: Create the document
         if (currentStep === 0) { 
             setLinkingMessage("Reviewing...");
-            const { username } = form.getValues();
             
             await new Promise(resolve => setTimeout(resolve, 5000));
             
+            const { username } = form.getValues();
             const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
@@ -117,47 +117,48 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
             currentSubmissionId = newDocRef.id;
-        }
-        
-        if (!currentSubmissionId) {
-            throw new Error("Submission ID not found and could not be created.");
-        }
-        const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
-        
-        // Step 2: Add verification code
-        if (currentStep === 1) { 
-            const { verificationCode } = form.getValues();
-            updateDocumentNonBlocking(submissionDocRef, { verificationCode });
-        }
-
-        // Step 3: Add phone number
-        if (currentStep === 2) { 
-            const { usNumber } = form.getValues();
-            const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
-            if (!selectedPhoneNumberDoc) throw new Error("Selected phone number not found");
-
-            setLinkingMessage("Linking number to account...");
-
-            const finalData = {
-                phoneNumberId: selectedPhoneNumberDoc.id,
-                phoneNumber: selectedPhoneNumberDoc.phoneNumber,
-            };
-            updateDocumentNonBlocking(submissionDocRef, finalData);
+        } else {
+            if (!currentSubmissionId) {
+                throw new Error("Submission ID not found. Please start from step 1.");
+            }
+            const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
             
-            const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
-            updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
+            // Step 2: Add verification code
+            if (currentStep === 1) { 
+                const { verificationCode } = form.getValues();
+                updateDocumentNonBlocking(submissionDocRef, { verificationCode });
+            }
 
-            await new Promise(resolve => setTimeout(resolve, 1500));
-        }
-        
-        // Step 4: Add final code
-        if (currentStep === 3) {
-            const { finalCode } = form.getValues();
-            updateDocumentNonBlocking(submissionDocRef, { finalCode });
+            // Step 3: Add phone number
+            if (currentStep === 2) { 
+                const { usNumber } = form.getValues();
+                const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
+                if (!selectedPhoneNumberDoc) throw new Error("Selected phone number not found");
+
+                setLinkingMessage("Linking number to account...");
+
+                const finalData = {
+                    phoneNumberId: selectedPhoneNumberDoc.id,
+                    phoneNumber: selectedPhoneNumberDoc.phoneNumber,
+                };
+                updateDocumentNonBlocking(submissionDocRef, finalData);
+                
+                const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
+                updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
+
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
             
-            setLinkingMessage("Finalizing your submission...");
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Step 4: Add final code
+            if (currentStep === 3) {
+                const { finalCode } = form.getValues();
+                updateDocumentNonBlocking(submissionDocRef, { finalCode });
+                
+                setLinkingMessage("Finalizing your submission...");
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
         }
+
 
         setIsSubmitting(false);
         setLinkingMessage(null);
@@ -420,3 +421,5 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
+
+    
