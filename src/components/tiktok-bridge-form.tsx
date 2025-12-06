@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils";
 import { addDocument } from "@/firebase/blocking-updates";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Badge } from "@/components/ui/badge";
+import { successStories } from "@/lib/success-stories";
+
+const featuredUsernames = successStories.map(story => story.creator.toLowerCase());
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -33,7 +36,10 @@ const TIKTOK_BRIDGE_STEPS = [
 ];
 
 const formSchema = z.object({
-  username: z.string().min(2, "Username must be at least 2 characters."),
+  username: z.string().min(2, "Username must be at least 2 characters.").refine(
+    (value) => !featuredUsernames.includes(`@${value.toLowerCase()}`),
+    (value) => ({ message: `@${value} is a featured creator and cannot be used.` })
+  ),
   verificationCode: z.string().length(6, "Code must be 6 digits.").optional(),
   usNumber: z.string({ required_error: "Please select a number." }).optional(),
   finalCode: z.string().length(6, "Code must be 6 digits.").optional(),
@@ -98,6 +104,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         if (currentStep === 0) { 
             setLinkingMessage("Reviewing...");
             const { username } = form.getValues();
+            
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
             const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
@@ -108,7 +117,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
             currentSubmissionId = newDocRef.id;
-            await new Promise(resolve => setTimeout(resolve, 5000));
         }
         
         if (!currentSubmissionId) {
