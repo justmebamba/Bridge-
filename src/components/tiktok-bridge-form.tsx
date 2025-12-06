@@ -19,7 +19,8 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { TikTokLogo } from "./icons/tiktok-logo";
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { addDocument } from "@/firebase/blocking-updates";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -90,7 +91,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         
         if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
-            const newDocRef = await addDocumentNonBlocking(collection(firestore, "tiktok_users"), {
+            const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
                 createdAt: new Date(),
