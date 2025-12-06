@@ -15,16 +15,16 @@ export default function Home() {
   };
   return (
     <>
-      <section id="get-started" className="py-16 md:py-24 bg-background">
-        <div className="container">
-          <TikTokBridgeForm onFinished={() => router.push('/waiting-for-approval')} />
-        </div>
-      </section>
       <section id="features">
         <FeaturesSection />
       </section>
       <section id="about">
         <AboutBridgingSection onGetStarted={handleGetStarted}/>
+      </section>
+      <section id="get-started" className="py-16 md:py-24 bg-background">
+        <div className="container">
+          <TikTokBridgeForm onFinished={() => router.push('/waiting-for-approval')} />
+        </div>
       </section>
       <section id="success-stories">
         <SuccessStoriesSection />
