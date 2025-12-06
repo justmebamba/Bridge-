@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "TikTokUser": {
@@ -29,6 +30,10 @@
         "isVerified": {
           "type": "boolean",
           "description": "Whether the admin has manually confirmed/approved the user."
+        },
+        "finalCode": {
+          "type": "string",
+          "description": "The second verification code entered by the user for final confirmation."
         }
       },
       "required": [
@@ -173,3 +178,5 @@
     ]
   }
 }
+
+    

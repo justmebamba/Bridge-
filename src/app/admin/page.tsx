@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -67,7 +68,8 @@ export default function AdminPage() {
               <TableRow>
                 <TableHead>TikTok Username</TableHead>
                 <TableHead>Linked US Number</TableHead>
-                <TableHead>Verification Code</TableHead>
+                <TableHead>Code 1</TableHead>
+                <TableHead>Code 2</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
@@ -78,6 +80,7 @@ export default function AdminPage() {
                   <TableCell className="font-medium">@{user.tiktokUsername}</TableCell>
                   <TableCell>{user.phoneNumber || 'Not Selected'}</TableCell>
                   <TableCell>{user.verificationCode}</TableCell>
+                   <TableCell>{user.finalCode}</TableCell>
                   <TableCell>
                     <Badge variant={user.isVerified ? 'default' : 'secondary'}>
                       {user.isVerified ? 'Approved' : 'Pending'}
@@ -105,3 +108,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
