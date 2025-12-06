@@ -91,23 +91,25 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         
         if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
+            // Use the blocking addDocument to ensure we get an ID before proceeding
             const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
+                id: '', // Will be overwritten by doc id
                 createdAt: new Date(),
             });
 
-            if (newDocRef) {
-                setSubmissionId(newDocRef.id);
-                localStorage.setItem('submissionId', newDocRef.id);
-            }
+            // Update the new doc with its own ID
+            updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
+            setSubmissionId(newDocRef.id);
+            localStorage.setItem('submissionId', newDocRef.id);
             
             api.scrollNext(); // Go to processing
             setTimeout(() => {
                 api.scrollNext(); // Go to enter code
                 setIsSubmitting(false);
-            }, 3000); // Shorter delay
-            return; // Important to return here to not reset submitting state
+            }, 2000); 
+            return; 
         }
         
         if (currentStep === 2) { // Submitting verification code
@@ -132,6 +134,10 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
             };
             updateDocumentNonBlocking(submissionDocRef, finalData);
             
+            // Also mark the phone number as unavailable
+            const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
+            updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
+
             api.scrollNext(); // Go to final completed step
             setTimeout(() => {
                 onFinished();
@@ -143,7 +149,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
     } catch (e) {
         console.error("An error occurred: ", e);
     } finally {
-        // Only set submitting to false if it's not the username step
         if (currentStep !== 0 && currentStep !== 3) {
             setIsSubmitting(false);
         }
