@@ -26,7 +26,9 @@ export function SiteHeader({ onGetStarted }: { onGetStarted: () => void }) {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-            <Button onClick={onGetStarted}>Get Started</Button>
+            <Button asChild>
+                <Link href="/#get-started" onClick={(e) => { e.preventDefault(); onGetStarted();}}>Get Started</Link>
+            </Button>
             <Link href="/login" className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
         </div>
 

@@ -7,11 +7,9 @@ import { Inter } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
-import { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { TikTokBridgeForm } from '@/components/tiktok-bridge-form';
-import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
 import { usePathname } from 'next/navigation';
+import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
+import { useRouter } from 'next/navigation';
 
 
 const fontSans = Inter({
@@ -24,17 +22,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const isHomePage = pathname === '/';
+
+  const handleGetStarted = () => {
+    if (isHomePage) {
+      document.getElementById('get-started')?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      router.push('/#get-started');
+    }
+  };
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
         <FirebaseClientProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
-            <SiteHeader onGetStarted={() => setIsFormOpen(true)} />
-            {isHomePage && <TikTokBridgeHero onGetStarted={() => setIsFormOpen(true)} />}
+            <SiteHeader onGetStarted={handleGetStarted} />
+            {isHomePage && <TikTokBridgeHero onGetStarted={handleGetStarted} />}
             <main className="flex-1">
               {children}
             </main>
@@ -44,11 +50,6 @@ export default function RootLayout({
           </div>
         </FirebaseClientProvider>
         <Toaster />
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-lg">
-            <TikTokBridgeForm onFinished={() => setIsFormOpen(false)} />
-          </DialogContent>
-        </Dialog>
       </body>
     </html>
   );
