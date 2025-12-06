@@ -126,57 +126,23 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "tiktok_users/{tiktokUserId}",
-        "definition": {
-          "entityName": "TikTokUser",
-          "schema": {
-            "$ref": "#/backend/entities/TikTokUser"
-          },
-          "description": "Stores TikTok user data pending admin approval.",
-          "params": [
-            {
-              "name": "tiktokUserId",
-              "description": "The unique identifier for the TikTok user."
-            }
-          ]
-        }
+    "/tiktok_users/{tiktokUserId}": {
+      "schema": {
+        "$ref": "#/entities/TikTokUser"
       },
-      {
-        "path": "phone_numbers/{phoneNumberId}",
-        "definition": {
-          "entityName": "PhoneNumber",
-          "schema": {
-            "$ref": "#/backend/entities/PhoneNumber"
-          },
-          "description": "Stores US phone numbers and their availability status.",
-          "params": [
-            {
-              "name": "phoneNumberId",
-              "description": "The unique identifier for the phone number."
-            }
-          ]
-        }
+      "description": "Stores TikTok user data pending admin approval."
+    },
+    "/phone_numbers/{phoneNumberId}": {
+      "schema": {
+        "$ref": "#/entities/PhoneNumber"
       },
-      {
-        "path": "admins/{adminId}",
-        "definition": {
-          "entityName": "Admin",
-          "schema": {
-            "$ref": "#/backend/entities/Admin"
-          },
-          "description": "Stores admin user credentials for control panel access.",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The unique identifier for the admin user."
-            }
-          ]
-        }
-      }
-    ]
+      "description": "Stores US phone numbers and their availability status."
+    },
+    "/admins/{adminId}": {
+      "schema": {
+        "$ref": "#/entities/Admin"
+      },
+      "description": "Stores admin user credentials for control panel access."
+    }
   }
 }
-
-    
