@@ -89,8 +89,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     if (!api) return;
     
     setIsSubmitting(true);
-    setLinkingMessage(null);
-
+    
     try {
         if (!firestore) throw new Error("Firestore not available");
         let currentSubmissionId = submissionId;
@@ -105,12 +104,11 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 id: '', // Placeholder
                 createdAt: new Date(),
             });
-            updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
+            await updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
             currentSubmissionId = newDocRef.id;
             await new Promise(resolve => setTimeout(resolve, 5000));
-            setLinkingMessage(null);
         }
         
         if (!currentSubmissionId) {
@@ -142,7 +140,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
 
             await new Promise(resolve => setTimeout(resolve, 1500));
-            setLinkingMessage(null);
         }
         
         // Step 4: Add final code
@@ -154,6 +151,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
+        setIsSubmitting(false);
+        setLinkingMessage(null);
         api.scrollNext();
 
         if (currentStep === TIKTOK_BRIDGE_STEPS.length - 2) {
@@ -168,8 +167,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
 
     } catch (e) {
         console.error("An error occurred: ", e);
-    } finally {
         setIsSubmitting(false);
+        setLinkingMessage(null);
     }
   };
 
@@ -222,7 +221,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
               <CarouselContent>
                 {/* Step 1: Username */}
                 <CarouselItem>
-                    {linkingMessage ? (
+                    {isSubmitting && linkingMessage ? (
                         <div className="flex flex-col items-center justify-center h-[280px] text-center">
                             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                             <p className="text-muted-foreground">{linkingMessage}</p>
@@ -285,7 +284,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                         <FormMessage className="pb-2"/>
                         <FormControl>
                           <ScrollArea className="h-[280px] w-full pr-4">
-                            {linkingMessage ? (
+                            {isSubmitting && linkingMessage ? (
                                 <div className="flex flex-col items-center justify-center h-full text-center">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                                     <p className="text-muted-foreground">{linkingMessage}</p>
@@ -352,7 +351,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
 
                 {/* Step 4: Final Code */}
                 <CarouselItem>
-                   {linkingMessage ? (
+                   {isSubmitting && linkingMessage ? (
                         <div className="flex flex-col items-center justify-center h-[280px] text-center">
                             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                             <p className="text-muted-foreground">{linkingMessage}</p>
@@ -413,5 +412,3 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
-
-    
