@@ -9,7 +9,7 @@ import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { usePathname } from 'next/navigation';
 import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
-import { useRouter } from 'next/navigation';
+import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 
 
 const fontSans = Inter({
@@ -23,7 +23,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const router = useRouter();
   const isHomePage = pathname === '/';
 
   return (
@@ -40,6 +39,7 @@ export default function RootLayout({
                 <SiteFooter />
             </div>
           </div>
+          <CookieConsentBanner />
         </FirebaseClientProvider>
         <Toaster />
       </body>
