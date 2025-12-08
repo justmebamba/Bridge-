@@ -52,6 +52,7 @@ export default function JoinPage() {
     try {
       await createUserWithEmailAndPassword(auth, data.email, data.password);
       router.push('/start');
+      router.refresh(); // Ensures redirect is processed
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Sign Up Failed', description: error.message });
     } finally {
@@ -69,6 +70,7 @@ export default function JoinPage() {
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       router.push('/start');
+      router.refresh(); // Ensures redirect is processed
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Sign In Failed', description: error.message });
     } finally {

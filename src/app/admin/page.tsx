@@ -100,6 +100,7 @@ export default function AdminPage() {
                   <TableCell className="text-right">
                     {!user.isVerified ? (
                        <Button onClick={() => handleApprove(user.id)} size="sm">
+                          <CheckCircle className="h-4 w-4 mr-2"/>
                           Approve
                        </Button>
                     ) : (
