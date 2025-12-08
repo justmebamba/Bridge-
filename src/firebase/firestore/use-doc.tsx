@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '../provider';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
@@ -44,13 +45,15 @@ export function useDoc<T = any>(
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start as true
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const { isUserLoading } = useUser();
 
   useEffect(() => {
-    if (!memoizedDocRef) {
+    // If the auth state is still loading, or no docRef is provided, wait.
+    if (isUserLoading || !memoizedDocRef) {
+      setIsLoading(true); // Keep loading until auth is ready and docRef is provided
       setData(null);
-      setIsLoading(false); // Set to false if no docRef is provided
       setError(null);
       return;
     }
@@ -80,13 +83,12 @@ export function useDoc<T = any>(
         setData(null)
         setIsLoading(false)
 
-        // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
       }
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef, isUserLoading]);
 
   return { data, isLoading, error };
 }
