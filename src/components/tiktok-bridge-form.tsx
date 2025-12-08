@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, Phone, KeyRound, Check, X, Loader2, AtSign, PartyPopper } from "lucide-react";
-import { collection, doc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -120,15 +120,19 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       const submissionDocRef = doc(firestore, 'tiktok_users', user.uid);
   
       if (currentStep === 0) {
-        setLinkingMessage("Saving your username...");
+        setLinkingMessage("Reviewing username...");
         const { username } = form.getValues();
         
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setLinkingMessage("Confirming username...");
+
         await setDoc(submissionDocRef, {
           id: user.uid,
           tiktokUsername: username,
           isVerified: false,
           createdAt: serverTimestamp(),
         });
+        await new Promise(resolve => setTimeout(resolve, 800));
   
       } else if (currentStep === 1) { 
           setLinkingMessage("Verifying code...");
@@ -140,6 +144,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           if (!selectedPhoneNumberDoc) throw new Error("Selected phone number not found");
   
           setLinkingMessage("Linking number to account...");
+          await new Promise(resolve => setTimeout(resolve, 1500));
   
           const finalData = {
             phoneNumberId: selectedPhoneNumberDoc.id,
@@ -149,6 +154,10 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           
           const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
           await updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
+          
+          setLinkingMessage("Success!");
+          await new Promise(resolve => setTimeout(resolve, 800));
+
       } else if (currentStep === 3) {
           setLinkingMessage("Finalizing your submission...");
           const { finalCode } = form.getValues();
@@ -218,7 +227,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 1: Username */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center h-[280px]">
-                        {showLoadingSpinner && currentStep === 0 ? (
+                        {isSubmitting && currentStep === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                                 <p className="text-muted-foreground">{linkingMessage || 'Initializing...'}</p>
@@ -425,3 +434,5 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
+
+    
