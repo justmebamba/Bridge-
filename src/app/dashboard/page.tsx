@@ -1,24 +1,30 @@
+
 'use client';
 
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { Loader2, User, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { TikTokLogo } from "@/components/icons/tiktok-logo";
 
 export default function DashboardPage() {
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
   const firestore = useFirestore();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const submissionId = searchParams.get('id');
 
   useEffect(() => {
-    if (!submissionId) {
-      router.push('/');
+    if (typeof window !== 'undefined') {
+      const id = localStorage.getItem('submissionId');
+      if (id) {
+        setSubmissionId(id);
+      } else {
+        // If no ID, they might have cleared storage. Redirect home.
+        router.push('/');
+      }
     }
-  }, [submissionId, router]);
+  }, [router]);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!submissionId || !firestore) return null;
@@ -26,6 +32,14 @@ export default function DashboardPage() {
   }, [firestore, submissionId]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
+
+  useEffect(() => {
+      // This effect handles the case where a user lands here but is not yet verified.
+      if (!isProfileLoading && userProfile && !userProfile.isVerified) {
+          router.push('/waiting-for-approval');
+      }
+  }, [isProfileLoading, userProfile, router]);
+
 
   if (isProfileLoading || !userProfile) {
     return (
@@ -38,13 +52,21 @@ export default function DashboardPage() {
     );
   }
   
+  // This check is important. If the profile exists but is not verified,
+  // we redirect to the waiting page.
   if (!userProfile.isVerified) {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('submissionId', submissionId as string);
-    }
-    router.push('/waiting-for-approval');
-    return null;
+    // The useEffect above handles this, but as a fallback, we show a loader
+    // to prevent flashing content before the redirect happens.
+    return (
+        <div className="flex h-screen items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Verifying status...</p>
+          </div>
+        </div>
+      );
   }
+
 
   return (
     <div className="container flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-6 md:p-8">
@@ -83,3 +105,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

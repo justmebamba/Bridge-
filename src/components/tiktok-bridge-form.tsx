@@ -91,9 +91,11 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   });
     
   useEffect(() => {
-    const storedId = localStorage.getItem('submissionId');
-    if (storedId) {
-      setSubmissionId(storedId);
+    if (typeof window !== 'undefined') {
+        const storedId = localStorage.getItem('submissionId');
+        if (storedId) {
+          setSubmissionId(storedId);
+        }
     }
   }, []);
 
@@ -113,7 +115,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       
       let currentUserId = user?.uid;
   
-      // Step 1: Secure session and create the document
       if (currentStep === 0) {
         if (!currentUserId) {
           setIsAuthLoading(true);
@@ -134,10 +135,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         }
         
         setLinkingMessage("Saving your submission...");
-        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const { username } = form.getValues();
-        const newDocRef = doc(collection(firestore, "tiktok_users"), currentUserId);
+        const newDocRef = doc(firestore, "tiktok_users", currentUserId);
         
         await addDocument(newDocRef, {
           id: currentUserId,
@@ -147,16 +147,17 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         });
   
         setSubmissionId(currentUserId);
-        localStorage.setItem('submissionId', currentUserId);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('submissionId', currentUserId);
+        }
   
-      } else { // Steps 2, 3, 4
+      } else { 
          const currentSubmissionId = submissionId || user?.uid;
          if (!currentSubmissionId) throw new Error("Submission ID not found.");
          const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
   
         if (currentStep === 1) { 
           setLinkingMessage("Verifying code...");
-          await new Promise(resolve => setTimeout(resolve, 1000));
           const { verificationCode } = form.getValues();
           updateDocumentNonBlocking(submissionDocRef, { verificationCode });
         }
@@ -177,14 +178,12 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
           updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
   
-          await new Promise(resolve => setTimeout(resolve, 1500));
         }
         
         if (currentStep === 3) {
           setLinkingMessage("Finalizing your submission...");
           const { finalCode } = form.getValues();
           updateDocumentNonBlocking(submissionDocRef, { finalCode });
-          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
   
@@ -215,7 +214,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           onFinished();
         } else {
             setTimeout(() => {
-                if (submissionId) {
+                const finalSubmissionId = submissionId || (typeof window !== 'undefined' ? localStorage.getItem('submissionId') : null);
+                if (finalSubmissionId) {
                     router.push('/waiting-for-approval');
                 } else {
                     router.push('/');
@@ -229,7 +229,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep]?.icon || User;
   const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length -1)) * 100;
 
-  const showLoadingSpinner = isSubmitting || (isAuthLoading && currentStep === 0);
+  const showLoadingSpinner = isSubmitting || isAuthLoading;
 
   return (
     <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
@@ -468,3 +468,4 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   );
 }
 
+    

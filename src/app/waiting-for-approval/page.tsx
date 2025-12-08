@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -13,12 +14,14 @@ export default function WaitingForApprovalPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // This effect should only run on the client side.
     if (typeof window !== 'undefined') {
       const id = localStorage.getItem('submissionId');
       if (id) {
         setSubmissionId(id);
       } else {
-        // If no ID is found, they shouldn't be on this page.
+        // If no ID is found in localStorage, they shouldn't be here.
+        // Redirect them to the homepage.
         router.replace('/');
       }
     }
@@ -29,15 +32,14 @@ export default function WaitingForApprovalPage() {
     return doc(firestore, 'tiktok_users', submissionId);
   }, [firestore, submissionId]);
 
-  // The useDoc hook will automatically listen for real-time changes.
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
     if (!isProfileLoading && userProfile) {
       if (userProfile.isVerified) {
         // User has been approved, redirect to their dashboard.
-        // We can pass the submission ID to the dashboard to fetch data.
-        router.replace(`/dashboard?id=${submissionId}`);
+        // The dashboard can use the same localStorage item to fetch data.
+        router.replace(`/dashboard`);
       }
     }
   }, [userProfile, isProfileLoading, router, submissionId]);
@@ -64,3 +66,5 @@ export default function WaitingForApprovalPage() {
     </main>
   );
 }
+
+    
