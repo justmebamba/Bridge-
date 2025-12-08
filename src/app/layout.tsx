@@ -26,21 +26,13 @@ export default function RootLayout({
   const router = useRouter();
   const isHomePage = pathname === '/';
 
-  const handleGetStarted = () => {
-    if (isHomePage) {
-      document.getElementById('get-started')?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      router.push('/#get-started');
-    }
-  };
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
         <FirebaseClientProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
-            <SiteHeader onGetStarted={handleGetStarted} />
-            {isHomePage && <TikTokBridgeHero onGetStarted={handleGetStarted} />}
+            <SiteHeader />
+            {isHomePage && <TikTokBridgeHero />}
             <main className="flex-1">
               {children}
             </main>

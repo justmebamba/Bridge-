@@ -5,7 +5,7 @@ import { Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
 
-export function SiteHeader({ onGetStarted }: { onGetStarted: () => void }) {
+export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-20 items-center justify-between">
@@ -27,7 +27,7 @@ export function SiteHeader({ onGetStarted }: { onGetStarted: () => void }) {
 
         <div className="hidden md:flex items-center gap-4">
             <Button asChild>
-                <Link href="/#get-started" onClick={(e) => { e.preventDefault(); onGetStarted();}}>Get Started</Link>
+                <Link href="/join">Get Started</Link>
             </Button>
             <Link href="/login" className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
         </div>
@@ -47,7 +47,7 @@ export function SiteHeader({ onGetStarted }: { onGetStarted: () => void }) {
                         <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Contact Us</Link>
                         <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Support</Link>
                         <hr className="my-2"/>
-                        <Button onClick={onGetStarted} size="lg">Get Started</Button>
+                        <Button asChild size="lg"><Link href="/join">Get Started</Link></Button>
                     </div>
                 </SheetContent>
             </Sheet>

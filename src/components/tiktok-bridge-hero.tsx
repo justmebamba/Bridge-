@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "./ui/button";
 
-export function TikTokBridgeHero({ onGetStarted }: { onGetStarted: () => void }) {
+export function TikTokBridgeHero() {
 
   return (
     <>
@@ -42,7 +42,7 @@ export function TikTokBridgeHero({ onGetStarted }: { onGetStarted: () => void })
         <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
             <div className="container px-4 pt-16 pb-16 text-center">
                  <Button asChild size="lg" className="rounded-full px-8 text-lg">
-                  <Link href="/#get-started" onClick={(e) => { e.preventDefault(); onGetStarted();}}>Get started</Link>
+                  <Link href="/join">Get started</Link>
                 </Button>
             </div>
         </div>

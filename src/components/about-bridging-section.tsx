@@ -1,5 +1,7 @@
+
 import { Button } from "./ui/button";
 import { BarChart, CheckCircle, Users } from "lucide-react";
+import Link from "next/link";
 
 const stats = [
     { value: "1B+", label: "Monthly Active Users", icon: Users },
@@ -7,7 +9,7 @@ const stats = [
     { value: "90%", label: "Open the app every day", icon: BarChart },
 ];
 
-export function AboutBridgingSection({ onGetStarted }: { onGetStarted: () => void }) {
+export function AboutBridgingSection() {
     return (
         <section className="bg-black text-white py-20 sm:py-32">
             <div className="container mx-auto px-4">
@@ -21,8 +23,8 @@ export function AboutBridgingSection({ onGetStarted }: { onGetStarted: () => voi
                         We handle the secure setup so you can focus on what you do best: creating content.
                     </p>
                     <div className="mt-10">
-                        <Button size="lg" className="rounded-full px-8 text-lg" variant="outline" onClick={onGetStarted}>
-                            Get Started
+                        <Button size="lg" className="rounded-full px-8 text-lg" variant="outline" asChild>
+                            <Link href="/join">Get Started</Link>
                         </Button>
                     </div>
                 </div>
