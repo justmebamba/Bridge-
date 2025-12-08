@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -14,17 +15,20 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // This is now the single source of truth for the submission ID.
     if (typeof window !== 'undefined') {
       const id = localStorage.getItem('submissionId');
       if (id) {
         setSubmissionId(id);
       } else {
-        // If no ID, they might have cleared storage. Redirect home.
-        router.push('/');
+        // If there's no ID, the user has no submission or cleared storage.
+        // Go back to the start.
+        router.replace('/');
       }
     }
   }, [router]);
 
+  // This hook will now wait until firestore and submissionId are both available.
   const userProfileRef = useMemoFirebase(() => {
     if (!submissionId || !firestore) return null;
     return doc(firestore, 'tiktok_users', submissionId);
@@ -33,7 +37,7 @@ export default function DashboardPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
-      // This effect handles the case where a user lands here but is not yet verified.
+      // This logic is now reliable because the hooks above are stable.
       if (!isProfileLoading && userProfile && !userProfile.isVerified) {
           router.push('/waiting-for-approval');
       }
@@ -51,11 +55,7 @@ export default function DashboardPage() {
     );
   }
   
-  // This check is important. If the profile exists but is not verified,
-  // we redirect to the waiting page.
   if (!userProfile.isVerified) {
-    // The useEffect above handles this, but as a fallback, we show a loader
-    // to prevent flashing content before the redirect happens.
     return (
         <div className="flex h-screen items-center justify-center">
           <div className="flex flex-col items-center space-y-4">

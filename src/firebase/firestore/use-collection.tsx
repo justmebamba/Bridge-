@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { useUser } from '../provider';
+import { useUser, useFirestore } from '../provider'; // Note: using useFirestore here now
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -42,7 +43,6 @@ export interface InternalQuery extends Query<DocumentData> {
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
  * 
- *
  * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery or BAD THINGS WILL HAPPEN
  * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
  * references
@@ -61,14 +61,17 @@ export function useCollection<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  
+  // This is a key change. We get the firestore instance and user loading state.
+  // The provider ensures useFirestore() only returns a value when it's truly ready.
+  const firestore = useFirestore();
   const { isUserLoading } = useUser();
 
   useEffect(() => {
-    // If the auth state is still loading, or no query is provided, wait.
-    if (isUserLoading || !memoizedTargetRefOrQuery) {
-      setIsLoading(true); // Keep loading until auth is ready and query is provided
+    // This is the new, robust guard clause. It waits for everything to be ready.
+    if (!firestore || isUserLoading || !memoizedTargetRefOrQuery) {
+      setIsLoading(true);
       setData(null);
-      setError(null);
       return;
     }
 
@@ -106,7 +109,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery, isUserLoading]);
+  }, [memoizedTargetRefOrQuery, firestore, isUserLoading]);
   
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     console.warn('useCollection was not properly memoized using useMemoFirebase. This may cause performance issues or infinite loops.', memoizedTargetRefOrQuery);

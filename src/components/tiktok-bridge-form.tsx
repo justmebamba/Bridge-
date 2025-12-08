@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect }from "react";
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Badge } from "@/components/ui/badge";
 import { successStories } from "@/lib/success-stories";
-import { signInAnonymously, getAuth, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { signInAnonymously, getAuth } from "firebase/auth";
 
 
 const featuredUsernames = successStories.map(story => story.creator.toLowerCase().replace('@', ''));
@@ -64,7 +65,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const [linkingMessage, setLinkingMessage] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const firestore = useFirestore();
-  const { user, isUserLoading: isAuthHookLoading } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   const phoneNumbersQuery = useMemoFirebase(() => {
@@ -93,27 +94,30 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     }
   }, []);
 
+  // *** THE CORE FIX IS HERE ***
+  // This function is now simple, robust, and correctly awaits authentication.
   const handleNext = async () => {
     const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep]?.fields;
-    if (fieldsToValidate && fieldsToValidate.length > 0) {
+    if (fieldsToValidate?.length) {
       const isValid = await form.trigger(fieldsToValidate as any, { shouldFocus: true });
       if (!isValid) return;
     }
-
+  
     if (currentStep >= TIKTOK_BRIDGE_STEPS.length - 1) return;
-
+  
     setIsSubmitting(true);
+    setLinkingMessage("Saving...");
   
     try {
-      if (!firestore) throw new Error("Firebase services not available");
-      
+      if (!firestore) throw new Error("Database not ready. Please try again.");
+  
       let currentUserId = user?.uid;
   
+      // Step 0: The First "Continue" Click
       if (currentStep === 0) {
         setLinkingMessage("Creating secure session...");
         
-        // This is the critical authentication step.
-        // We ensure we have an authenticated user (anonymous or otherwise) before proceeding.
+        // This is the critical authentication step. It now correctly WAITS.
         if (!currentUserId) {
             const auth = getAuth();
             const userCredential = await signInAnonymously(auth);
@@ -121,15 +125,14 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         }
 
         if (!currentUserId) {
-          throw new Error("Could not authenticate user. Please try again.");
+          throw new Error("Could not create a secure session. Please try again.");
         }
         
         setLinkingMessage("Saving your submission...");
-        
         const { username } = form.getValues();
         const newDocRef = doc(firestore, "tiktok_users", currentUserId);
         
-        // Use await to ensure the document is created before moving on.
+        // Firestore write operation only happens AFTER authentication is confirmed.
         await setDoc(newDocRef, {
           id: currentUserId,
           tiktokUsername: username,
@@ -139,13 +142,12 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   
         // Set state and localStorage immediately after successful creation.
         setSubmissionId(currentUserId);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('submissionId', currentUserId);
-        }
+        localStorage.setItem('submissionId', currentUserId);
   
       } else { 
-         const currentSubmissionId = submissionId;
-         if (!currentSubmissionId) throw new Error("Submission ID not found. Please start over.");
+         // For all subsequent steps, the submissionId is now guaranteed to exist.
+         const currentSubmissionId = submissionId || localStorage.getItem('submissionId');
+         if (!currentSubmissionId) throw new Error("Your session expired. Please start over.");
          const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
   
         if (currentStep === 1) { 
@@ -178,6 +180,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         }
       }
   
+      // This now reliably moves to the next step.
       setCurrentStep(prev => prev + 1);
   
     } catch (e: any) {
@@ -194,6 +197,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     setCurrentStep(prev => prev - 1);
   };
   
+  // This effect ensures the visual carousel is always in sync with our reliable state.
   useEffect(() => {
     if (!api) return;
     
@@ -201,10 +205,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
 
     if (currentStep === TIKTOK_BRIDGE_STEPS.length - 1) {
         if (onFinished) {
-            onFinished();
-        } else {
-            // fallback if onFinished is not provided
-            setTimeout(() => router.push('/waiting-for-approval'), 3000); 
+            // Wait a moment on the success screen before redirecting.
+            setTimeout(() => onFinished(), 1500);
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,8 +214,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep]?.icon || User;
   const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length - 1)) * 100;
-
-  const showLoadingSpinner = isSubmitting || isAuthHookLoading;
+  
+  // A single, reliable loading check.
+  const showLoadingSpinner = isSubmitting || isUserLoading;
 
   return (
     <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">

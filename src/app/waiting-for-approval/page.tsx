@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -13,19 +14,19 @@ export default function WaitingForApprovalPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // This effect should only run on the client side.
+    // This is now the single source of truth. It reliably gets the ID from storage.
     if (typeof window !== 'undefined') {
       const id = localStorage.getItem('submissionId');
       if (id) {
         setSubmissionId(id);
       } else {
-        // If no ID is found in localStorage, they shouldn't be here.
-        // Redirect them to the homepage.
+        // If no ID is found, the user shouldn't be here.
         router.replace('/');
       }
     }
   }, [router]);
 
+  // This hook will now correctly wait for firestore and submissionId to be ready.
   const userProfileRef = useMemoFirebase(() => {
     if (!submissionId || !firestore) return null;
     return doc(firestore, 'tiktok_users', submissionId);
@@ -34,9 +35,9 @@ export default function WaitingForApprovalPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
   useEffect(() => {
+    // This redirection logic is now stable because the data hooks are reliable.
     if (!isProfileLoading && userProfile) {
       if (userProfile.isVerified) {
-        // User has been approved, redirect to their dashboard.
         router.replace(`/dashboard`);
       }
     }
