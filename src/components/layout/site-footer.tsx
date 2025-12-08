@@ -45,7 +45,7 @@ export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {
               </div>
             </div>
              <div className="text-sm text-muted-foreground space-y-4">
-                <h3 className="font-semibold text-foreground">Fine Print</h3>
+                <h3 className="font-semibold text-foreground">Disclaimer</h3>
                 <p>
                     Our TikTok Bridging service is a third-party solution designed to enable monetization features for creators in regions not officially supported by the TikTok Creator Fund or TikTok Shop. We provide a legitimate, US-based phone number for verification purposes only.
                 </p>
