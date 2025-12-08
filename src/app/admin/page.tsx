@@ -27,6 +27,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   const usersQuery = useMemoFirebase(() => {
+      // Only create the query if firestore is available
       if (!firestore) return null;
       return query(collection(firestore, 'tiktok_users'));
     }, [firestore]);
@@ -50,6 +51,7 @@ export default function AdminPage() {
   }
 
   const renderContent = () => {
+    // Show loader if the query is not ready or data is loading
     if (usersLoading || !firestore) {
         return (
              <div className="flex flex-col items-center justify-center h-64 text-center">

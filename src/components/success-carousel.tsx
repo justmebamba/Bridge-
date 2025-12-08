@@ -12,7 +12,6 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { Button } from "./ui/button";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { successStories } from "@/lib/success-stories";
 
 

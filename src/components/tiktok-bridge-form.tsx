@@ -63,7 +63,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const [api, setApi] = useState<CarouselApi>()
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [linkingMessage, setLinkingMessage] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const firestore = useFirestore();
@@ -113,9 +112,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       let currentUserId = user?.uid;
   
       if (currentStep === 0) {
+        setLinkingMessage("Creating secure session...");
+        
         if (!currentUserId) {
-          setIsAuthLoading(true);
-          setLinkingMessage("Creating secure session...");
           try {
             const auth = getAuth();
             const userCredential = await signInAnonymously(auth);
@@ -123,8 +122,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           } catch (authError) {
             console.error("Anonymous sign-in failed:", authError);
             throw new Error("Could not create a secure session. Please try again.");
-          } finally {
-            setIsAuthLoading(false);
           }
         }
   
@@ -205,22 +202,14 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   useEffect(() => {
     if (!api) return;
     
-    api.scrollTo(currentStep, true);
+    api.scrollTo(currentStep, false);
 
     if (currentStep === TIKTOK_BRIDGE_STEPS.length - 1) {
-        const finalRedirect = () => {
-            const finalSubmissionId = submissionId || (typeof window !== 'undefined' ? localStorage.getItem('submissionId') : null);
-            if (finalSubmissionId) {
-                router.push('/waiting-for-approval');
-            } else {
-                router.push('/');
-            }
-        };
-
         if (onFinished) {
             onFinished();
         } else {
-            setTimeout(finalRedirect, 3000); 
+            // fallback if onFinished is not provided
+            setTimeout(() => router.push('/waiting-for-approval'), 3000); 
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,7 +218,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep]?.icon || User;
   const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length -1)) * 100;
 
-  const showLoadingSpinner = isSubmitting || isAuthLoading;
+  const showLoadingSpinner = isSubmitting || isUserLoading;
 
   return (
     <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
@@ -453,7 +442,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           
           {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && (
             <CardFooter className="flex-col-reverse gap-4 pt-4">
-              <Button type="button" onClick={handleNext} disabled={showLoadingSpinner || isUserLoading || (currentStep === 2 && phoneNumbersLoading)} className="w-full rounded-full" size="lg">
+              <Button type="button" onClick={handleNext} disabled={showLoadingSpinner || (currentStep === 2 && phoneNumbersLoading)} className="w-full rounded-full" size="lg">
                 {showLoadingSpinner ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === 3 ? "Complete Submission" : "Continue"}
               </Button>
