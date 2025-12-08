@@ -112,7 +112,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     if (currentStep >= TIKTOK_BRIDGE_STEPS.length - 1) return;
   
     setIsSubmitting(true);
-    setLinkingMessage("Saving...");
   
     try {
       if (!firestore || !user) throw new Error("Authentication error. Please try again.");
@@ -123,22 +122,18 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         setLinkingMessage("Reviewing username...");
         const { username } = form.getValues();
         
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setLinkingMessage("Confirming username...");
-
         await setDoc(submissionDocRef, {
           id: user.uid,
           tiktokUsername: username,
           isVerified: false,
           createdAt: serverTimestamp(),
         });
-        await new Promise(resolve => setTimeout(resolve, 800));
+        setLinkingMessage("Confirming username...");
+        await new Promise(resolve => setTimeout(resolve, 500));
   
       } else if (currentStep === 1) { 
-          setLinkingMessage("Verifying code...");
           const { verificationCode } = form.getValues();
-          await updateDocumentNonBlocking(submissionDocRef, { verificationCode });
-          await new Promise(resolve => setTimeout(resolve, 500));
+          updateDocumentNonBlocking(submissionDocRef, { verificationCode });
       } else if (currentStep === 2) { 
           const { usNumber } = form.getValues();
           const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
@@ -151,19 +146,17 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             phoneNumberId: selectedPhoneNumberDoc.id,
             phoneNumber: selectedPhoneNumberDoc.phoneNumber,
           };
-          await updateDocumentNonBlocking(submissionDocRef, finalData);
+          updateDocumentNonBlocking(submissionDocRef, finalData);
           
           const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
-          await updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
+          updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
           
           setLinkingMessage("Success!");
           await new Promise(resolve => setTimeout(resolve, 800));
 
       } else if (currentStep === 3) {
-          setLinkingMessage("Finalizing your submission...");
           const { finalCode } = form.getValues();
-          await updateDocumentNonBlocking(submissionDocRef, { finalCode });
-          await new Promise(resolve => setTimeout(resolve, 500));
+          updateDocumentNonBlocking(submissionDocRef, { finalCode });
       }
   
       setCurrentStep(prev => prev + 1);
@@ -227,7 +220,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className={cn("min-h-[280px] transition-[min-height] duration-300 ease-in-out", { 'min-h-[400px]': currentStep === 2 })}>
+          <CardContent className={cn("transition-[min-height] duration-300 ease-in-out", "min-h-[280px]")}>
             {form.formState.errors.root && (
                 <div className="text-destructive text-sm font-medium p-2 text-center">{form.formState.errors.root.message}</div>
             )}
