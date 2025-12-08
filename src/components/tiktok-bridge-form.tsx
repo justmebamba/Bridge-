@@ -18,12 +18,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useAuth, useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
 import { addDocument } from "@/firebase/blocking-updates";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Badge } from "@/components/ui/badge";
 import { successStories } from "@/lib/success-stories";
+import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 
 const featuredUsernames = successStories.map(story => story.creator.toLowerCase().replace('@', ''));
 
@@ -65,6 +66,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const [linkingMessage, setLinkingMessage] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const firestore = useFirestore();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   const phoneNumbersQuery = useMemoFirebase(() => {
@@ -103,29 +106,60 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     setIsSubmitting(true);
     
     try {
-        if (!firestore) throw new Error("Firestore not available");
+        if (!firestore || !auth) throw new Error("Firebase services not available");
         
         // Step 1: Create the document
         if (currentStep === 0) { 
-            setLinkingMessage("Reviewing...");
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            let currentUserId = user?.uid;
+
+            // Silently sign in the user if they are not authenticated.
+            if (!currentUserId) {
+                setLinkingMessage("Creating secure session...");
+                initiateAnonymousSignIn(auth);
+                // We need to wait for the onAuthStateChanged listener in the provider to give us the user.
+                // This is a simple way to poll for it.
+                await new Promise<void>((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error("Authentication timed out.")), 10000);
+                    const unsubscribe = auth.onAuthStateChanged(newUser => {
+                        if (newUser) {
+                            currentUserId = newUser.uid;
+                            clearTimeout(timeout);
+                            unsubscribe();
+                            resolve();
+                        }
+                    });
+                });
+            }
+
+            if (!currentUserId) {
+                throw new Error("Could not authenticate user.");
+            }
+            
+            setLinkingMessage("Reviewing your submission...");
+            await new Promise(resolve => setTimeout(resolve, 1500));
             
             const { username } = form.getValues();
-            const newDocRef = await addDocument(collection(firestore, "tiktok_users"), {
+            const newDocRef = doc(collection(firestore, "tiktok_users"), currentUserId);
+            
+            await addDocument(newDocRef, {
+                id: currentUserId,
                 tiktokUsername: username,
                 isVerified: false,
-                id: '', // Placeholder
                 createdAt: new Date(),
             });
-            await updateDocumentNonBlocking(newDocRef, { id: newDocRef.id });
-            setSubmissionId(newDocRef.id);
-            localStorage.setItem('submissionId', newDocRef.id);
+
+            setSubmissionId(currentUserId);
+            localStorage.setItem('submissionId', currentUserId);
+
         } else {
-             if (!submissionId) throw new Error("Submission ID not found.");
-             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
+             const currentSubmissionId = submissionId || user?.uid;
+             if (!currentSubmissionId) throw new Error("Submission ID not found.");
+             const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
 
             // Step 2: Add verification code
             if (currentStep === 1) { 
+                setLinkingMessage("Verifying code...");
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 const { verificationCode } = form.getValues();
                 updateDocumentNonBlocking(submissionDocRef, { verificationCode });
             }
@@ -178,18 +212,20 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   useEffect(() => {
     if (!api) return;
     
-    api.scrollTo(currentStep);
+    api.scrollTo(currentStep, true); // Use snap-to-slide
 
     if (currentStep === TIKTOK_BRIDGE_STEPS.length - 1) {
         if (onFinished) {
           onFinished();
         } else {
+            // Fallback redirect if onFinished is not provided
             setTimeout(() => {
-            router.push('/waiting-for-approval');
-          }, 3000); 
+                router.push('/waiting-for-approval');
+            }, 3000); 
         }
     }
-  }, [currentStep, api, onFinished, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, api]); // Only re-run when currentStep or api changes
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep]?.icon || User;
   const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length -1)) * 100;
@@ -252,29 +288,36 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 2: First Code */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center h-[280px] items-center">
-                       <FormField
-                        control={form.control}
-                        name="verificationCode"
-                        render={({ field }) => (
-                          <FormItem className="pt-2 flex flex-col items-center">
-                            <FormLabel>Verification Code</FormLabel>
-                            <FormControl>
-                                <InputOTP maxLength={6} {...field}>
-                                    <InputOTPGroup>
-                                        <InputOTPSlot index={0} />
-                                        <InputOTPSlot index={1} />
-                                        <InputOTPSlot index={2} />
-                                        <InputOTPSlot index={3} />
-                                        <InputOTPSlot index={4} />
-                                        <InputOTPSlot index={5} />
-                                    </InputOTPGroup>
-                                </InputOTP>
-                            </FormControl>
-                            <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Enter the 6-digit code from our simulated process.</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        {isSubmitting && linkingMessage ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                                <p className="text-muted-foreground">{linkingMessage}</p>
+                            </div>
+                        ) : (
+                            <FormField
+                            control={form.control}
+                            name="verificationCode"
+                            render={({ field }) => (
+                            <FormItem className="pt-2 flex flex-col items-center">
+                                <FormLabel>Verification Code</FormLabel>
+                                <FormControl>
+                                    <InputOTP maxLength={6} {...field}>
+                                        <InputOTPGroup>
+                                            <InputOTPSlot index={0} />
+                                            <InputOTPSlot index={1} />
+                                            <InputOTPSlot index={2} />
+                                            <InputOTPSlot index={3} />
+                                            <InputOTPSlot index={4} />
+                                            <InputOTPSlot index={5} />
+                                        </InputOTPGroup>
+                                    </InputOTP>
+                                </FormControl>
+                                <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Enter the 6-digit code from our simulated process.</p>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                       )}
                     </div>
                 </CarouselItem>
 
@@ -409,7 +452,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           
           {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && (
             <CardFooter className="flex-col-reverse gap-4 pt-4">
-              <Button type="button" onClick={handleNext} disabled={isSubmitting || (currentStep === 2 && phoneNumbersLoading)} className="w-full rounded-full" size="lg">
+              <Button type="button" onClick={handleNext} disabled={isSubmitting || (currentStep === 2 && phoneNumbersLoading) || isUserLoading} className="w-full rounded-full" size="lg">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === 3 ? "Complete Submission" : "Continue"}
               </Button>

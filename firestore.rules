@@ -120,7 +120,8 @@ service cloud.firestore {
     match /tiktok_users/{tiktokUserId} {
       allow get: if isOwner(tiktokUserId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if request.auth.uid == tiktokUserId && request.resource.data.id == tiktokUserId;
+      // Allow a signed-in user to create their own document, ensuring the document ID and the embedded ID match their UID.
+      allow create: if isOwner(tiktokUserId) && request.resource.data.id == request.auth.uid;
       allow update: if isExistingOwner(tiktokUserId) || isAdmin();
       allow delete: if isExistingOwner(tiktokUserId) || isAdmin();
     }
