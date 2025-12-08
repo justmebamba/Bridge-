@@ -1,3 +1,4 @@
+
 /**
  * Core Philosophy: This ruleset enforces a strict two-tier access model: regular users and administrators.
  * Users have exclusive ownership over their own data within the `/tiktok_users` collection. Administrators,
@@ -87,9 +88,9 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow get: if isAdmin();
       allow list: if isAdmin();
-      // Allow any signed-in user to create an admin document. This is necessary to bootstrap the first admin.
-      // This rule should be tightened to `if isAdmin()` after the first admin is created.
-      allow create: if isSignedIn();
+      // Allow any signed-in user to create an admin document ONLY if no other admins exist.
+      // This is necessary to bootstrap the first admin, but prevents others from being created.
+      allow create: if isSignedIn() && !exists(/databases/$(database)/documents/admins);
       allow update: if isAdmin() && isExistingDoc();
       allow delete: if isAdmin() && isExistingDoc();
     }
@@ -105,7 +106,8 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isAdmin();
-      allow update: if isAdmin() && isExistingDoc();
+      // Allow an admin to update a number. Allow any user to update a number only to set isAvailable to false.
+      allow update: if isAdmin() && isExistingDoc() || (isSignedIn() && request.resource.data.isAvailable == false);
       allow delete: if isAdmin() && isExistingDoc();
     }
 
@@ -121,7 +123,8 @@ service cloud.firestore {
       allow get: if isOwner(tiktokUserId) || isAdmin();
       allow list: if isAdmin();
       // Allow a signed-in user to create their own document, ensuring the document ID and the embedded ID match their UID.
-      allow create: if isOwner(tiktokUserId) && request.resource.data.id == request.auth.uid;
+      // Also ensures a timestamp is present.
+      allow create: if isOwner(tiktokUserId) && request.resource.data.id == request.auth.uid && request.resource.data.createdAt == request.time;
       allow update: if isExistingOwner(tiktokUserId) || isAdmin();
       allow delete: if isExistingOwner(tiktokUserId) || isAdmin();
     }
