@@ -1,8 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useCallback }from "react";
-import type { EmblaCarouselType } from 'embla-carousel-react'
+import { useState, useEffect }from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
@@ -23,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Badge } from "@/components/ui/badge";
 import { successStories } from "@/lib/success-stories";
-import { signInAnonymously, getAuth, User as FirebaseUser } from "firebase/auth";
+import { signInAnonymously, getAuth, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 
 
 const featuredUsernames = successStories.map(story => story.creator.toLowerCase().replace('@', ''));
@@ -66,7 +64,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const [linkingMessage, setLinkingMessage] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading: isAuthHookLoading } = useUser();
   const router = useRouter();
 
   const phoneNumbersQuery = useMemoFirebase(() => {
@@ -101,9 +99,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       const isValid = await form.trigger(fieldsToValidate as any, { shouldFocus: true });
       if (!isValid) return;
     }
-  
+
     if (currentStep >= TIKTOK_BRIDGE_STEPS.length - 1) return;
-  
+
     setIsSubmitting(true);
   
     try {
@@ -114,19 +112,16 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       if (currentStep === 0) {
         setLinkingMessage("Creating secure session...");
         
+        // This is the critical authentication step.
+        // We ensure we have an authenticated user (anonymous or otherwise) before proceeding.
         if (!currentUserId) {
-          try {
             const auth = getAuth();
             const userCredential = await signInAnonymously(auth);
             currentUserId = userCredential.user.uid;
-          } catch (authError) {
-            console.error("Anonymous sign-in failed:", authError);
-            throw new Error("Could not create a secure session. Please try again.");
-          }
         }
-  
+
         if (!currentUserId) {
-          throw new Error("Could not authenticate user.");
+          throw new Error("Could not authenticate user. Please try again.");
         }
         
         setLinkingMessage("Saving your submission...");
@@ -134,6 +129,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         const { username } = form.getValues();
         const newDocRef = doc(firestore, "tiktok_users", currentUserId);
         
+        // Use await to ensure the document is created before moving on.
         await setDoc(newDocRef, {
           id: currentUserId,
           tiktokUsername: username,
@@ -141,14 +137,15 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           createdAt: serverTimestamp(),
         });
   
+        // Set state and localStorage immediately after successful creation.
         setSubmissionId(currentUserId);
         if (typeof window !== 'undefined') {
             localStorage.setItem('submissionId', currentUserId);
         }
   
       } else { 
-         const currentSubmissionId = submissionId || user?.uid;
-         if (!currentSubmissionId) throw new Error("Submission ID not found.");
+         const currentSubmissionId = submissionId;
+         if (!currentSubmissionId) throw new Error("Submission ID not found. Please start over.");
          const submissionDocRef = doc(firestore, 'tiktok_users', currentSubmissionId);
   
         if (currentStep === 1) { 
@@ -172,7 +169,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           
           const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
           updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
-  
         }
         
         if (currentStep === 3) {
@@ -192,7 +188,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       setLinkingMessage(null);
     }
   };
-  
 
   const handlePrev = () => {
     if (isSubmitting || currentStep === 0) return;
@@ -216,9 +211,9 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   }, [currentStep, api]); 
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep]?.icon || User;
-  const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length -1)) * 100;
+  const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length - 1)) * 100;
 
-  const showLoadingSpinner = isSubmitting || isUserLoading;
+  const showLoadingSpinner = isSubmitting || isAuthHookLoading;
 
   return (
     <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
@@ -249,10 +244,10 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 1: Username */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center h-[280px]">
-                        {showLoadingSpinner ? (
+                        {showLoadingSpinner && currentStep === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                                <p className="text-muted-foreground">{linkingMessage}</p>
+                                <p className="text-muted-foreground">{linkingMessage || 'Initializing...'}</p>
                             </div>
                         ) : (
                             <FormField
@@ -278,7 +273,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 2: First Code */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center h-[280px] items-center">
-                        {showLoadingSpinner ? (
+                        {isSubmitting ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                                 <p className="text-muted-foreground">{linkingMessage}</p>
@@ -323,7 +318,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                                 <FormMessage className="pb-2"/>
                                 <FormControl className="flex-grow">
                                 <ScrollArea className="h-full w-full pr-4">
-                                    {showLoadingSpinner ? (
+                                    {isSubmitting ? (
                                         <div className="flex flex-col items-center justify-center h-full text-center">
                                             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                                             <p className="text-muted-foreground">{linkingMessage}</p>
@@ -394,7 +389,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 4: Final Code */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center h-[280px] items-center">
-                       {showLoadingSpinner ? (
+                       {isSubmitting ? (
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                                 <p className="text-muted-foreground">{linkingMessage}</p>
@@ -443,11 +438,11 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           {currentStep < TIKTOK_BRIDGE_STEPS.length - 1 && (
             <CardFooter className="flex-col-reverse gap-4 pt-4">
               <Button type="button" onClick={handleNext} disabled={showLoadingSpinner || (currentStep === 2 && phoneNumbersLoading)} className="w-full rounded-full" size="lg">
-                {showLoadingSpinner ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {currentStep === 3 ? "Complete Submission" : "Continue"}
               </Button>
               {currentStep > 0 && currentStep < 4 &&
-                <Button type="button" variant="ghost" onClick={handlePrev} disabled={showLoadingSpinner} className="w-full rounded-full">Back</Button>
+                <Button type="button" variant="ghost" onClick={handlePrev} disabled={isSubmitting} className="w-full rounded-full">Back</Button>
               }
             </CardFooter>
           )}

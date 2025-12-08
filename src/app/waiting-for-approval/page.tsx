@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -38,11 +37,10 @@ export default function WaitingForApprovalPage() {
     if (!isProfileLoading && userProfile) {
       if (userProfile.isVerified) {
         // User has been approved, redirect to their dashboard.
-        // The dashboard can use the same localStorage item to fetch data.
         router.replace(`/dashboard`);
       }
     }
-  }, [userProfile, isProfileLoading, router, submissionId]);
+  }, [userProfile, isProfileLoading, router]);
 
   if (isProfileLoading || !submissionId) {
     return (

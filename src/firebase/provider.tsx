@@ -116,7 +116,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
  * Hook to access core Firebase services and user authentication state.
  * Throws error if core services are not available or used outside provider.
  */
-export const useFirebase = (): FirebaseServicesAndUser => {
+export const useFirebase = (): FirebaseServicesAndUser | null => {
   const context = useContext(FirebaseContext);
 
   if (context === undefined) {
@@ -125,12 +125,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
 
   // Use the new areServicesReady flag to check for availability.
   if (!context.areServicesReady || !context.firebaseApp || !context.firestore || !context.auth) {
-    // This can happen legitimately during the initial load, so we should throw only if it's unexpected.
-    // For hooks like useCollection/useDoc, they should handle the loading state gracefully.
-    // We still check for the presence of the services themselves for robustness.
-    if (!context.firebaseApp || !context.firestore || !context.auth) {
-      throw new Error('Firebase core services not available. Check FirebaseProvider props.');
-    }
+    return null;
   }
 
   return {
