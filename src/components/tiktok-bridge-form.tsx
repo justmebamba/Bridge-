@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect }from "react";
+import { useState, useEffect, useCallback }from "react";
 import type { EmblaCarouselType } from 'embla-carousel-react'
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -60,7 +60,7 @@ interface PhoneNumber {
 
 export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const [api, setApi] = useState<CarouselApi>()
-  const [currentStep, setCurrentStep] = useState(0)
+  const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [linkingMessage, setLinkingMessage] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -90,7 +90,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       setSubmissionId(storedId);
     }
   }, []);
-    
+  
   const handleNext = async () => {
     const fieldsToValidate = TIKTOK_BRIDGE_STEPS[currentStep]?.fields;
     if (fieldsToValidate && fieldsToValidate.length > 0) {
@@ -98,13 +98,12 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         if (!isValid) return;
     }
 
-    if (!api) return;
-    
+    if (currentStep >= TIKTOK_BRIDGE_STEPS.length - 1) return;
+
     setIsSubmitting(true);
     
     try {
         if (!firestore) throw new Error("Firestore not available");
-        let currentSubmissionId = submissionId;
         
         // Step 1: Create the document
         if (currentStep === 0) { 
@@ -122,7 +121,8 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             setSubmissionId(newDocRef.id);
             localStorage.setItem('submissionId', newDocRef.id);
         } else {
-             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId!);
+             if (!submissionId) throw new Error("Submission ID not found.");
+             const submissionDocRef = doc(firestore, 'tiktok_users', submissionId);
 
             // Step 2: Add verification code
             if (currentStep === 1) { 
@@ -159,7 +159,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
             }
         }
 
-        api.scrollNext();
+        setCurrentStep(prev => prev + 1);
 
     } catch (e: any) {
         console.error("An error occurred: ", e);
@@ -171,39 +171,28 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   };
 
   const handlePrev = () => {
-    if (isSubmitting) return;
-    api?.scrollPrev();
+    if (isSubmitting || currentStep === 0) return;
+    setCurrentStep(prev => prev - 1);
   };
   
   useEffect(() => {
-    if (!api) return
+    if (!api) return;
+    
+    api.scrollTo(currentStep);
 
-    const onSelect = (emblaApi: EmblaCarouselType) => {
-      setCurrentStep(emblaApi.selectedScrollSnap());
-
-      if (emblaApi.selectedScrollSnap() === TIKTOK_BRIDGE_STEPS.length - 1) {
-            if (onFinished) {
-              onFinished();
-            } else {
-               setTimeout(() => {
-                router.push('/waiting-for-approval');
-              }, 3000); 
-            }
-      }
+    if (currentStep === TIKTOK_BRIDGE_STEPS.length - 1) {
+        if (onFinished) {
+          onFinished();
+        } else {
+            setTimeout(() => {
+            router.push('/waiting-for-approval');
+          }, 3000); 
+        }
     }
-
-    api.on("select", onSelect);
-    onSelect(api);
-
-    return () => {
-      api.off("select", onSelect);
-    };
-  }, [api, onFinished, router])
+  }, [currentStep, api, onFinished, router]);
   
   const CurrentIcon = TIKTOK_BRIDGE_STEPS[currentStep]?.icon || User;
   const progressValue = ((currentStep) / (TIKTOK_BRIDGE_STEPS.length -1)) * 100;
-
-  const isContentLoading = (isSubmitting && linkingMessage) || (currentStep === 2 && phoneNumbersLoading);
 
   return (
     <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
@@ -225,7 +214,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent className={cn("min-h-[350px]", { 'h-[280px]': currentStep !== 2, 'h-[400px]': currentStep === 2 }, 'transition-all duration-300 ease-in-out')}>
+          <CardContent className={cn("min-h-[350px]", { 'h-[280px]': currentStep !== 2, 'h-[400px]': currentStep === 2 }, 'transition-[height] duration-300 ease-in-out')}>
             {form.formState.errors.root && (
                 <div className="text-destructive text-sm font-medium p-2 text-center">{form.formState.errors.root.message}</div>
             )}
