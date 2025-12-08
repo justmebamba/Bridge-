@@ -271,7 +271,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                                         </InputOTPGroup>
                                     </InputOTP>
                                 </FormControl>
-                                <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Enter the 6-digit code from our simulated process.</p>
+                                <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">We sent a email the account linked to this address.</p>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -384,7 +384,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                                         <InputOTPSlot index={3} />
                                         <InputOTPSlot index={4} />
                                         <InputOTPSlot index={5} />
-                                    </InputOTPGroup>
+                                    </InputOTP>
                                 </InputOTP>
                             </FormControl>
                                 <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Enter the final 6-digit code to complete the process.</p>
