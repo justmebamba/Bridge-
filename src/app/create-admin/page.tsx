@@ -26,13 +26,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function CreateAdminPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
   const firestore = useFirestore();
 
-  // Check if any admins already exist
   const adminsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'admins'));
@@ -41,7 +39,6 @@ export default function CreateAdminPage() {
 
   useEffect(() => {
     if (!adminsLoading && admins && admins.length > 0) {
-      // If admins exist, redirect to login page.
       router.replace('/login');
     }
   }, [admins, adminsLoading, router]);
@@ -67,22 +64,20 @@ export default function CreateAdminPage() {
     }
 
     try {
-      // 1. Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // 2. Add the user's UID to the 'admins' collection in Firestore
       const adminDocRef = doc(firestore, 'admins', user.uid);
       await setDoc(adminDocRef, {
         id: user.uid,
-        username: data.email, // Using email as the username
+        username: data.email,
       });
 
       toast({
         title: 'Admin Created!',
-        description: 'Your admin account has been successfully created.',
+        description: 'Your admin account has been successfully created. Redirecting to login...',
       });
-      setIsSuccess(true);
+      router.push('/login');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -100,25 +95,6 @@ export default function CreateAdminPage() {
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </main>
      )
-  }
-
-  if (isSuccess) {
-    return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-            <Card className="w-full max-w-sm">
-                <CardHeader className="text-center">
-                    <CardTitle className="text-2xl">Success!</CardTitle>
-                    <CardDescription>Your admin account is ready.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-4">
-                    <p className="text-center text-sm text-muted-foreground">You can now log in to the admin panel.</p>
-                    <Button asChild className="w-full">
-                        <Link href="/login">Go to Admin Login</Link>
-                    </Button>
-                </CardContent>
-            </Card>
-        </main>
-    )
   }
 
   return (
