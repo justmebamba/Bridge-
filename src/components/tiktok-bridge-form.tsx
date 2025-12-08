@@ -376,17 +376,17 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                             <FormItem className="pt-2 flex flex-col items-center">
                                 <FormLabel>Final Confirmation Code</FormLabel>
                                <FormControl>
-                                <InputOTP maxLength={6} {...field}>
-                                    <InputOTPGroup>
-                                        <InputOTPSlot index={0} />
-                                        <InputOTPSlot index={1} />
-                                        <InputOTPSlot index={2} />
-                                        <InputOTPSlot index={3} />
-                                        <InputOTPSlot index={4} />
-                                        <InputOTPSlot index={5} />
+                                    <InputOTP maxLength={6} {...field}>
+                                        <InputOTPGroup>
+                                            <InputOTPSlot index={0} />
+                                            <InputOTPSlot index={1} />
+                                            <InputOTPSlot index={2} />
+                                            <InputOTPSlot index={3} />
+                                            <InputOTPSlot index={4} />
+                                            <InputOTPSlot index={5} />
+                                        </InputOTPGroup>
                                     </InputOTP>
-                                </InputOTP>
-                            </FormControl>
+                                </FormControl>
                                 <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">Enter the final 6-digit code to complete the process.</p>
                                 <FormMessage />
                             </FormItem>
