@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { User, Phone, KeyRound, Check, X, Loader2, AtSign, PartyPopper } from "lucide-react";
-import { collection, doc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -18,14 +18,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
-import { useCollection, useFirestore, useMemoFirebase, useAuth, useUser } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { cn } from "@/lib/utils";
-import { addDocument } from "@/firebase/blocking-updates";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Badge } from "@/components/ui/badge";
 import { successStories } from "@/lib/success-stories";
-import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
-import { signInAnonymously, User as FirebaseUser } from "firebase/auth";
+import { signInAnonymously, getAuth, User as FirebaseUser } from "firebase/auth";
 
 
 const featuredUsernames = successStories.map(story => story.creator.toLowerCase().replace('@', ''));
@@ -69,7 +67,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const [linkingMessage, setLinkingMessage] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const firestore = useFirestore();
-  const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
@@ -111,7 +108,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     setIsSubmitting(true);
   
     try {
-      if (!firestore || !auth) throw new Error("Firebase services not available");
+      if (!firestore) throw new Error("Firebase services not available");
       
       let currentUserId = user?.uid;
   
@@ -120,6 +117,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           setIsAuthLoading(true);
           setLinkingMessage("Creating secure session...");
           try {
+            const auth = getAuth();
             const userCredential = await signInAnonymously(auth);
             currentUserId = userCredential.user.uid;
           } catch (authError) {
@@ -139,7 +137,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         const { username } = form.getValues();
         const newDocRef = doc(firestore, "tiktok_users", currentUserId);
         
-        await addDocument(newDocRef, {
+        await setDoc(newDocRef, {
           id: currentUserId,
           tiktokUsername: username,
           isVerified: false,
@@ -210,17 +208,19 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     api.scrollTo(currentStep, true);
 
     if (currentStep === TIKTOK_BRIDGE_STEPS.length - 1) {
+        const finalRedirect = () => {
+            const finalSubmissionId = submissionId || (typeof window !== 'undefined' ? localStorage.getItem('submissionId') : null);
+            if (finalSubmissionId) {
+                router.push('/waiting-for-approval');
+            } else {
+                router.push('/');
+            }
+        };
+
         if (onFinished) {
-          onFinished();
+            onFinished();
         } else {
-            setTimeout(() => {
-                const finalSubmissionId = submissionId || (typeof window !== 'undefined' ? localStorage.getItem('submissionId') : null);
-                if (finalSubmissionId) {
-                    router.push('/waiting-for-approval');
-                } else {
-                    router.push('/');
-                }
-            }, 3000); 
+            setTimeout(finalRedirect, 3000); 
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -467,5 +467,3 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     </Card>
   );
 }
-
-    

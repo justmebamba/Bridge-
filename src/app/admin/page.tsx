@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -51,7 +50,7 @@ export default function AdminPage() {
   }
 
   const renderContent = () => {
-    if (usersLoading) {
+    if (usersLoading || !firestore) {
         return (
              <div className="flex flex-col items-center justify-center h-64 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
