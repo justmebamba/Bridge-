@@ -35,7 +35,6 @@ export function SiteHeader() {
             <Link href="/#features" className="text-foreground/60 transition-colors hover:text-foreground/80">Features</Link>
             <Link href="/#about" className="text-foreground/60 transition-colors hover:text-foreground/80">About</Link>
             <Link href="/#contact" className="text-foreground/60 transition-colors hover:text-foreground/80">Contact Us</Link>
-            <Link href="/admin" className="text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
@@ -71,7 +70,6 @@ export function SiteHeader() {
                         <Link href="/#features" className="flex w-full items-center py-2 text-lg font-semibold">Features</Link>
                         <Link href="/#about" className="flex w-full items-center py-2 text-lg font-semibold">About</Link>
                         <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Contact Us</Link>
-                        <Link href="/admin" className="flex w-full items-center py-2 text-lg font-semibold">Admin</Link>
                         <hr className="my-2"/>
                          {!isLoading && user ? (
                             <>

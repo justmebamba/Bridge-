@@ -1,3 +1,4 @@
+
 export interface Submission {
   id: string;
   tiktokUsername: string;
@@ -17,4 +18,12 @@ export interface PhoneNumber {
     benefits: string[];
     disadvantages: string[];
     bonuses: string[];
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  isVerified: boolean;
+  isMainAdmin: boolean;
+  createdAt: string;
 }

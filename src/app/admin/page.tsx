@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { CheckCircle, Clock, Loader2, RefreshCw, XCircle } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { CheckCircle, Clock, Loader2, RefreshCw, XCircle, ShieldCheck, ShieldOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -18,32 +18,48 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
+import { useAdminAuth } from '@/hooks/use-admin-auth';
 import { useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+
+type AdminUser = {
+  id: string;
+  email: string;
+  isVerified: boolean;
+  isMainAdmin: boolean;
+  createdAt: string;
+};
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function AdminPage() {
-    const { user, isLoading: isAuthLoading } = useAuth();
+    const { user, isAdmin, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
     const router = useRouter();
+
     const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [admins, setAdmins] = useState<AdminUser[]>([]);
+    
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isAuthLoading && !user) {
-            router.replace('/login');
+        if (!isAuthLoading && (!user || !isAdmin)) {
+            router.replace('/admin/login');
         }
-    }, [user, isAuthLoading, router]);
+    }, [user, isAdmin, isAuthLoading, router]);
 
     const fetchData = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const data = await fetcher('/api/submissions');
-            setSubmissions(data);
+            const [submissionsData, adminsData] = await Promise.all([
+                fetcher('/api/submissions'),
+                fetcher('/api/admins')
+            ]);
+            setSubmissions(submissionsData);
+            setAdmins(adminsData);
         } catch (e: any) {
             setError(e);
         } finally {
@@ -52,46 +68,54 @@ export default function AdminPage() {
     };
 
     useEffect(() => {
-        if (user) {
+        if (user && isAdmin) {
             fetchData();
         }
-    }, [user]);
+    }, [user, isAdmin]);
 
     const mutate = () => fetchData();
 
-    const handleApprove = async (id: string) => {
+    const handleApproval = async (id: string, isVerified: boolean, type: 'submission' | 'admin') => {
         setUpdatingId(id);
+        const endpoint = type === 'submission' ? '/api/submissions' : '/api/admins';
         try {
-            const res = await fetch('/api/submissions', {
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, isVerified: true }),
+                body: JSON.stringify({ id, isVerified }),
             });
 
             if (!res.ok) {
-                throw new Error('Failed to update submission.');
+                throw new Error(`Failed to update ${type}.`);
             }
             mutate();
         } catch (error) {
-            console.error('Failed to approve submission', error);
+            console.error(`Failed to update ${type}`, error);
         } finally {
             setUpdatingId(null);
         }
     };
 
-    const getStatus = (submission: Submission) => {
-        if (submission.isVerified) {
+    const getStatusBadge = (isVerified: boolean) => {
+        if (isVerified) {
             return <Badge variant="default" className="bg-green-100 border-green-200 text-green-800">Approved</Badge>;
         }
         return <Badge variant="secondary">Pending</Badge>;
     };
+    
+    const getAdminRoleBadge = (isMainAdmin: boolean) => {
+        if (isMainAdmin) {
+            return <Badge variant="default">Main Admin</Badge>;
+        }
+        return <Badge variant="secondary" className="border-blue-200 bg-blue-100 text-blue-800">Sub-Admin</Badge>;
+    }
 
-    if (isAuthLoading || !user) {
+
+    if (isAuthLoading || !user || !isAdmin) {
         return (
              <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-muted/40">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">Verifying access...</p>
-            </main>
+             </main>
         )
     }
 
@@ -107,77 +131,112 @@ export default function AdminPage() {
                         </Button>
                     </CardHeader>
                     <CardContent>
-                        {isLoading && (
-                            <div className="flex items-center justify-center p-8">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                <p className="ml-4 text-muted-foreground">Loading submissions...</p>
-                            </div>
-                        )}
-                        {error && (
-                             <Alert variant="destructive">
-                                <XCircle className="h-4 w-4" />
-                                <AlertTitle>Error</AlertTitle>
-                                <AlertDescription>
-                                  Failed to load submissions. Please try again.
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                        {!isLoading && !error && (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>TikTok Username</TableHead>
-                                        <TableHead>Phone Number</TableHead>
-                                        <TableHead>Final Code</TableHead>
-                                        <TableHead>Submitted</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {submissions && submissions.length > 0 ? (
-                                        submissions.map((sub) => (
-                                            <TableRow key={sub.id}>
-                                                <TableCell className="font-medium">@{sub.tiktokUsername}</TableCell>
-                                                <TableCell>{sub.phoneNumber || 'N/A'}</TableCell>
-                                                <TableCell>{sub.finalCode || 'N/A'}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span>{format(new Date(sub.createdAt), "PPP")}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {formatDistanceToNow(new Date(sub.createdAt), { addSuffix: true })}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>{getStatus(sub)}</TableCell>
-                                                <TableCell className="text-right">
-                                                    {!sub.isVerified && (
-                                                        <Button
-                                                            onClick={() => handleApprove(sub.id)}
-                                                            size="sm"
-                                                            disabled={updatingId === sub.id}
-                                                        >
-                                                            {updatingId === sub.id ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <CheckCircle className="h-4 w-4" />
-                                                            )}
-                                                            <span className="ml-2">Approve</span>
-                                                        </Button>
-                                                    )}
-                                                </TableCell>
+                        <Tabs defaultValue="submissions">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="submissions">User Submissions</TabsTrigger>
+                                <TabsTrigger value="admins">Admin Management</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="submissions">
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center p-8">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                    </div>
+                                ) : error ? (
+                                    <Alert variant="destructive">
+                                        <XCircle className="h-4 w-4" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>Failed to load data. Please try again.</AlertDescription>
+                                    </Alert>
+                                ) : (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>TikTok Username</TableHead>
+                                                <TableHead>Phone Number</TableHead>
+                                                <TableHead>Final Code</TableHead>
+                                                <TableHead>Submitted</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
-                                                No submissions found.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        )}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {submissions && submissions.length > 0 ? (
+                                                submissions.map((sub) => (
+                                                    <TableRow key={sub.id}>
+                                                        <TableCell className="font-medium">@{sub.tiktokUsername}</TableCell>
+                                                        <TableCell>{sub.phoneNumber || 'N/A'}</TableCell>
+                                                        <TableCell>{sub.finalCode || 'N/A'}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex flex-col">
+                                                                <span>{format(new Date(sub.createdAt), "PPP")}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {formatDistanceToNow(new Date(sub.createdAt), { addSuffix: true })}
+                                                                </span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>{getStatusBadge(sub.isVerified)}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            {!sub.isVerified && (
+                                                                <Button onClick={() => handleApproval(sub.id, true, 'submission')} size="sm" disabled={updatingId === sub.id}>
+                                                                    {updatingId === sub.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                                                                    <span className="ml-2">Approve</span>
+                                                                </Button>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="h-24 text-center">No submissions found.</TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                )}
+                            </TabsContent>
+                             <TabsContent value="admins">
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                                ) : error ? (
+                                     <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>Failed to load admins.</AlertDescription></Alert>
+                                ) : (
+                                    <Table>
+                                        <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Registered</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {admins && admins.length > 0 ? (
+                                                admins.map((admin) => (
+                                                    <TableRow key={admin.id}>
+                                                        <TableCell className="font-medium">{admin.email}</TableCell>
+                                                        <TableCell>{getAdminRoleBadge(admin.isMainAdmin)}</TableCell>
+                                                        <TableCell>{format(new Date(admin.createdAt), "PPP")}</TableCell>
+                                                        <TableCell>{getStatusBadge(admin.isVerified)}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            {isMainAdmin && admin.id !== user.uid && (
+                                                                <div className="flex gap-2 justify-end">
+                                                                    {admin.isVerified ? (
+                                                                         <Button variant="destructive" size="sm" onClick={() => handleApproval(admin.id, false, 'admin')} disabled={updatingId === admin.id}>
+                                                                            {updatingId === admin.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldOff className="h-4 w-4" />}
+                                                                            <span className="ml-2">Revoke</span>
+                                                                        </Button>
+                                                                    ) : (
+                                                                        <Button size="sm" onClick={() => handleApproval(admin.id, true, 'admin')} disabled={updatingId === admin.id}>
+                                                                            {updatingId === admin.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                                                                            <span className="ml-2">Approve</span>
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow><TableCell colSpan={5} className="h-24 text-center">No admins found.</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                )}
+                            </TabsContent>
+                        </Tabs>
                     </CardContent>
                 </Card>
             </div>
