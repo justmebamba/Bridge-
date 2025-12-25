@@ -6,7 +6,7 @@ import { Check, Loader2, Phone, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import useSWR from 'swr';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import type { PhoneNumber } from '@/lib/types';
 import { useMockUser } from '@/hooks/use-mock-user';
-import { useEffect } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -31,7 +30,25 @@ type FormValues = z.infer<typeof formSchema>;
 export default function SelectNumberPage() {
   const router = useRouter();
   const { user, isLoading: isUserLoading } = useMockUser();
-  const { data: phoneNumbers, isLoading: phoneNumbersLoading, error } = useSWR<PhoneNumber[]>('/api/phone-numbers', fetcher);
+  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
+  const [phoneNumbersLoading, setPhoneNumbersLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchPhoneNumbers = async () => {
+      setPhoneNumbersLoading(true);
+      setError(null);
+      try {
+        const data = await fetcher('/api/phone-numbers');
+        setPhoneNumbers(data);
+      } catch(e: any) {
+        setError(e);
+      } finally {
+        setPhoneNumbersLoading(false);
+      }
+    };
+    fetchPhoneNumbers();
+  }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

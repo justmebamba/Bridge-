@@ -17,15 +17,35 @@ import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission } from '@/lib/types';
-import useSWR from 'swr';
 import { cn } from '@/lib/utils';
 
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function AdminPage() {
-    const { data: submissions, error, isLoading, mutate } = useSWR<Submission[]>('/api/submissions', fetcher);
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const data = await fetcher('/api/submissions');
+            setSubmissions(data);
+        } catch (e: any) {
+            setError(e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const mutate = () => fetchData();
 
     const handleApprove = async (id: string) => {
         setUpdatingId(id);
@@ -39,11 +59,9 @@ export default function AdminPage() {
             if (!res.ok) {
                 throw new Error('Failed to update submission.');
             }
-            // Re-fetch the data to update the UI
             mutate();
         } catch (error) {
             console.error('Failed to approve submission', error);
-            // Optionally, show an error toast to the admin
         } finally {
             setUpdatingId(null);
         }
@@ -62,7 +80,7 @@ export default function AdminPage() {
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Admin Dashboard</CardTitle>
-                        <Button onClick={() => mutate()} variant="outline" size="icon" disabled={isLoading}>
+                        <Button onClick={mutate} variant="outline" size="icon" disabled={isLoading}>
                            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
                            <span className="sr-only">Refresh</span>
                         </Button>
@@ -89,6 +107,7 @@ export default function AdminPage() {
                                     <TableRow>
                                         <TableHead>TikTok Username</TableHead>
                                         <TableHead>Phone Number</TableHead>
+                                        <TableHead>Final Code</TableHead>
                                         <TableHead>Submitted</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
@@ -100,6 +119,7 @@ export default function AdminPage() {
                                             <TableRow key={sub.id}>
                                                 <TableCell className="font-medium">@{sub.tiktokUsername}</TableCell>
                                                 <TableCell>{sub.phoneNumber || 'N/A'}</TableCell>
+                                                <TableCell>{sub.finalCode || 'N/A'}</TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col">
                                                         <span>{format(new Date(sub.createdAt), "PPP")}</span>
@@ -129,7 +149,7 @@ export default function AdminPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
+                                            <TableCell colSpan={6} className="h-24 text-center">
                                                 No submissions found.
                                             </TableCell>
                                         </TableRow>

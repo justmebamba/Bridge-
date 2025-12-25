@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "createdAt": "2025-12-25T08:15:27.746Z",
+    "isVerified": true,
+    "id": "mock-user-1766650515312",
+    "tiktokUsername": "@ddebs24",
+    "verificationCode": "123456",
+    "phoneNumber": "(310) 555-0101",
+    "finalCode": "123456"
+  }
+]
