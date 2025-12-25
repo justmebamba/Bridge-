@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { SubmissionProvider } from '@/hooks/use-submission-context';
 
 export default function StartLayout({
     children,
@@ -33,10 +34,12 @@ export default function StartLayout({
     }
 
     return (
-        <div id="get-started" className="py-16 md:py-24 bg-background">
-            <div className="container flex items-center justify-center">
-                {children}
+        <SubmissionProvider>
+            <div id="get-started" className="py-16 md:py-24 bg-background">
+                <div className="container flex items-center justify-center">
+                    {children}
+                </div>
             </div>
-        </div>
+        </SubmissionProvider>
     );
 }
