@@ -109,21 +109,21 @@ export default function StartPage() {
     const isSubmitting = form.formState.isSubmitting;
 
     return (
-        <Card className="w-full max-w-lg">
-            <CardHeader>
-                 <div className="flex items-center justify-center space-x-4 min-h-[48px]">
+        <div className="w-full max-w-lg">
+            <div className="text-center mb-8">
+                <div className="flex items-center justify-center space-x-4 min-h-[48px]">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
                         <User className="h-7 w-7" />
                     </div>
                     <div>
-                        <CardTitle className="text-2xl">Complete Your Submission</CardTitle>
-                        <CardDescription>Fill out all fields to complete the bridging process.</CardDescription>
+                        <h1 className="text-2xl font-bold">Complete Your Submission</h1>
+                        <p className="text-muted-foreground">Fill out all fields to complete the bridging process.</p>
                     </div>
                 </div>
-            </CardHeader>
+            </div>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <CardContent className="space-y-8 pt-4">
+                    <div className="space-y-8 pt-4">
                         {/* Username */}
                         <FormField
                             control={form.control}
@@ -267,15 +267,15 @@ export default function StartPage() {
                                 </FormItem>
                             )}
                         />
-                    </CardContent>
-                    <CardFooter>
+                    </div>
+                    <div className="mt-8">
                         <Button type="submit" disabled={isSubmitting || phoneNumbersLoading} className="w-full rounded-full" size="lg">
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Submit Application
                         </Button>
-                    </CardFooter>
+                    </div>
                 </form>
             </Form>
-        </Card>
+        </div>
     );
 }

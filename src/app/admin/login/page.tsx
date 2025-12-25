@@ -9,7 +9,6 @@ import * as z from 'zod';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { signInWithEmailAndPassword, AuthError } from 'firebase/auth';
@@ -129,57 +128,57 @@ export default function AdminLoginPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
-        <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-            <LogIn className="mx-auto h-10 w-10 text-primary" />
-            <CardTitle className="text-2xl mt-4">Admin Access</CardTitle>
-            <CardDescription>Enter your admin credentials to log in.</CardDescription>
-        </CardHeader>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="grid gap-4">
-                <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                        <Input placeholder="admin@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </CardContent>
-            <CardFooter className="flex-col gap-4">
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Log In
-                </Button>
-                <p className="text-sm text-center text-muted-foreground">
-                    Need an admin account?{' '}
-                    <Link href="/admin/signup" className="font-semibold text-primary hover:underline">
-                        Register here
-                    </Link>
-                </p>
-            </CardFooter>
-            </form>
-        </Form>
-        </Card>
+        <div className="w-full max-w-sm">
+            <div className="text-center mb-8">
+                <LogIn className="mx-auto h-10 w-10 text-primary" />
+                <h1 className="text-2xl mt-4 font-bold">Admin Access</h1>
+                <p className="text-muted-foreground">Enter your admin credentials to log in.</p>
+            </div>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid gap-4">
+                        <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                                <Input placeholder="admin@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        <Button type="submit" disabled={isSubmitting} className="w-full">
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Log In
+                        </Button>
+                        <p className="text-sm text-center text-muted-foreground">
+                            Need an admin account?{' '}
+                            <Link href="/admin/signup" className="font-semibold text-primary hover:underline">
+                                Register here
+                            </Link>
+                        </p>
+                    </div>
+                </form>
+            </Form>
+        </div>
     </main>
   );
 }

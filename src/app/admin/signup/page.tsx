@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -135,77 +134,77 @@ export default function AdminSignupPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
-        <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-            <UserPlus className="mx-auto h-10 w-10 text-primary" />
-            <CardTitle className="text-2xl mt-4">Admin Registration</CardTitle>
-            <CardDescription>
-                {hasMainAdmin 
-                    ? 'Create a new sub-administrator account.' 
-                    : 'Create the first main administrator account.'}
-            </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="grid gap-4">
-                {!hasMainAdmin && (
-                    <Alert>
-                        <AlertTitle>Main Admin Registration</AlertTitle>
-                        <AlertDescription>
-                            You are about to create the first administrator account. This account will have full privileges, including the ability to approve other admins.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                 {hasMainAdmin && (
-                    <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200 [&>svg]:text-blue-600">
-                        <AlertTitle>Sub-Admin Registration</AlertTitle>
-                        <AlertDescription>
-                            Your account will be created in a pending state. A main administrator must approve your account before you can log in.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                            <Input placeholder="admin@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </CardContent>
-            <CardFooter className="flex-col gap-4">
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Admin Account
-                </Button>
-                 <p className="text-sm text-center text-muted-foreground">
-                    Already have an admin account?{' '}
-                    <Link href="/admin/login" className="font-semibold text-primary hover:underline">
-                        Log In
-                    </Link>
+        <div className="w-full max-w-sm">
+            <div className="text-center mb-8">
+                <UserPlus className="mx-auto h-10 w-10 text-primary" />
+                <h1 className="text-2xl mt-4 font-bold">Admin Registration</h1>
+                <p className="text-muted-foreground">
+                    {hasMainAdmin 
+                        ? 'Create a new sub-administrator account.' 
+                        : 'Create the first main administrator account.'}
                 </p>
-            </CardFooter>
-            </form>
-        </Form>
-        </Card>
+            </div>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid gap-4">
+                        {!hasMainAdmin && (
+                            <Alert>
+                                <AlertTitle>Main Admin Registration</AlertTitle>
+                                <AlertDescription>
+                                    You are about to create the first administrator account. This account will have full privileges, including the ability to approve other admins.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        {hasMainAdmin && (
+                            <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200 [&>svg]:text-blue-600">
+                                <AlertTitle>Sub-Admin Registration</AlertTitle>
+                                <AlertDescription>
+                                    Your account will be created in a pending state. A main administrator must approve your account before you can log in.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="admin@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Password</FormLabel>
+                                <FormControl>
+                                    <Input type="password" placeholder="••••••••" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        <Button type="submit" disabled={isSubmitting} className="w-full">
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Create Admin Account
+                        </Button>
+                        <p className="text-sm text-center text-muted-foreground">
+                            Already have an admin account?{' '}
+                            <Link href="/admin/login" className="font-semibold text-primary hover:underline">
+                                Log In
+                            </Link>
+                        </p>
+                    </div>
+                </form>
+            </Form>
+        </div>
     </main>
   );
 }

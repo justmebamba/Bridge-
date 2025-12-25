@@ -11,7 +11,6 @@ import { createUserWithEmailAndPassword, updateProfile, AuthError } from 'fireba
 import { auth } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -78,72 +77,72 @@ export default function SignupPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
-        <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-            <UserPlus className="mx-auto h-10 w-10 text-primary" />
-            <CardTitle className="text-2xl mt-4">Create an Account</CardTitle>
-            <CardDescription>
-                Get started with the TikTok Bridge in minutes.
-            </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="grid gap-4">
-                 <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                            <Input placeholder="name@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </CardContent>
-            <CardFooter className="flex-col gap-4">
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Account
-                </Button>
-                 <p className="text-sm text-center text-muted-foreground">
-                    Already have an account?{' '}
-                    <Link href="/login" className="font-semibold text-primary hover:underline">
-                        Log In
-                    </Link>
+        <div className="w-full max-w-sm">
+            <div className="text-center mb-8">
+                <UserPlus className="mx-auto h-10 w-10 text-primary" />
+                <h1 className="text-2xl mt-4 font-bold">Create an Account</h1>
+                <p className="text-muted-foreground">
+                    Get started with the TikTok Bridge in minutes.
                 </p>
-            </CardFooter>
-            </form>
-        </Form>
-        </Card>
+            </div>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid gap-4">
+                        <FormField
+                            control={form.control}
+                            name="displayName"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="John Doe" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="name@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Password</FormLabel>
+                                <FormControl>
+                                    <Input type="password" placeholder="••••••••" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        <Button type="submit" disabled={isSubmitting} className="w-full">
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Create Account
+                        </Button>
+                        <p className="text-sm text-center text-muted-foreground">
+                            Already have an account?{' '}
+                            <Link href="/login" className="font-semibold text-primary hover:underline">
+                                Log In
+                            </Link>
+                        </p>
+                    </div>
+                </form>
+            </Form>
+        </div>
     </main>
   );
 }
