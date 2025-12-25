@@ -31,7 +31,12 @@ type AdminUser = {
   createdAt: string;
 };
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => {
+    if (!res.ok) {
+        throw new Error('Failed to fetch data');
+    }
+    return res.json()
+});
 
 export default function AdminPage() {
     const { user, isAdmin, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
@@ -40,18 +45,20 @@ export default function AdminPage() {
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [admins, setAdmins] = useState<AdminUser[]>([]);
     
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isAuthLoading && (!user || !isAdmin)) {
-            router.replace('/admin/login');
+        if (!isAuthLoading) {
+            if (!user || !isAdmin) {
+                router.replace('/admin/login');
+            }
         }
     }, [user, isAdmin, isAuthLoading, router]);
 
     const fetchData = async () => {
-        setIsLoading(true);
+        setIsLoadingData(true);
         setError(null);
         try {
             const [submissionsData, adminsData] = await Promise.all([
@@ -63,7 +70,7 @@ export default function AdminPage() {
         } catch (e: any) {
             setError(e);
         } finally {
-            setIsLoading(false);
+            setIsLoadingData(false);
         }
     };
 
@@ -118,6 +125,8 @@ export default function AdminPage() {
              </main>
         )
     }
+
+    const isLoading = isAuthLoading || isLoadingData;
 
     return (
         <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12 lg:p-24 bg-muted/40">
@@ -211,7 +220,7 @@ export default function AdminPage() {
                                                         <TableCell>{format(new Date(admin.createdAt), "PPP")}</TableCell>
                                                         <TableCell>{getStatusBadge(admin.isVerified)}</TableCell>
                                                         <TableCell className="text-right">
-                                                            {isMainAdmin && admin.id !== user.uid && (
+                                                            {isMainAdmin && user && admin.id !== user.uid && (
                                                                 <div className="flex gap-2 justify-end">
                                                                     {admin.isVerified ? (
                                                                          <Button variant="destructive" size="sm" onClick={() => handleApproval(admin.id, false, 'admin')} disabled={updatingId === admin.id}>

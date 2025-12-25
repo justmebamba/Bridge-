@@ -17,6 +17,8 @@ import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/use-admin-auth';
+import type { AdminUser } from '@/lib/types';
+
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
@@ -47,45 +49,62 @@ export default function AdminLoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // The useAdminAuth hook will detect the new user state and the effect will re-route.
-      // We add a small toast for better UX.
-       toast({
+      // Step 1: Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const signedInUser = userCredential.user;
+
+      // Step 2: Verify if the user is a registered and verified admin from our backend
+      const res = await fetch('/api/admins');
+      if (!res.ok) {
+        throw new Error('Could not verify admin status.');
+      }
+      const admins: AdminUser[] = await res.json();
+      const adminRecord = admins.find(admin => admin.id === signedInUser.uid);
+
+      if (!adminRecord) {
+        throw new Error('You do not have permission to access this area.');
+      }
+      if (!adminRecord.isVerified) {
+        throw new Error('Your account is pending approval by an administrator.');
+      }
+
+      // Success
+      toast({
         title: 'Login Successful',
         description: 'Redirecting to your dashboard...',
       });
       router.push('/admin');
 
     } catch (error) {
-      const authError = error as AuthError;
       let errorMessage = 'An unexpected error occurred. Please try again.';
-      switch (authError.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          errorMessage = 'Invalid email or password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        case 'auth/too-many-requests':
-           errorMessage = 'Too many login attempts. Please try again later.';
-           break;
-        default:
-          console.error(authError);
-          break;
+      if (error instanceof Error) {
+          errorMessage = error.message;
       }
-       // Check if the user is not an admin after successful firebase login
-      const adminsRes = await fetch('/api/admins');
-      const admins = await adminsRes.json();
-      const signedInUser = admins.find((a: any) => a.email.toLowerCase() === values.email.toLowerCase());
-
-      if (signedInUser && !signedInUser.isVerified) {
-        errorMessage = 'Your account is pending approval by an administrator.';
-      } else if (!signedInUser) {
-        errorMessage = 'You do not have permission to access this area.';
+      
+      if ((error as AuthError).code) {
+          const authError = error as AuthError;
+          switch (authError.code) {
+              case 'auth/user-not-found':
+              case 'auth/wrong-password':
+              case 'auth/invalid-credential':
+              errorMessage = 'Invalid email or password. Please try again.';
+              break;
+              case 'auth/invalid-email':
+              errorMessage = 'Please enter a valid email address.';
+              break;
+              case 'auth/too-many-requests':
+              errorMessage = 'Too many login attempts. Please try again later.';
+              break;
+              default:
+               // Use the generic message for other auth errors
+               break;
+          }
       }
-
+      
+      // Sign out the user if they logged in via Firebase but failed admin verification
+      if (auth.currentUser) {
+        await auth.signOut();
+      }
 
       toast({
         variant: 'destructive',
