@@ -82,7 +82,7 @@ service cloud.firestore {
      * @description Manages admin role assignments.
      * @path /admins/{adminId}
      * @allow An admin (auth.uid='admin_abc') lists all admin documents. (list)
-     * @deny A regular user (auth.uid='user_123') tries to read an admin document. (get)
+     * @deny A regular user (auth.uid='user_120') tries to read an admin document. (get)
      * @principle Enforces role-based access control (RBAC), allowing admins to manage other admins.
      */
     match /admins/{adminId} {
@@ -98,8 +98,8 @@ service cloud.firestore {
     /**
      * @description Manages the pool of available phone numbers. All users can view them, but only admins can manage the list.
      * @path /phone_numbers/{phoneNumberId}
-     * @allow Any signed-in user (auth.uid='user_123') lists all phone numbers to choose one. (list)
-     * @deny A regular user (auth.uid='user_123') tries to add a new phone number. (create)
+     * @allow Any signed-in user (auth.uid='user_120') lists all phone numbers to choose one. (list)
+     * @deny A regular user (auth.uid='user_120') tries to add a new phone number. (create)
      * @principle Segregates public read access from privileged write access for system resources.
      */
     match /phone_numbers/{phoneNumberId} {
@@ -114,8 +114,8 @@ service cloud.firestore {
     /**
      * @description Secures a TikTok user's private data, restricting all access to the user themselves.
      * @path /tiktok_users/{tiktokUserId}
-     * @allow The user (auth.uid='user_123') creates their own profile document at /tiktok_users/user_123. (create)
-     * @deny A different user (auth.uid='user_456') tries to read the profile of 'user_123'. (get)
+     * @allow The user (auth.uid='user_120') creates their own profile document at /tiktok_users/user_120. (create)
+     * @deny A different user (auth.uid='user_456') tries to read the profile of 'user_120'. (get)
      * @deny Any user, including the owner, tries to list all documents in the collection. (list)
      * @principle Restricts access to a user's own data tree and prevents user enumeration.
      */
@@ -123,8 +123,7 @@ service cloud.firestore {
       allow get: if isOwner(tiktokUserId) || isAdmin();
       allow list: if isAdmin();
       // Allow a signed-in user to create their own document, ensuring the document ID and the embedded ID match their UID.
-      // Also ensures a timestamp is present.
-      allow create: if isOwner(tiktokUserId) && request.resource.data.id == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow create: if isOwner(tiktokUserId) && request.resource.data.id == request.auth.uid;
       allow update: if isExistingOwner(tiktokUserId) || isAdmin();
       allow delete: if isExistingOwner(tiktokUserId) || isAdmin();
     }
