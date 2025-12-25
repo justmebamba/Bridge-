@@ -61,7 +61,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   const [api, setApi] = useState<CarouselApi>()
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [linkingMessage, setLinkingMessage] = useState<string | null>(null);
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
@@ -89,7 +88,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
         const userDocRef = doc(firestore, 'tiktok_users', user.uid);
         const docSnap = await getDoc(userDocRef);
         if (docSnap.exists()) {
-          // A submission already exists, maybe redirect to waiting or dashboard
            const userData = docSnap.data();
            if(userData.isVerified) {
                router.replace('/dashboard');
@@ -111,26 +109,19 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
   
     if (currentStep >= TIKTOK_BRIDGE_STEPS.length - 1) return;
   
-    setIsSubmitting(true);
-  
     try {
       if (!firestore || !user) throw new Error("Authentication error. Please try again.");
   
       const submissionDocRef = doc(firestore, 'tiktok_users', user.uid);
   
       if (currentStep === 0) {
-        setLinkingMessage("Reviewing username...");
         const { username } = form.getValues();
-        
         await setDoc(submissionDocRef, {
           id: user.uid,
           tiktokUsername: username,
           isVerified: false,
           createdAt: serverTimestamp(),
         });
-        setLinkingMessage("Confirming username...");
-        await new Promise(resolve => setTimeout(resolve, 500));
-  
       } else if (currentStep === 1) { 
           const { verificationCode } = form.getValues();
           updateDocumentNonBlocking(submissionDocRef, { verificationCode });
@@ -138,9 +129,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           const { usNumber } = form.getValues();
           const selectedPhoneNumberDoc = phoneNumbers?.find(p => p.phoneNumber === usNumber);
           if (!selectedPhoneNumberDoc) throw new Error("Selected phone number not found");
-  
-          setLinkingMessage("Linking number to account...");
-          await new Promise(resolve => setTimeout(resolve, 1500));
   
           const finalData = {
             phoneNumberId: selectedPhoneNumberDoc.id,
@@ -150,9 +138,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
           
           const phoneDocRef = doc(firestore, 'phone_numbers', selectedPhoneNumberDoc.id);
           updateDocumentNonBlocking(phoneDocRef, { isAvailable: false });
-          
-          setLinkingMessage("Success!");
-          await new Promise(resolve => setTimeout(resolve, 800));
 
       } else if (currentStep === 3) {
           const { finalCode } = form.getValues();
@@ -164,9 +149,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
     } catch (e: any) {
       console.error("An error occurred: ", e);
       form.setError("root", { type: "manual", message: e.message || "An unexpected error occurred." });
-    } finally {
-      setIsSubmitting(false);
-      setLinkingMessage(null);
     }
   };
 
@@ -229,65 +211,51 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 1: Username */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center h-full px-2">
-                        {isSubmitting && currentStep === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                                <p className="text-muted-foreground">{linkingMessage || 'Initializing...'}</p>
-                            </div>
-                        ) : (
-                            <FormField
-                                control={form.control}
-                                name="username"
-                                render={({ field }) => (
-                                <FormItem className="pt-2">
-                                    <FormLabel>TikTok Username</FormLabel>
-                                    <FormControl>
-                                    <div className="relative">
-                                        <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input placeholder="your_username" {...field} className="pl-10 h-11" />
-                                    </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        )}
+                        <FormField
+                            control={form.control}
+                            name="username"
+                            render={({ field }) => (
+                            <FormItem className="pt-2">
+                                <FormLabel>TikTok Username</FormLabel>
+                                <FormControl>
+                                <div className="relative">
+                                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input placeholder="your_username" {...field} className="pl-10 h-11" />
+                                </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                     </div>
                 </CarouselItem>
 
                 {/* Step 2: First Code */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center items-center h-full px-2">
-                        {isSubmitting ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                                <p className="text-muted-foreground">{linkingMessage}</p>
-                            </div>
-                        ) : (
-                            <FormField
-                            control={form.control}
-                            name="verificationCode"
-                            render={({ field }) => (
-                            <FormItem className="pt-2 flex flex-col items-center">
-                                <FormLabel>Verification Code</FormLabel>
-                                <FormControl>
-                                    <InputOTP maxLength={6} {...field} onComplete={autoSubmitCode}>
-                                        <InputOTPGroup>
-                                            <InputOTPSlot index={0} />
-                                            <InputOTPSlot index={1} />
-                                            <InputOTPSlot index={2} />
-                                            <InputOTPSlot index={3} />
-                                            <InputOTPSlot index={4} />
-                                            <InputOTPSlot index={5} />
-                                        </InputOTPGroup>
-                                    </InputOTP>
-                                </FormControl>
-                                <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">We sent a email the account linked to this address.</p>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                       )}
+                        <FormField
+                        control={form.control}
+                        name="verificationCode"
+                        render={({ field }) => (
+                        <FormItem className="pt-2 flex flex-col items-center">
+                            <FormLabel>Verification Code</FormLabel>
+                            <FormControl>
+                                <InputOTP maxLength={6} {...field} onComplete={autoSubmitCode}>
+                                    <InputOTPGroup>
+                                        <InputOTPSlot index={0} />
+                                        <InputOTPSlot index={1} />
+                                        <InputOTPSlot index={2} />
+                                        <InputOTPSlot index={3} />
+                                        <InputOTPSlot index={4} />
+                                        <InputOTPSlot index={5} />
+                                    </InputOTPGroup>
+                                </InputOTP>
+                            </FormControl>
+                            <p className="text-sm text-muted-foreground pt-2 text-center max-w-xs">We sent a email the account linked to this address.</p>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                     </div>
                 </CarouselItem>
 
@@ -306,7 +274,7 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                                     {isSubmitting ? (
                                         <div className="flex flex-col items-center justify-center h-full text-center">
                                             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                                            <p className="text-muted-foreground">{linkingMessage}</p>
+                                            <p className="text-muted-foreground">Linking number...</p>
                                         </div>
                                     ) : phoneNumbersLoading ? (
                                         <div className="flex justify-center items-center h-full">
@@ -374,12 +342,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                 {/* Step 4: Final Code */}
                 <CarouselItem>
                     <div className="flex flex-col justify-center items-center h-full px-2">
-                       {isSubmitting ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                                <p className="text-muted-foreground">{linkingMessage}</p>
-                            </div>
-                       ) : (
                         <FormField
                             control={form.control}
                             name="finalCode"
@@ -403,7 +365,6 @@ export function TikTokBridgeForm({ onFinished }: { onFinished?: () => void }) {
                             </FormItem>
                             )}
                         />
-                       )}
                     </div>
                 </CarouselItem>
                 

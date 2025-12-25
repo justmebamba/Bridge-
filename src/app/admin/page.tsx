@@ -26,7 +26,6 @@ export default function AdminPage() {
   const auth = useAuth();
   const router = useRouter();
 
-  // This query is now safe because useFirestore() will only return a value when ready.
   const usersQuery = useMemoFirebase(() => {
       if (!firestore) return null;
       return query(collection(firestore, 'tiktok_users'));
@@ -47,12 +46,10 @@ export default function AdminPage() {
   const handleApprove = (userId: string) => {
     if (!firestore) return;
     const userDocRef = doc(firestore, 'tiktok_users', userId);
-    // This correctly uses the non-blocking update for a responsive UI.
     updateDocumentNonBlocking(userDocRef, { isVerified: true });
   }
 
   const renderContent = () => {
-    // The isLoading state from useCollection is now reliable.
     if (usersLoading) {
         return (
              <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -136,3 +133,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
