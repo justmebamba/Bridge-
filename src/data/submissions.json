@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "createdAt": "2025-12-25T10:03:46.914Z",
+    "isVerified": false,
+    "id": "OGAxHmxrCVhUxwmVrpTJPOmHaMQ2",
+    "tiktokUsername": "@ddebs24",
+    "verificationCode": "123456",
+    "phoneNumber": "(212) 555-0102",
+    "finalCode": "123456"
+  }
+]
