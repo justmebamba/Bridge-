@@ -1,86 +1,125 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useForm } from 'react-hook-form';
-import { KeyRound, PartyPopper } from 'lucide-react';
+import { KeyRound, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import { useUser, updateDocumentNonBlocking } from '@/firebase';
-import { useSubmission } from '@/hooks/use-submission';
+import { useMockUser } from '@/hooks/use-mock-user';
+import { useEffect } from 'react';
+
 
 const formSchema = z.object({
-  finalCode: z.string().length(6, 'Code must be 6 digits.'),
+  finalCode: z.string().length(6, "Code must be 6 digits."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 export default function FinalCodePage() {
   const router = useRouter();
-  const { user } = useUser();
-  const { userDocRef } = useSubmission();
-  const [isSuccess, setIsSuccess] = useState(false);
+  const { user, isLoading: isUserLoading } = useMockUser();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
     defaultValues: {
-      finalCode: '',
-    },
+      finalCode: "",
+    }
   });
 
-  const handleOnComplete = (code: string) => {
-    if (!userDocRef || !user) return;
+  useEffect(() => {
+    // Redirect if user is not "logged in"
+    if (!isUserLoading && !user) {
+        router.replace('/start');
+    }
+    // Pre-fill form for demonstration purposes if a submission exists
+    const submissionId = localStorage.getItem('submissionId');
+    if (submissionId) {
+       // In a real app, you'd fetch the submission and check its state.
+       // Here we assume if they are on this page, the previous steps are done.
+    } else {
+        // If there's no submission ID, they shouldn't be here.
+        router.replace('/start/username');
+    }
+  }, [user, isUserLoading, router]);
 
-    updateDocumentNonBlocking(userDocRef, { finalCode: code });
-
-    localStorage.setItem('submissionId', user.uid);
-    setIsSuccess(true);
+  const onSubmit = async (values: FormValues) => {
+    if (!user) {
+      form.setError("root", { message: "You must be logged in to proceed." });
+      return;
+    }
     
-    setTimeout(() => {
-      router.push('/waiting-for-approval');
-    }, 2000);
-  };
-  
-  const progressValue = 75;
+    try {
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: user.uid, // Use the user's mock UID
+          finalCode: values.finalCode,
+        }),
+      });
 
-  if (isSuccess) {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'An unknown error occurred.');
+      }
+
+      // On successful submission of the final step
+      router.push('/success');
+
+    } catch (error: any) {
+      console.error(error);
+      form.setError("root", { message: error.message || "An unexpected error occurred." });
+    }
+  };
+
+  const autoSubmitCode = (code: string) => {
+    if (code.length === 6) {
+      form.handleSubmit(onSubmit)();
+    }
+  };
+
+  const isSubmitting = form.formState.isSubmitting;
+
+
+  if (isUserLoading) {
     return (
-        <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
-            <CardHeader>
-                <Progress value={100} className="mb-4 h-1.5" />
-            </CardHeader>
-             <CardContent className="min-h-[150px] flex flex-col items-center justify-center text-center py-8">
-                <PartyPopper className="h-20 w-20 text-primary" />
-                <h3 className="text-xl font-semibold mt-4">Successful!</h3>
-                <p className="text-muted-foreground mt-2 max-w-[250px]">Your submission is complete. You will be redirected shortly to await admin approval.</p>
-            </CardContent>
-        </Card>
-    );
+        <div className="flex min-h-screen items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="ml-4 text-muted-foreground">Loading Your Progress...</p>
+        </div>
+    )
   }
 
   return (
-    <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <Progress value={100} className="mb-4 h-1.5" />
+        <div className="flex items-center space-x-4 min-h-[48px]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+            <KeyRound className="h-6 w-6" />
+          </div>
+          <div>
+            <CardTitle className="text-xl">Final Confirmation</CardTitle>
+            <CardDescription>Step 4 of 4</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
       <Form {...form}>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <CardHeader>
-            <Progress value={progressValue} className="mb-4 h-1.5" />
-            <div className="flex items-center space-x-4 min-h-[48px]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
-                <KeyRound className="h-6 w-6" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">Final Confirmation</CardTitle>
-                <CardDescription>Step 4 of 4</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-[150px] flex flex-col items-center justify-center">
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="min-h-[200px] flex items-center justify-center">
+            {form.formState.errors.root && (
+                <div className="text-destructive text-sm font-medium p-2 text-center">{form.formState.errors.root.message}</div>
+            )}
             <FormField
               control={form.control}
               name="finalCode"
@@ -88,7 +127,7 @@ export default function FinalCodePage() {
                 <FormItem className="flex flex-col items-center">
                   <FormLabel>Final Confirmation Code</FormLabel>
                   <FormControl>
-                    <InputOTP maxLength={6} {...field} onComplete={handleOnComplete}>
+                    <InputOTP maxLength={6} {...field} onComplete={autoSubmitCode}>
                       <InputOTPGroup>
                         <InputOTPSlot index={0} />
                         <InputOTPSlot index={1} />
@@ -105,8 +144,12 @@ export default function FinalCodePage() {
               )}
             />
           </CardContent>
-           <CardFooter>
-                <Button type="button" variant="ghost" onClick={() => router.back()} className="w-full rounded-full">Back</Button>
+          <CardFooter className="flex-col-reverse gap-4 pt-4">
+            <Button type="submit" disabled={isSubmitting} className="w-full rounded-full" size="lg">
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Complete Submission
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => router.back()} disabled={isSubmitting} className="w-full rounded-full">Back</Button>
           </CardFooter>
         </form>
       </Form>

@@ -1,42 +1,27 @@
+
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Lock, LogIn, Mail, Loader2, UserPlus } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query } from 'firebase/firestore';
+import { Input } from '@/components/ui/input';
 
 const formSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(1, 'Password is required.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { toast } = useToast();
-  const auth = useAuth();
-  const firestore = useFirestore();
-
-  const adminsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'admins'));
-  }, [firestore]);
-  const { data: admins, isLoading: adminsLoading } = useCollection(adminsQuery);
-  const noAdminsExist = !adminsLoading && admins && admins.length === 0;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -46,100 +31,79 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = async (data: FormValues) => {
-    setIsLoading(true);
-    if (!auth) {
-        toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: 'Authentication service is not available.',
-        });
-        setIsLoading(false);
-        return;
-    }
+  const onSubmit = (values: FormValues) => {
+    // This is mock authentication. In a real app, you'd call your auth service.
+    const mockUser = {
+      uid: `mock-user-${new Date().getTime()}`,
+      email: values.email,
+      displayName: 'Mock User', // You might get this from your backend
+    };
+    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    
+    // Force a storage event to update the header
+    window.dispatchEvent(new StorageEvent('storage', {
+        key: 'mockUser',
+        newValue: JSON.stringify(mockUser),
+    }));
 
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      router.push('/admin');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred.',
-      });
-      setIsLoading(false);
-    }
+    router.push('/start');
   };
 
+  const { isSubmitting } = form.formState;
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Admin Login</CardTitle>
-          <CardDescription>Enter your credentials to access the control panel.</CardDescription>
+            <LogIn className="mx-auto h-10 w-10 text-primary" />
+            <CardTitle className="text-2xl mt-4">Welcome Back</CardTitle>
+            <CardDescription>Enter your credentials to access your account.</CardDescription>
         </CardHeader>
-        <CardContent>
-          {adminsLoading ? (
-            <div className="flex justify-center items-center h-24">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="grid gap-4">
                 <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
+                control={form.control}
+                name="email"
+                render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input type="email" placeholder="admin@example.com" {...field} className="pl-10" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                        <Input placeholder="name@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
                     </FormItem>
-                  )}
+                )}
                 />
                 <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
+                control={form.control}
+                name="password"
+                render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input type="password" placeholder="••••••••" {...field} className="pl-10" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
                     </FormItem>
-                  )}
+                )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Signing In...' : 'Sign In'}
-                  <LogIn className="ml-2 h-4 w-4" />
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Log In
                 </Button>
-              </form>
-            </Form>
-          )}
-        </CardContent>
-        {noAdminsExist && (
-          <CardFooter className="flex-col items-start gap-4">
-            <div className="text-sm text-muted-foreground text-center w-full">
-              No admin account found. Create the first one to get started.
-            </div>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/create-admin">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Create First Admin Account
-              </Link>
-            </Button>
-          </CardFooter>
-        )}
-      </Card>
+                <p className="text-sm text-center text-muted-foreground">
+                    Don't have an account?{' '}
+                    <Link href="/signup" className="font-semibold text-primary hover:underline">
+                        Sign up
+                    </Link>
+                </p>
+            </CardFooter>
+            </form>
+        </Form>
+        </Card>
     </main>
   );
 }

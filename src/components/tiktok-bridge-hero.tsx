@@ -42,7 +42,7 @@ export function TikTokBridgeHero() {
         <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
             <div className="container px-4 pt-16 pb-16 text-center">
                  <Button asChild size="lg" className="rounded-full px-8 text-lg">
-                  <Link href="/join">Get started</Link>
+                  <Link href="/start">Get started</Link>
                 </Button>
             </div>
         </div>

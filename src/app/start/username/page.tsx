@@ -1,99 +1,123 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useForm } from 'react-hook-form';
 import { AtSign, Loader2, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { useUser, setDocumentNonBlocking } from '@/firebase';
-import { useSubmission } from '@/hooks/use-submission';
-import { serverTimestamp } from 'firebase/firestore';
+import { successStories } from '@/lib/success-stories';
+import { useMockUser } from '@/hooks/use-mock-user';
+import { useEffect } from 'react';
+
+const featuredUsernames = successStories.map(story => story.creator.toLowerCase().replace('@', ''));
 
 const formSchema = z.object({
-  username: z.string().min(2, 'Username must be at least 2 characters.'),
+  username: z.string().min(2, "Username must be at least 2 characters.").refine(
+    (value) => !featuredUsernames.includes(value.toLowerCase()),
+    (value) => ({ message: `@${value} is a featured creator and cannot be used.` })
+  ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 export default function UsernamePage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const { user } = useUser();
-  const { submission, userDocRef } = useSubmission();
+  const { user, isLoading: isUserLoading } = useMockUser();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
     defaultValues: {
-      username: submission?.tiktokUsername || '',
-    },
+      username: "",
+    }
   });
   
   useEffect(() => {
-    if (submission?.tiktokUsername) {
-        form.reset({ username: submission.tiktokUsername });
+    // If a user is "logged in", clear any previous submission ID
+    // to allow them to start a new application.
+    if (user) {
+      localStorage.removeItem('submissionId');
     }
-  }, [submission, form]);
+  }, [user]);
 
-
-  const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true);
-    if (!userDocRef || !user) {
-      form.setError('root', { message: 'You must be logged in to continue.' });
-      setIsSubmitting(false);
+  const onSubmit = async (values: FormValues) => {
+    if (!user) {
+      form.setError("root", { message: "You must be logged in to proceed." });
       return;
     }
-
+    
     try {
-        const docData = {
-            id: user.uid,
-            tiktokUsername: data.username,
-            createdAt: serverTimestamp(),
-            isVerified: false,
-        };
+      // The API route will create a new submission or find the existing one.
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: user.uid, // Use the user's mock UID
+          tiktokUsername: values.username,
+        }),
+      });
 
-      setDocumentNonBlocking(userDocRef, docData, { merge: true });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'An unknown error occurred.');
+      }
+      
+      // Store the submission ID to persist progress across pages
+      localStorage.setItem('submissionId', user.uid);
+
+      // Navigate to the next step
       router.push('/start/verify-code');
 
     } catch (error: any) {
-      form.setError('root', { message: error.message || 'An unexpected error occurred.' });
-      setIsSubmitting(false);
+      console.error(error);
+      form.setError("root", { message: error.message || "An unexpected error occurred." });
     }
   };
-  
-  const progressValue = 0;
+
+  const isSubmitting = form.formState.isSubmitting;
+
+  if (isUserLoading) {
+    return (
+        <div className="flex min-h-screen items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    )
+  }
 
   return (
-    <Card className="rounded-2xl shadow-xl border-t w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <Progress value={25} className="mb-4 h-1.5" />
+        <div className="flex items-center space-x-4 min-h-[48px]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+            <User className="h-6 w-6" />
+          </div>
+          <div>
+            <CardTitle className="text-xl">Your TikTok</CardTitle>
+            <CardDescription>Step 1 of 4</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardHeader>
-            <Progress value={progressValue} className="mb-4 h-1.5" />
-            <div className="flex items-center space-x-4 min-h-[48px]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
-                <User className="h-6 w-6" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">Your TikTok</CardTitle>
-                <CardDescription>Step 1 of 4</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-[150px]">
-             {form.formState.errors.root && (
-                <div className="text-destructive text-sm font-medium p-2 text-center mb-4">{form.formState.errors.root.message}</div>
+          <CardContent className="min-h-[200px] flex items-center">
+            {form.formState.errors.root && (
+                <div className="text-destructive text-sm font-medium p-2 text-center">{form.formState.errors.root.message}</div>
             )}
             <FormField
               control={form.control}
               name="username"
               render={({ field }) => (
-                <FormItem className="pt-2">
+                <FormItem className="w-full">
                   <FormLabel>TikTok Username</FormLabel>
                   <FormControl>
                     <div className="relative">

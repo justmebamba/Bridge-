@@ -2,7 +2,6 @@
 'use client';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Inter } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { SiteHeader } from '@/components/layout/site-header';
@@ -28,7 +27,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
-        <FirebaseClientProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
             <SiteHeader />
             {isHomePage && <TikTokBridgeHero />}
@@ -40,7 +38,6 @@ export default function RootLayout({
             </div>
           </div>
           <CookieConsentBanner />
-        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>

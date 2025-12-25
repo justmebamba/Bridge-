@@ -24,7 +24,7 @@ export function AboutBridgingSection() {
                     </p>
                     <div className="mt-10">
                         <Button size="lg" className="rounded-full px-8 text-lg" variant="outline" asChild>
-                            <Link href="/join">Get Started</Link>
+                            <Link href="/start">Get Started</Link>
                         </Button>
                     </div>
                 </div>

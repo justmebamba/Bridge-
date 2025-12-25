@@ -1,17 +1,13 @@
-import { SubmissionProvider } from "@/components/submission-provider";
-
 export default function StartLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
-  return (
-    <SubmissionProvider>
+    return (
         <div id="get-started" className="py-16 md:py-24 bg-background">
-            <div className="container">
+            <div className="container flex items-center justify-center">
                 {children}
             </div>
         </div>
-    </SubmissionProvider>
-  );
+    );
 }

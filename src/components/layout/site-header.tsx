@@ -1,11 +1,23 @@
 
+'use client';
+
 import Link from "next/link"
 import { TikTokLogo } from "../icons/tiktok-logo"
 import { Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
+import { useMockUser } from "@/hooks/use-mock-user";
+import { useRouter } from "next/navigation";
 
 export function SiteHeader() {
+  const { user, isLoading } = useMockUser();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('mockUser');
+    router.push('/login');
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-20 items-center justify-between">
@@ -22,14 +34,27 @@ export function SiteHeader() {
             <Link href="/#features" className="text-foreground/60 transition-colors hover:text-foreground/80">Features</Link>
             <Link href="/#about" className="text-foreground/60 transition-colors hover:text-foreground/80">About</Link>
             <Link href="/#contact" className="text-foreground/60 transition-colors hover:text-foreground/80">Contact Us</Link>
-            <Link href="/#contact" className="text-foreground/60 transition-colors hover:text-foreground/80">Support</Link>
+            <Link href="/admin" className="text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-            <Button asChild>
-                <Link href="/join">Get Started</Link>
-            </Button>
-            <Link href="/login" className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground/80">Admin</Link>
+            {!isLoading && user ? (
+                <>
+                    <Button variant="secondary" onClick={handleLogout}>Log Out</Button>
+                    <Button asChild>
+                        <Link href="/start">Get Started</Link>
+                    </Button>
+                </>
+            ) : !isLoading && (
+                 <>
+                    <Button variant="ghost" asChild>
+                        <Link href="/login">Log In</Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/signup">Sign Up</Link>
+                    </Button>
+                </>
+            )}
         </div>
 
         <div className="md:hidden">
@@ -45,9 +70,19 @@ export function SiteHeader() {
                         <Link href="/#features" className="flex w-full items-center py-2 text-lg font-semibold">Features</Link>
                         <Link href="/#about" className="flex w-full items-center py-2 text-lg font-semibold">About</Link>
                         <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Contact Us</Link>
-                        <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Support</Link>
+                        <Link href="/admin" className="flex w-full items-center py-2 text-lg font-semibold">Admin</Link>
                         <hr className="my-2"/>
-                        <Button asChild size="lg"><Link href="/join">Get Started</Link></Button>
+                         {!isLoading && user ? (
+                            <>
+                                <Button onClick={handleLogout} variant="secondary">Log Out</Button>
+                                <Button asChild size="lg"><Link href="/start">Get Started</Link></Button>
+                            </>
+                        ) : !isLoading && (
+                            <>
+                                <Button asChild size="lg"><Link href="/login">Log In</Link></Button>
+                                <Button asChild size="lg" variant="outline"><Link href="/signup">Sign Up</Link></Button>
+                            </>
+                        )}
                     </div>
                 </SheetContent>
             </Sheet>
