@@ -18,15 +18,25 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function AdminPage() {
+    const { user, isLoading: isAuthLoading } = useAuth();
+    const router = useRouter();
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isAuthLoading && !user) {
+            router.replace('/login');
+        }
+    }, [user, isAuthLoading, router]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -42,8 +52,10 @@ export default function AdminPage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (user) {
+            fetchData();
+        }
+    }, [user]);
 
     const mutate = () => fetchData();
 
@@ -73,6 +85,15 @@ export default function AdminPage() {
         }
         return <Badge variant="secondary">Pending</Badge>;
     };
+
+    if (isAuthLoading || !user) {
+        return (
+             <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-muted/40">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">Verifying access...</p>
+            </main>
+        )
+    }
 
     return (
         <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12 lg:p-24 bg-muted/40">

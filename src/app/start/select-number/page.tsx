@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import type { PhoneNumber } from '@/lib/types';
-import { useMockUser } from '@/hooks/use-mock-user';
+import { useAuth } from '@/hooks/use-auth';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -29,7 +29,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SelectNumberPage() {
   const router = useRouter();
-  const { user, isLoading: isUserLoading } = useMockUser();
+  const { user, isLoading: isUserLoading } = useAuth();
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [phoneNumbersLoading, setPhoneNumbersLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -57,11 +57,7 @@ export default function SelectNumberPage() {
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.replace('/start');
-    }
-     const submissionId = localStorage.getItem('submissionId');
-    if (!submissionId) {
-        router.replace('/start/username');
+      router.replace('/login');
     }
   }, [user, isUserLoading, router]);
 
@@ -97,11 +93,10 @@ export default function SelectNumberPage() {
 
   const isSubmitting = form.formState.isSubmitting;
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="ml-4 text-muted-foreground">Loading Your Progress...</p>
         </div>
     )
   }

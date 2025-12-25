@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import { useMockUser } from '@/hooks/use-mock-user';
+import { useAuth } from '@/hooks/use-auth';
 import { useEffect } from 'react';
 
 
@@ -24,7 +24,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function FinalCodePage() {
   const router = useRouter();
-  const { user, isLoading: isUserLoading } = useMockUser();
+  const { user, isLoading: isUserLoading } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -35,18 +35,9 @@ export default function FinalCodePage() {
   });
 
   useEffect(() => {
-    // Redirect if user is not "logged in"
+    // Redirect if user is not logged in
     if (!isUserLoading && !user) {
-        router.replace('/start');
-    }
-    // Pre-fill form for demonstration purposes if a submission exists
-    const submissionId = localStorage.getItem('submissionId');
-    if (submissionId) {
-       // In a real app, you'd fetch the submission and check its state.
-       // Here we assume if they are on this page, the previous steps are done.
-    } else {
-        // If there's no submission ID, they shouldn't be here.
-        router.replace('/start/username');
+        router.replace('/login');
     }
   }, [user, isUserLoading, router]);
 
@@ -91,11 +82,10 @@ export default function FinalCodePage() {
   const isSubmitting = form.formState.isSubmitting;
 
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="ml-4 text-muted-foreground">Loading Your Progress...</p>
         </div>
     )
   }

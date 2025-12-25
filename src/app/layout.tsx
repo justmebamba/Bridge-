@@ -9,6 +9,7 @@ import { SiteFooter } from '@/components/layout/site-footer';
 import { usePathname } from 'next/navigation';
 import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
+import { AuthProvider } from '@/hooks/use-auth';
 
 
 const fontSans = Inter({
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
+        <AuthProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
             <SiteHeader />
             {isHomePage && <TikTokBridgeHero />}
@@ -38,6 +40,7 @@ export default function RootLayout({
             </div>
           </div>
           <CookieConsentBanner />
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

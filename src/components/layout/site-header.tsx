@@ -6,15 +6,16 @@ import { TikTokLogo } from "../icons/tiktok-logo"
 import { Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
-import { useMockUser } from "@/hooks/use-mock-user";
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
 
 export function SiteHeader() {
-  const { user, isLoading } = useMockUser();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem('mockUser');
+  const handleLogout = async () => {
+    await auth.signOut();
     router.push('/login');
   };
 

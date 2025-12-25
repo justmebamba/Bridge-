@@ -7,11 +7,14 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
+import { createUserWithEmailAndPassword, updateProfile, AuthError } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -23,6 +26,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -33,22 +37,41 @@ export default function SignupPage() {
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    // This is mock authentication. In a real app, you'd call your auth service.
-    const mockUser = {
-      uid: `mock-user-${new Date().getTime()}`,
-      email: values.email,
-      displayName: values.displayName,
-    };
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+  const onSubmit = async (values: FormValues) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      
+      // Update the user's profile with their display name
+      await updateProfile(userCredential.user, {
+        displayName: values.displayName,
+      });
 
-    // Force a storage event to update the header
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: 'mockUser',
-        newValue: JSON.stringify(mockUser),
-    }));
+      // Redirect to the start of the flow
+      router.push('/start');
 
-    router.push('/start');
+    } catch (error) {
+      const authError = error as AuthError;
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      switch (authError.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email address is already in use.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'The password is too weak. Please choose a stronger password.';
+          break;
+        default:
+          console.error(authError);
+          break;
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Sign-up Failed',
+        description: errorMessage,
+      });
+    }
   };
 
   const { isSubmitting } = form.formState;
@@ -124,4 +147,3 @@ export default function SignupPage() {
     </main>
   );
 }
-

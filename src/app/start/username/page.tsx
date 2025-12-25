@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { successStories } from '@/lib/success-stories';
-import { useMockUser } from '@/hooks/use-mock-user';
+import { useAuth } from '@/hooks/use-auth';
 import { useEffect } from 'react';
 
 const featuredUsernames = successStories.map(story => story.creator.toLowerCase().replace('@', ''));
@@ -29,7 +29,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function UsernamePage() {
   const router = useRouter();
-  const { user, isLoading: isUserLoading } = useMockUser();
+  const { user, isLoading: isUserLoading } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -40,12 +40,10 @@ export default function UsernamePage() {
   });
   
   useEffect(() => {
-    // If a user is "logged in", clear any previous submission ID
-    // to allow them to start a new application.
-    if (user) {
-      localStorage.removeItem('submissionId');
+    if (!isUserLoading && !user) {
+      router.replace('/login');
     }
-  }, [user]);
+  }, [user, isUserLoading, router]);
 
   const onSubmit = async (values: FormValues) => {
     if (!user) {
@@ -63,6 +61,8 @@ export default function UsernamePage() {
         body: JSON.stringify({
           id: user.uid, // Use the user's mock UID
           tiktokUsername: values.username,
+          createdAt: new Date().toISOString(),
+          isVerified: false,
         }),
       });
 
@@ -71,9 +71,6 @@ export default function UsernamePage() {
         throw new Error(errorData.message || 'An unknown error occurred.');
       }
       
-      // Store the submission ID to persist progress across pages
-      localStorage.setItem('submissionId', user.uid);
-
       // Navigate to the next step
       router.push('/start/verify-code');
 
@@ -85,7 +82,7 @@ export default function UsernamePage() {
 
   const isSubmitting = form.formState.isSubmitting;
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />

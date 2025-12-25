@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import { useMockUser } from '@/hooks/use-mock-user';
+import { useAuth } from '@/hooks/use-auth';
 import { useEffect } from 'react';
 
 
@@ -24,7 +24,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function VerifyCodePage() {
   const router = useRouter();
-  const { user, isLoading: isUserLoading } = useMockUser();
+  const { user, isLoading: isUserLoading } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -35,19 +35,14 @@ export default function VerifyCodePage() {
   });
 
   useEffect(() => {
-    // Redirect if user is not "logged in" or if there's no submission ID
+    // Redirect if user is not logged in
     if (!isUserLoading && !user) {
-        router.replace('/start');
-    }
-    const submissionId = localStorage.getItem('submissionId');
-    if (!submissionId) {
-        router.replace('/start/username');
+        router.replace('/login');
     }
   }, [user, isUserLoading, router]);
 
   const onSubmit = async (values: FormValues) => {
-    const submissionId = localStorage.getItem('submissionId');
-     if (!user || !submissionId) {
+     if (!user) {
       form.setError("root", { message: "You must be logged in to proceed." });
       return;
     }
@@ -59,7 +54,7 @@ export default function VerifyCodePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id: submissionId,
+          id: user.uid,
           verificationCode: values.verificationCode,
         }),
       });
@@ -85,11 +80,10 @@ export default function VerifyCodePage() {
 
   const isSubmitting = form.formState.isSubmitting;
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="ml-4 text-muted-foreground">Loading Your Progress...</p>
         </div>
     )
   }

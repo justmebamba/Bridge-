@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { getAuth, signInWithEmailAndPassword, AuthError } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
@@ -22,6 +25,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -31,22 +35,34 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    // This is mock authentication. In a real app, you'd call your auth service.
-    const mockUser = {
-      uid: `mock-user-${new Date().getTime()}`,
-      email: values.email,
-      displayName: 'Mock User', // You might get this from your backend
-    };
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
-    
-    // Force a storage event to update the header
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: 'mockUser',
-        newValue: JSON.stringify(mockUser),
-    }));
-
-    router.push('/start');
+  const onSubmit = async (values: FormValues) => {
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      router.push('/start');
+    } catch (error) {
+      const authError = error as AuthError;
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      switch (authError.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          errorMessage = 'Invalid email or password. Please try again.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/too-many-requests':
+           errorMessage = 'Too many login attempts. Please try again later.';
+           break;
+        default:
+          console.error(authError);
+          break;
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: errorMessage,
+      });
+    }
   };
 
   const { isSubmitting } = form.formState;
