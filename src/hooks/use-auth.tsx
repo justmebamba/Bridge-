@@ -36,13 +36,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [checked, setChecked] = useState(false); // New state
 
   useEffect(() => {
-    // This effect runs once on mount to check all auth states
     let isMounted = true;
     
     const checkAllAuth = async () => {
-        // 1. Check client-side session for regular user
+        setIsLoading(true);
         const storedUser = sessionStorage.getItem(USER_SESSION_KEY);
-        if (isMounted && storedUser) {
+        if (storedUser) {
             try {
                 const parsedUser = JSON.parse(storedUser);
                 if(parsedUser && parsedUser.id && parsedUser.submission){
@@ -56,33 +55,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
-        // 2. Check Firebase auth state for admin user
         const auth = getAuth(firebaseApp);
         const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-            if (isMounted) {
-                setFirebaseUser(fbUser);
-                if (fbUser) {
-                    try {
-                        // Use the new API route to get session info
-                        const res = await fetch('/api/auth/session');
-                        if (res.ok) {
-                            const sessionData = await res.json();
-                            if (sessionData.isLogged) {
-                                setAdminUser(sessionData.user);
-                            } else {
-                                setAdminUser(null);
-                            }
-                        } else {
+            setFirebaseUser(fbUser);
+            if (fbUser) {
+                try {
+                    const res = await fetch('/api/auth/session');
+                    if (res.ok) {
+                        const sessionData = await res.json();
+                        if (sessionData.isLogged && isMounted) {
+                            setAdminUser(sessionData.user);
+                        } else if(isMounted) {
                             setAdminUser(null);
                         }
-                    } catch (error) {
-                        console.error("Error fetching admin session:", error);
+                    } else if (isMounted) {
                         setAdminUser(null);
                     }
-                } else {
-                    setAdminUser(null);
+                } catch (error) {
+                    console.error("Error fetching admin session:", error);
+                    if (isMounted) setAdminUser(null);
                 }
-                // 3. Mark auth check as complete
+            } else if (isMounted) {
+                setAdminUser(null);
+            }
+
+            if (isMounted) {
                 setIsLoading(false);
                 setChecked(true);
             }
@@ -96,7 +93,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     checkAllAuth();
 
-    // The empty dependency array ensures this effect runs only once on mount.
   }, []);
 
   const login = useCallback(async (username: string) => {
@@ -143,7 +139,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const token = await userCredential.user.getIdToken();
 
-      // Set session cookie
       await fetch('/api/auth/session', {
         method: 'POST',
         headers: {
@@ -151,7 +146,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
-      // Manually trigger onAuthStateChanged logic to update local state immediately
       const adminDetailsResponse = await fetch('/api/auth/session');
       const adminDetails = await adminDetailsResponse.json();
       if(adminDetails.isLogged) {
@@ -180,7 +174,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const auth = getAuth(firebaseApp);
     try {
       await signOut(auth);
-      // Clear session cookie by calling our API endpoint
       await fetch('/api/auth/session', { method: 'DELETE' });
       setAdminUser(null);
       setFirebaseUser(null);
@@ -189,8 +182,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // By wrapping the context value in useMemo, we prevent unnecessary re-renders
-  // of consumers when the provider's parent re-renders. The objects are stable.
   const value = useMemo(() => ({ 
       user, 
       adminUser,

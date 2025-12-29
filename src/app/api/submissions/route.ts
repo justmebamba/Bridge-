@@ -35,7 +35,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { id, step, data } = body;
     
-    // This is the simplified login/signup flow from the /start page
     if (step === 'tiktokUsername') {
         if (!id) {
             return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
@@ -45,16 +44,14 @@ export async function POST(request: Request) {
             let submission = submissions.find(s => s.id === id);
 
             if (submission) {
-                // User exists, just return their data (login)
                 return { updatedData: submissions, result: submission };
             } else {
-                // New user, create a record (signup)
                 const newSubmission: Submission = {
                     id,
                     createdAt: new Date().toISOString(),
                     isVerified: false,
                     tiktokUsername: id,
-                    tiktokUsernameStatus: 'approved', // Auto-approved on creation
+                    tiktokUsernameStatus: 'approved',
                     verificationCode: '',
                     verificationCodeStatus: 'pending',
                     phoneNumber: '',
@@ -68,12 +65,11 @@ export async function POST(request: Request) {
         });
     }
 
-    // This handles subsequent step submissions
     if (!id || !step || data === undefined) {
       return NextResponse.json({ message: 'Submission ID, step, and data are required' }, { status: 400 });
     }
     
-    const updatedSubmission = await store.update(async (submissions) => {
+    return await store.update(async (submissions) => {
         const submissionIndex = submissions.findIndex(s => s.id === id);
         
         if (submissionIndex === -1) {
@@ -84,19 +80,15 @@ export async function POST(request: Request) {
         
         const submission = submissions[submissionIndex];
         
-        // Update the specific step data and status
         (submission as any)[step] = data;
         (submission as any)[`${step}Status`] = 'pending';
         
-        // Clear any previous rejection reason when resubmitting
         submission.rejectionReason = undefined;
         
         submissions[submissionIndex] = submission;
         
         return { updatedData: submissions, result: submission };
     });
-
-    return NextResponse.json(updatedSubmission, { status: 200 });
 
   } catch (error: any) {
     console.error("Error processing submission:", error);

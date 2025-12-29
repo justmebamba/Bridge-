@@ -1,6 +1,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import { NextResponse } from 'next/server';
 
 // Simple mutex implementation
 class Mutex {
@@ -36,6 +37,12 @@ function getLock(filePath: string): Mutex {
   return locks.get(filePath)!;
 }
 
+type UpdateResult<R> = {
+  updatedData: T;
+  result: R;
+  status?: number;
+}
+
 export class JsonStore<T> {
   private dataFilePath: string;
   private defaultValue: T;
@@ -55,10 +62,8 @@ export class JsonStore<T> {
       return JSON.parse(fileContents);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        // File doesn't exist, return default value
         return this.defaultValue;
       }
-      // For other errors (like parsing), re-throw
       throw error;
     } finally {
       lock.unlock();
@@ -82,13 +87,12 @@ export class JsonStore<T> {
   }
   
   async update<R>(
-    updater: (data: T) => Promise<{ updatedData: T, result: R }>
-  ): Promise<R> {
+    updater: (data: T) => Promise<{ updatedData: T, result: R, status?: number }>
+  ): Promise<NextResponse> {
     const lock = getLock(this.dataFilePath);
     await lock.lock();
     let currentData;
     try {
-      // Read current data
       try {
           await fs.access(this.dataFilePath);
           const fileContents = await fs.readFile(this.dataFilePath, 'utf8');
@@ -101,10 +105,8 @@ export class JsonStore<T> {
            }
       }
 
-      // Apply updates
-      const { updatedData, result } = await updater(currentData);
+      const { updatedData, result, status = 200 } = await updater(currentData);
 
-      // Write updated data
       const dir = path.dirname(this.dataFilePath);
       try {
         await fs.access(dir);
@@ -113,7 +115,7 @@ export class JsonStore<T> {
       }
       await fs.writeFile(this.dataFilePath, JSON.stringify(updatedData, null, 2));
       
-      return result;
+      return NextResponse.json(result, { status });
     } finally {
       lock.unlock();
     }

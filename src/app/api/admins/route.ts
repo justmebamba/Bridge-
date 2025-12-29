@@ -42,43 +42,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
     }
 
-    const userRecord = await store.update(async (admins) => {
+    return await store.update(async (admins) => {
         if (admins.some(admin => admin.email === email)) {
-            // Throw a custom error to be caught outside
             const err = new Error('Email already in use.');
             (err as any).statusCode = 409;
             throw err;
         }
 
-        // Create user in Firebase Auth
         const createdUser = await getAuth().createUser({ email, password });
 
         const isMainAdmin = admins.length === 0;
         const newAdmin: AdminUser = {
-          id: createdUser.uid, // Use Firebase UID as the ID
+          id: createdUser.uid,
           email: email,
-          isVerified: isMainAdmin, // First admin is auto-verified
+          isVerified: isMainAdmin,
           isMainAdmin: isMainAdmin,
           createdAt: new Date().toISOString(),
         };
 
         admins.push(newAdmin);
         
-        // Set custom claim for main admin
         if (isMainAdmin) {
             await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: true, isVerified: true });
         } else {
             await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: false, isVerified: false });
         }
         
-        return { updatedData: admins, result: newAdmin };
+        return { updatedData: admins, result: {id: newAdmin.id, email: newAdmin.email, isMainAdmin: newAdmin.isMainAdmin}, status: 201 };
     });
-
-    return NextResponse.json({
-        id: userRecord.id,
-        email: userRecord.email,
-        isMainAdmin: userRecord.isMainAdmin,
-    }, { status: 201 });
 
   } catch (error: any) {
     console.error('Error creating admin:', error);
@@ -101,13 +92,13 @@ export async function PATCH(request: Request) {
   try {
     await initializeFirebaseAdmin();
     const body = await request.json();
-    const { id, isVerified } = body; // ID is now Firebase UID
+    const { id, isVerified } = body;
 
     if (!id || typeof isVerified !== 'boolean') {
         return NextResponse.json({ message: 'Admin ID and verification status are required.' }, { status: 400 });
     }
 
-    const updatedAdmin = await store.update(async (admins) => {
+    return await store.update(async (admins) => {
         const adminIndex = admins.findIndex(admin => admin.id === id);
 
         if (adminIndex === -1) {
@@ -116,18 +107,14 @@ export async function PATCH(request: Request) {
             throw err;
         }
 
-        // Update local JSON file
         admins[adminIndex].isVerified = isVerified;
 
-        // Update Firebase custom claims
         const currentClaims = (await getAuth().getUser(id)).customClaims || {};
         await getAuth().setCustomUserClaims(id, { ...currentClaims, isVerified });
         
         return { updatedData: admins, result: admins[adminIndex] };
     });
 
-
-    return NextResponse.json(updatedAdmin);
 
   } catch (error: any) {
     console.error('Error updating admin:', error);
