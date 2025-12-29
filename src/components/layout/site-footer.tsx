@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import { Facebook, Twitter, Instagram } from "lucide-react";
-import { TikTokForBusinessLogo } from "@/components/icons/tiktok-for-business-logo";
+import { TikTokLogo } from "@/components/icons/tiktok-logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -12,8 +12,11 @@ export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {
         <div className="grid md:grid-cols-2 gap-12">
             <div>
               <div className="flex flex-col items-start gap-8">
-                <Link href="/" aria-label="Go to homepage">
-                  <TikTokForBusinessLogo className="h-7 text-foreground" />
+                <Link href="/" className="flex items-center space-x-2" aria-label="Go to homepage">
+                  <TikTokLogo className="h-8 w-8 text-foreground" />
+                   <span className="font-bold text-xl tracking-tight">
+                    Monetization Bridge
+                  </span>
                 </Link>
                 
                 <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm text-muted-foreground">

@@ -2,7 +2,6 @@
 'use client';
 
 import { 
-    Sidebar, 
     SidebarContent, 
     SidebarHeader, 
     SidebarMenu, 
@@ -10,14 +9,13 @@ import {
     SidebarMenuButton, 
     SidebarFooter 
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { LayoutDashboard, LogOut, Settings, Users } from "lucide-react";
+import { LayoutDashboard, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { TikTokForBusinessLogo } from "../icons/tiktok-for-business-logo";
+import { TikTokLogo } from "../icons/tiktok-logo";
 
 export function AdminSidebar() {
-    const { adminLogout, adminUser } = useAuth();
+    const { adminLogout } = useAuth();
     const router = useRouter();
     
     const handleLogout = () => {
@@ -28,7 +26,10 @@ export function AdminSidebar() {
     return (
         <>
             <SidebarHeader>
-                 <TikTokForBusinessLogo className="h-6 text-foreground" />
+                 <div className="flex items-center space-x-2">
+                    <TikTokLogo className="h-7 w-7 text-foreground" />
+                    <span className="font-semibold text-lg">Admin</span>
+                 </div>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarMenu>
