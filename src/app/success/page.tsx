@@ -42,17 +42,16 @@ export default function SuccessPage() {
   }, [user, router]);
 
   useEffect(() => {
-    if (!isAuthLoading && !user) {
-      router.replace('/login');
-    }
-    if(user) {
+    if (!isAuthLoading && user) {
         fetchSubmission();
+    } else if (!isAuthLoading && !user) {
+      router.replace('/login');
     }
   }, [user, isAuthLoading, router, fetchSubmission]);
   
   const isLoading = isAuthLoading || isLoadingData;
   
-  if (isLoading || submission?.finalCodeStatus !== 'approved') {
+  if (isLoading || !submission || submission?.finalCodeStatus !== 'approved') {
       return (
           <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -84,3 +83,5 @@ export default function SuccessPage() {
     </main>
   );
 }
+
+    

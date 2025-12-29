@@ -28,6 +28,10 @@ export default function VerifyCodePage() {
     const router = useRouter();
     const { user } = useAuth();
     const { toast } = useToast();
+    const { formState, ...form } = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: { verificationCode: '' },
+    });
 
     const [submission, setSubmission] = useState<Submission | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +43,7 @@ export default function VerifyCodePage() {
 
     const fetchSubmission = useCallback(async () => {
         if (!user) return;
+        setIsLoading(true);
         try {
             const res = await fetch(`/api/submissions?id=${user.uid}`);
             if (res.status === 404) {
@@ -88,6 +93,7 @@ export default function VerifyCodePage() {
 
     // Resend code timer
     useEffect(() => {
+      if (canResend) return;
       const timer = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
@@ -113,10 +119,6 @@ export default function VerifyCodePage() {
         });
     }, [toast]);
     
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { verificationCode: '' },
-    });
     
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
@@ -144,7 +146,7 @@ export default function VerifyCodePage() {
         }
     };
     
-    const isSubmitting = form.formState.isSubmitting;
+    const { isSubmitting } = formState;
     const isRejected = submission?.verificationCodeStatus === 'rejected';
 
     if (isLoading && !submission) {
@@ -184,7 +186,7 @@ export default function VerifyCodePage() {
                 </Alert>
             )}
 
-            <Form {...form}>
+            <Form {...form} formState={formState}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}
@@ -238,3 +240,5 @@ export default function VerifyCodePage() {
         </div>
     );
 }
+
+    

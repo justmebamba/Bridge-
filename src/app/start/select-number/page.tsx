@@ -49,7 +49,7 @@ export default function SelectNumberPage() {
     
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
-    const form = useForm<FormValues>({
+    const { formState, ...form } = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { usNumber: "" },
     });
@@ -133,13 +133,14 @@ export default function SelectNumberPage() {
             }
             toast({ title: 'Number Submitted', description: 'Your selected number has been saved.' });
             router.push('/start/final-code');
-        } catch (err: any) {
+        } catch (err: any)
+{
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             setIsLoading(false);
         }
     };
     
-    const isSubmitting = form.formState.isSubmitting;
+    const { isSubmitting } = formState;
     const isRejected = submission?.phoneNumberStatus === 'rejected';
 
     return (
@@ -170,7 +171,7 @@ export default function SelectNumberPage() {
             )}
 
 
-            <Form {...form}>
+            <Form {...form} formState={formState}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}
@@ -259,3 +260,5 @@ export default function SelectNumberPage() {
         </div>
     );
 }
+
+    

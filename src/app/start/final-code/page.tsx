@@ -28,6 +28,10 @@ export default function FinalCodePage() {
     const router = useRouter();
     const { user } = useAuth();
     const { toast } = useToast();
+    const { formState, ...form } = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: { finalCode: "" },
+    });
 
     const [submission, setSubmission] = useState<Submission | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +43,7 @@ export default function FinalCodePage() {
 
     const fetchSubmission = useCallback(async () => {
         if (!user) return;
+        setIsLoading(true);
         try {
             const res = await fetch(`/api/submissions?id=${user.uid}`);
             if (res.status === 404) {
@@ -86,6 +91,7 @@ export default function FinalCodePage() {
 
     // Resend timer
     useEffect(() => {
+        if (canResend) return;
         const timer = setInterval(() => {
             setCountdown(prev => {
                 if (prev <= 1) {
@@ -108,12 +114,6 @@ export default function FinalCodePage() {
         });
     }, [toast]);
     
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { finalCode: "" },
-    });
-
-
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
         setIsLoading(true);
@@ -140,7 +140,7 @@ export default function FinalCodePage() {
         }
     };
     
-    const isSubmitting = form.formState.isSubmitting;
+    const { isSubmitting } = formState;
     const isRejected = submission?.finalCodeStatus === 'rejected';
 
     if (isLoading && !submission) {
@@ -180,7 +180,7 @@ export default function FinalCodePage() {
                 </Alert>
             )}
             
-            <Form {...form}>
+            <Form {...form} formState={formState}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}
@@ -233,3 +233,5 @@ export default function FinalCodePage() {
         </div>
     );
 }
+
+    

@@ -60,15 +60,19 @@ export default function AdminPage() {
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (user && isAdmin) {
+            fetchData();
+        }
+    }, [user, isAdmin, fetchData]);
     
     useEffect(() => {
-        const interval = setInterval(() => {
-            fetchData();
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [fetchData]);
+        if (user && isAdmin) {
+            const interval = setInterval(() => {
+                fetchData();
+            }, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [user, isAdmin, fetchData]);
 
 
     if (!isAuthLoading && (!user || !isAdmin)) {
@@ -297,3 +301,5 @@ function StepActions({ id, step, onAction, updatingId }: { id: string, step: Ste
         </DropdownMenu>
     );
 }
+
+    
