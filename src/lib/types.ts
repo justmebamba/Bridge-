@@ -32,3 +32,8 @@ export interface AdminUser {
   isMainAdmin: boolean;
   createdAt: string;
 }
+
+export interface AuthUser {
+    id: string; // This will be the tiktok username
+    submission: Submission;
+}

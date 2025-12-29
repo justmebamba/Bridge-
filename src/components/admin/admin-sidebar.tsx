@@ -9,19 +9,18 @@ import {
     SidebarMenuButton, 
     SidebarFooter 
 } from "@/components/ui/sidebar";
-import { useAuth } from "@/hooks/use-auth";
 import { LayoutDashboard, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TikTokLogo } from "../icons/tiktok-logo";
+import type { AdminUser } from "@/lib/types";
 
-export function AdminSidebar() {
-    const { adminLogout } = useAuth();
+async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
+}
+
+export function AdminSidebar({ user }: { user?: AdminUser }) {
     const router = useRouter();
-    
-    const handleLogout = () => {
-        adminLogout();
-        router.push('/admin/login');
-    };
 
     return (
         <>

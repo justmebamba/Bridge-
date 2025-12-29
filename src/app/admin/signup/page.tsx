@@ -33,12 +33,10 @@ export default function AdminSignupPage() {
     const checkMainAdmin = async () => {
       setIsCheckingAdmin(true);
       try {
-        const res = await fetch('/api/admins');
-        const admins = await res.json();
-        const mainAdminExists = Array.isArray(admins) && admins.some((admin: any) => admin.isMainAdmin);
-        setHasMainAdmin(mainAdminExists);
+        const res = await fetch('/api/admins/check-main');
+        const { hasMainAdmin } = await res.json();
+        setHasMainAdmin(hasMainAdmin);
       } catch (error) {
-        // If the fetch fails (e.g., file doesn't exist), assume no admins exist yet.
         setHasMainAdmin(false);
       } finally {
         setIsCheckingAdmin(false);

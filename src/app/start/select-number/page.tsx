@@ -9,13 +9,12 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import type { PhoneNumber, Submission } from '@/lib/types';
+import type { PhoneNumber, Submission, AuthUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
@@ -39,11 +38,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SelectNumberPage() {
     const router = useRouter();
-    const { user, setSubmission: setAuthSubmission } = useAuth();
     const { toast } = useToast();
+    const [user, setUser] = useState<AuthUser | null>(null);
     
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
-    const [submission, setSubmission] = useState<Submission | null>(user?.submission || null);
+    const [submission, setSubmission] = useState<Submission | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
@@ -72,31 +71,27 @@ export default function SelectNumberPage() {
 
     useEffect(() => {
        fetchData();
-    }, [fetchData]);
+       const sessionUser = sessionStorage.getItem('user-session');
+       if (sessionUser) {
+           const parsedUser: AuthUser = JSON.parse(sessionUser);
+           setUser(parsedUser);
+           setSubmission(parsedUser.submission);
 
-    useEffect(() => {
-        if (user) {
-            setIsLoading(false);
-            const currentSubmission = user.submission;
-            setSubmission(currentSubmission);
-
-            if (currentSubmission.verificationCodeStatus !== 'approved') {
-                router.replace('/start/verify-code');
-                return;
-            }
-            if (currentSubmission.phoneNumberStatus === 'approved') {
-                router.push('/start/final-code');
-                return;
-            }
-            if (currentSubmission.phoneNumber) {
-                form.setValue('usNumber', currentSubmission.phoneNumber);
-            }
-        } else if (!user && isLoading) {
-            // still waiting for auth context
-        } else {
-             router.replace('/start');
-        }
-    }, [user, isLoading, router, form]);
+           if (parsedUser.submission.verificationCodeStatus !== 'approved') {
+               router.replace('/start/verify-code');
+               return;
+           }
+           if (parsedUser.submission.phoneNumberStatus === 'approved') {
+               router.push('/start/final-code');
+               return;
+           }
+           if (parsedUser.submission.phoneNumber) {
+               form.setValue('usNumber', parsedUser.submission.phoneNumber);
+           }
+       } else {
+           router.replace('/start');
+       }
+    }, [router, form, fetchData]);
 
 
     const handleRefresh = () => {
@@ -123,7 +118,10 @@ export default function SelectNumberPage() {
                  throw new Error(errorData.message || 'Failed to submit phone number.');
             }
             const updatedSubmission = await response.json();
-            setAuthSubmission(updatedSubmission);
+            
+            const updatedUser = { ...user, submission: updatedSubmission };
+            sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
+            
             toast({ title: 'Number Submitted', description: 'Your selected number has been saved.' });
             router.push('/start/final-code');
         } catch (err: any)

@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LogIn } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
-import { Loader } from '@/components/loader';
 
 
 const formSchema = z.object({
@@ -26,7 +24,6 @@ type FormValues = z.infer<typeof formSchema>;
 export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { adminUser, adminLogin, isLoading, checked } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -38,9 +35,26 @@ export default function AdminLoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await adminLogin(values.email, values.password);
-      // The layout's useEffect will handle the redirect on successful login
-      router.push('/admin');
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Login failed.');
+        }
+
+        toast({
+            title: 'Login Successful',
+            description: 'Welcome back!',
+        });
+        
+        router.push('/admin');
+        router.refresh(); // This ensures the layout re-evaluates the session
+
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -51,16 +65,6 @@ export default function AdminLoginPage() {
   };
 
   const { isSubmitting } = form.formState;
-
-  // The layout handles the main loading state until 'checked' is true.
-  // This page just needs to handle the redirect case.
-  if (checked && adminUser?.isVerified) {
-     return (
-        <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
-            <Loader isFadingOut={false} />
-        </div>
-    )
-  }
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
@@ -101,8 +105,8 @@ export default function AdminLoginPage() {
                         />
                     </div>
                     <div className="flex flex-col gap-4">
-                        <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                        {isSubmitting || isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
+                        <Button type="submit" disabled={isSubmitting} className="w-full">
+                        {isSubmitting ? <Loader2 className="animate-spin" /> : 'Log In'}
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">
                             Need an admin account?{' '}

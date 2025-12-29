@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 import { useEffect, useState, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { Submission } from '@/lib/types';
+import type { Submission, AuthUser } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -26,36 +25,43 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function VerifyCodePage() {
     const router = useRouter();
-    const { user, isLoading: isAuthLoading, setSubmission: setAuthSubmission } = useAuth();
     const { toast } = useToast();
+    const [user, setUser] = useState<AuthUser | null>(null);
     const { formState, ...form } = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { verificationCode: '' },
     });
 
-    const [submission, setSubmission] = useState<Submission | null>(user?.submission || null);
+    const [submission, setSubmission] = useState<Submission | null>(null);
     const [isPageLoading, setIsPageLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
     const [canResend, setCanResend] = useState(false);
-    
+
     const isPending = submission?.verificationCodeStatus === 'pending' && !!submission.verificationCode;
 
-    const fetchSubmission = useCallback(async () => {
-        if (!user?.id) return;
-        
+    const fetchSubmission = useCallback(async (userId: string) => {
         try {
-            const res = await fetch(`/api/submissions?id=${user.id}`);
+            const res = await fetch(`/api/submissions?id=${userId}`);
             if (res.status === 404) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
+                sessionStorage.removeItem('user-session');
                 router.replace('/start');
                 return;
             }
             if (!res.ok) throw new Error('Failed to fetch submission data.');
             const data: Submission = await res.json();
-            setSubmission(data);
-            setAuthSubmission(data);
+            
+            const sessionUser = sessionStorage.getItem('user-session');
+            if(sessionUser) {
+                const parsedUser: AuthUser = JSON.parse(sessionUser);
+                const updatedUser = {...parsedUser, submission: data};
+                sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
+                setUser(updatedUser);
+            }
 
+            setSubmission(data);
+            
             if (data.tiktokUsernameStatus !== 'approved') {
                  router.replace('/start');
                  return;
@@ -73,22 +79,25 @@ export default function VerifyCodePage() {
         } finally {
             setIsPageLoading(false);
         }
-    }, [user?.id, router, toast, setAuthSubmission, form]);
+    }, [router, toast, form]);
 
     useEffect(() => {
-        if(user) {
-            fetchSubmission();
-        } else if (!isAuthLoading) {
+        const sessionUser = sessionStorage.getItem('user-session');
+        if (sessionUser) {
+            const parsedUser: AuthUser = JSON.parse(sessionUser);
+            setUser(parsedUser);
+            fetchSubmission(parsedUser.id);
+        } else {
             router.replace('/start');
         }
-    }, [user, isAuthLoading, router, fetchSubmission]);
+    }, [router, fetchSubmission]);
     
     useEffect(() => {
-        if (isPending) {
-            const interval = setInterval(fetchSubmission, 3000);
+        if (isPending && user) {
+            const interval = setInterval(() => fetchSubmission(user.id), 3000);
             return () => clearInterval(interval);
         }
-    }, [isPending, fetchSubmission]);
+    }, [isPending, user, fetchSubmission]);
 
     useEffect(() => {
       if (canResend || isPending) return;
@@ -107,28 +116,28 @@ export default function VerifyCodePage() {
     }, [canResend, isPending]);
 
     const handleResendCode = useCallback(() => {
+        if (!user) return;
         setCanResend(false);
         setCountdown(30);
         toast({
             title: 'Code Resent',
             description: 'A new verification code has been sent (simulation).',
         });
-        if (user?.id) {
-             fetch('/api/submissions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: user.id,
-                    step: 'verificationCode',
-                    data: '', // Clear old code on resend
-                }),
-            }).then(res => res.json()).then(data => {
-                setSubmission(data);
-                setAuthSubmission(data);
-                form.reset({ verificationCode: '' });
-            });
-        }
-    }, [toast, user?.id, setAuthSubmission, form]);
+        
+        fetch('/api/submissions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: user.id,
+                step: 'verificationCode',
+                data: '', // Clear old code on resend
+            }),
+        }).then(res => res.json()).then(data => {
+            setSubmission(data);
+            form.reset({ verificationCode: '' });
+        });
+        
+    }, [toast, user, form]);
     
     
     const onSubmit = async (values: FormValues) => {
@@ -150,7 +159,6 @@ export default function VerifyCodePage() {
             }
             const updatedSubmission = await response.json();
             setSubmission(updatedSubmission);
-            setAuthSubmission(updatedSubmission);
             toast({ title: 'Code Submitted', description: 'Please wait for admin approval.' });
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });

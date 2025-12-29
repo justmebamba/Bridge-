@@ -2,35 +2,30 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-// Simple mutex implementation to prevent race conditions on file access
 class Mutex {
   private queue: (() => void)[] = [];
   private locked = false;
 
-  lock(): Promise<void> {
-    return new Promise((resolve) => {
-      if (this.locked) {
-        this.queue.push(resolve);
-      } else {
+  async acquire(): Promise<void> {
+    return new Promise(resolve => {
+      if (!this.locked) {
         this.locked = true;
         resolve();
+      } else {
+        this.queue.push(resolve);
       }
     });
   }
 
-  unlock(): void {
+  release(): void {
     if (this.queue.length > 0) {
-      const next = this.queue.shift();
-      if (next) {
-        next();
-      }
+      this.queue.shift()?.();
     } else {
       this.locked = false;
     }
   }
 }
 
-// Maintain a map of locks, one for each file path
 const locks = new Map<string, Mutex>();
 
 function getLock(filePath: string): Mutex {
@@ -42,54 +37,57 @@ function getLock(filePath: string): Mutex {
 
 export class JsonStore<T> {
   private dataFilePath: string;
-  private defaultValue: T;
+  private defaultValue: T | null = null; // Can be null if not provided
 
-  constructor(relativePath: string, defaultValue: T) {
+  constructor(relativePath: string, defaultValue?: T) {
     this.dataFilePath = path.join(process.cwd(), relativePath);
-    this.defaultValue = defaultValue;
+    if (defaultValue !== undefined) {
+      this.defaultValue = defaultValue;
+    }
+  }
+
+  private async ensureDirectoryExists(): Promise<void> {
+    const dir = path.dirname(this.dataFilePath);
+    try {
+      await fs.access(dir);
+    } catch {
+      await fs.mkdir(dir, { recursive: true });
+    }
   }
 
   async read(): Promise<T> {
     const lock = getLock(this.dataFilePath);
-    await lock.lock();
+    await lock.acquire();
     try {
-      // Ensure the directory exists before trying to read
-      const dir = path.dirname(this.dataFilePath);
-      try {
-        await fs.access(dir);
-      } catch {
-        await fs.mkdir(dir, { recursive: true });
-      }
-
-      await fs.access(this.dataFilePath);
+      await this.ensureDirectoryExists();
       const fileContents = await fs.readFile(this.dataFilePath, 'utf8');
-      if (!fileContents) return this.defaultValue;
       return JSON.parse(fileContents);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        // File doesn't exist, so we write the default value and return it
-        await this.write(this.defaultValue);
-        return this.defaultValue;
+        if (this.defaultValue !== null) {
+          await fs.writeFile(this.dataFilePath, JSON.stringify(this.defaultValue, null, 2));
+          return this.defaultValue;
+        }
+        // If no default value, and file doesn't exist, we must assume an empty array for list-based stores.
+        // This is a common use case for this app.
+        const emptyState = [] as unknown as T;
+        await fs.writeFile(this.dataFilePath, JSON.stringify(emptyState, null, 2));
+        return emptyState;
       }
       throw error;
     } finally {
-      lock.unlock();
+      lock.release();
     }
   }
 
   async write(data: T): Promise<void> {
     const lock = getLock(this.dataFilePath);
-    await lock.lock();
+    await lock.acquire();
     try {
-      const dir = path.dirname(this.dataFilePath);
-      try {
-        await fs.access(dir);
-      } catch {
-        await fs.mkdir(dir, { recursive: true });
-      }
-      await fs.writeFile(this.dataFilePath, JSON.stringify(data, null, 2));
+      await this.ensureDirectoryExists();
+      await fs.writeFile(this.dataFilePath, JSON.stringify(data, null, 2), 'utf8');
     } finally {
-      lock.unlock();
+      lock.release();
     }
   }
 }

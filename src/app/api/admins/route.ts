@@ -6,32 +6,17 @@ import type { AdminUser } from '@/lib/types';
 import { getAuth } from 'firebase-admin/auth';
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import { JsonStore } from '@/lib/json-store';
-import type { AuthError } from 'firebase-admin/auth';
+import { login } from '@/lib/session';
 
-const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+const store = new JsonStore<AdminUser[]>('src/data/admins.json');
 
-// GET all admins or a single admin by email
-export async function GET(request: Request) {
+// GET all admins
+export async function GET() {
   try {
-    await initializeFirebaseAdmin();
-    const { searchParams } = new URL(request.url);
-    const email = searchParams.get('email');
     const admins = await store.read();
-
-    if (email) {
-        const admin = admins.find(a => a.email === email);
-        if (admin) {
-            return NextResponse.json(admin);
-        }
-        return NextResponse.json({ message: 'Admin not found' }, { status: 404 });
-    }
-
     return NextResponse.json(admins);
   } catch (error: any) {
     console.error('Error reading admins data:', error);
-    if (error.code === 'ENOENT') {
-        return NextResponse.json([]);
-    }
     return NextResponse.json({ message: 'Could not read admins data.' }, { status: 500 });
   }
 }
@@ -46,11 +31,11 @@ export async function POST(request: Request) {
         if (!email || !password) {
             return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
         }
+        if (password.length < 6) {
+             return NextResponse.json({ message: 'Password must be at least 6 characters long.' }, { status: 400 });
+        }
 
-        const admins = await store.read().catch(err => {
-             if (err.code === 'ENOENT') return [];
-             throw err;
-        });
+        const admins = await store.read();
         
         if (admins.some(admin => admin.email === email)) {
             return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
@@ -59,17 +44,11 @@ export async function POST(request: Request) {
         let firebaseUser;
         try {
             firebaseUser = await getAuth().createUser({ email, password });
-        } catch (error) {
-            const authError = error as AuthError;
-            if (authError.code === 'auth/email-already-exists') {
-                firebaseUser = await getAuth().getUserByEmail(email);
-            } else {
-                throw error;
+        } catch (error: any) {
+            if (error.code === 'auth/email-already-exists') {
+                 return NextResponse.json({ message: 'A user with this email already exists in Firebase. If this is you, please contact support.' }, { status: 409 });
             }
-        }
-        
-        if (!firebaseUser) {
-             throw new Error('Could not create or retrieve Firebase user.');
+             return NextResponse.json({ message: error.message || 'Failed to create user in Firebase.' }, { status: 500 });
         }
 
         const isMainAdmin = admins.length === 0;
@@ -80,45 +59,22 @@ export async function POST(request: Request) {
             isMainAdmin: isMainAdmin,
             createdAt: new Date().toISOString(),
         };
+        
+        const claims = { isMainAdmin, isVerified: isMainAdmin };
+        await getAuth().setCustomUserClaims(firebaseUser.uid, claims);
 
         admins.push(newAdmin);
-
-        const claims = { isMainAdmin: isMainAdmin, isVerified: isMainAdmin };
-        await getAuth().setCustomUserClaims(firebaseUser.uid, claims);
-        
         await store.write(admins);
+
+        if (newAdmin.isMainAdmin) {
+            await login(newAdmin);
+        }
 
         return NextResponse.json({ id: newAdmin.id, email: newAdmin.email, isMainAdmin: newAdmin.isMainAdmin }, { status: 201 });
 
     } catch (error: any) {
-        console.error('[API/ADMINS/POST] Error:', error);
-        
-        let message = 'An unexpected error occurred.';
-        let status = 500;
-
-        if (error.code) { // Firebase Auth errors
-            switch (error.code) {
-                case 'auth/email-already-exists':
-                    message = 'An admin with this email already exists.';
-                    status = 409;
-                    break;
-                case 'auth/invalid-password':
-                    message = 'Password must be at least 6 characters long.';
-                    status = 400;
-                    break;
-                case 'auth/invalid-email':
-                    message = 'The email address is not valid.';
-                    status = 400;
-                    break;
-                default:
-                    message = error.message || 'A Firebase authentication error occurred.';
-                    break;
-            }
-        } else if (error.message) {
-            message = error.message;
-        }
-        
-        return NextResponse.json({ message }, { status });
+        console.error('[API/ADMINS/POST] Unhandled Error:', error);
+        return NextResponse.json({ message: error.message || 'An unexpected server error occurred.' }, { status: 500 });
     }
 }
 

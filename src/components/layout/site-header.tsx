@@ -6,15 +6,30 @@ import { TikTokLogo } from "../icons/tiktok-logo"
 import { Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
-import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { AuthUser } from "@/lib/types";
 
 export function SiteHeader() {
-  const { user, isLoading, logout } = useAuth();
   const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleLogout = async () => {
-    await logout();
+
+  useEffect(() => {
+    const fetchUser = () => {
+        const storedUser = sessionStorage.getItem('user-session');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+        setIsLoading(false);
+    }
+    fetchUser();
+  }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('user-session');
+    setUser(null);
     router.push('/');
   };
 

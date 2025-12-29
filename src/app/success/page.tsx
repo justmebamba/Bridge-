@@ -5,51 +5,28 @@ import { CheckCircle, PartyPopper, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import type { Submission } from '@/lib/types';
+import type { Submission, AuthUser } from '@/lib/types';
 import { useEffect, useState, useCallback } from 'react';
 
 export default function SuccessPage() {
   const router = useRouter();
-  const { user, isLoading: isAuthLoading } = useAuth();
   const [submission, setSubmission] = useState<Submission | null>(null);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-
-  const fetchSubmission = useCallback(async () => {
-    if (!user) return;
-    setIsLoadingData(true);
-    try {
-        const res = await fetch(`/api/submissions?id=${user.id}`);
-        if (res.status === 404) {
-            setSubmission(null);
-            router.replace('/start'); // If no submission, they shouldn't be here
-            return;
-        }
-        if (!res.ok) throw new Error('Failed to fetch submission data.');
-        const data: Submission = await res.json();
-        setSubmission(data);
-
-        // Security check: ensure the submission is actually approved
-        if (data.finalCodeStatus !== 'approved') {
-          router.replace('/start');
-        }
-    } catch (err: any) {
-        console.error(err);
-        router.replace('/start');
-    } finally {
-        setIsLoadingData(false);
-    }
-  }, [user, router]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthLoading && user) {
-        fetchSubmission();
-    } else if (!isAuthLoading && !user) {
-      router.replace('/login');
+    const sessionUser = sessionStorage.getItem('user-session');
+    if (sessionUser) {
+        const parsedUser: AuthUser = JSON.parse(sessionUser);
+        const sub = parsedUser.submission;
+        setSubmission(sub);
+        if (sub.finalCodeStatus !== 'approved') {
+          router.replace('/start');
+        }
+    } else {
+      router.replace('/start');
     }
-  }, [user, isAuthLoading, router, fetchSubmission]);
-  
-  const isLoading = isAuthLoading || isLoadingData;
+    setIsLoading(false);
+  }, [router]);
   
   if (isLoading || !submission || submission?.finalCodeStatus !== 'approved') {
       return (
