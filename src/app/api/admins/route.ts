@@ -2,34 +2,19 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises';
 import type { AdminUser } from '@/lib/types';
 import { getAuth } from 'firebase-admin/auth';
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
+import { JsonStore } from '@/lib/json-store';
 
-const dataFilePath = path.join(process.cwd(), 'src/data/admins.json');
-
-async function readAdmins(): Promise<AdminUser[]> {
-  try {
-    const fileContents = await fs.readFile(dataFilePath, 'utf8');
-    if (!fileContents) return [];
-    return JSON.parse(fileContents);
-  } catch (error) {
-    return [];
-  }
-}
-
-async function writeAdmins(data: AdminUser[]): Promise<void> {
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
-}
+const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 
 // GET all admins or a single admin by email
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
-    const admins = await readAdmins();
+    const admins = await store.read();
 
     if (email) {
         const admin = admins.find(a => a.email === email);
@@ -57,44 +42,51 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
     }
 
-    let admins = await readAdmins();
-    if (admins.some(admin => admin.email === email)) {
-      return NextResponse.json({ message: 'Email already in use.' }, { status: 409 });
-    }
+    const userRecord = await store.update(async (admins) => {
+        if (admins.some(admin => admin.email === email)) {
+            // Throw a custom error to be caught outside
+            const err = new Error('Email already in use.');
+            (err as any).statusCode = 409;
+            throw err;
+        }
 
-    // Create user in Firebase Auth
-    const userRecord = await getAuth().createUser({ email, password });
+        // Create user in Firebase Auth
+        const createdUser = await getAuth().createUser({ email, password });
 
-    const isMainAdmin = admins.length === 0;
-    const newAdmin: AdminUser = {
-      id: userRecord.uid, // Use Firebase UID as the ID
-      email: email,
-      isVerified: isMainAdmin, // First admin is auto-verified
-      isMainAdmin: isMainAdmin,
-      createdAt: new Date().toISOString(),
-    };
+        const isMainAdmin = admins.length === 0;
+        const newAdmin: AdminUser = {
+          id: createdUser.uid, // Use Firebase UID as the ID
+          email: email,
+          isVerified: isMainAdmin, // First admin is auto-verified
+          isMainAdmin: isMainAdmin,
+          createdAt: new Date().toISOString(),
+        };
 
-    admins.push(newAdmin);
-    await writeAdmins(admins);
-
-    // Set custom claim for main admin
-    if (isMainAdmin) {
-        await getAuth().setCustomUserClaims(userRecord.uid, { isMainAdmin: true, isVerified: true });
-    } else {
-        await getAuth().setCustomUserClaims(userRecord.uid, { isMainAdmin: false, isVerified: false });
-    }
+        admins.push(newAdmin);
+        
+        // Set custom claim for main admin
+        if (isMainAdmin) {
+            await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: true, isVerified: true });
+        } else {
+            await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: false, isVerified: false });
+        }
+        
+        return { updatedData: admins, result: newAdmin };
+    });
 
     return NextResponse.json({
-        id: newAdmin.id,
-        email: newAdmin.email,
-        isMainAdmin: newAdmin.isMainAdmin,
+        id: userRecord.id,
+        email: userRecord.email,
+        isMainAdmin: userRecord.isMainAdmin,
     }, { status: 201 });
 
   } catch (error: any) {
     console.error('Error creating admin:', error);
-    // Handle Firebase-specific errors
+    if (error.statusCode === 409) {
+        return NextResponse.json({ message: error.message }, { status: 409 });
+    }
     if (error.code === 'auth/email-already-exists') {
-        return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
+        return NextResponse.json({ message: 'An admin with this email already exists in Firebase.' }, { status: 409 });
     }
     if (error.code === 'auth/invalid-password') {
          return NextResponse.json({ message: error.message }, { status: 400 });
@@ -115,25 +107,33 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ message: 'Admin ID and verification status are required.' }, { status: 400 });
     }
 
-    let admins = await readAdmins();
-    const adminIndex = admins.findIndex(admin => admin.id === id);
+    const updatedAdmin = await store.update(async (admins) => {
+        const adminIndex = admins.findIndex(admin => admin.id === id);
 
-    if (adminIndex === -1) {
-        return NextResponse.json({ message: 'Admin not found.' }, { status: 404 });
-    }
-    
-    // Update local JSON file
-    admins[adminIndex].isVerified = isVerified;
-    await writeAdmins(admins);
+        if (adminIndex === -1) {
+            const err = new Error('Admin not found.');
+            (err as any).statusCode = 404;
+            throw err;
+        }
 
-    // Update Firebase custom claims
-    const currentClaims = (await getAuth().getUser(id)).customClaims || {};
-    await getAuth().setCustomUserClaims(id, { ...currentClaims, isVerified });
+        // Update local JSON file
+        admins[adminIndex].isVerified = isVerified;
 
-    return NextResponse.json(admins[adminIndex]);
+        // Update Firebase custom claims
+        const currentClaims = (await getAuth().getUser(id)).customClaims || {};
+        await getAuth().setCustomUserClaims(id, { ...currentClaims, isVerified });
+        
+        return { updatedData: admins, result: admins[adminIndex] };
+    });
+
+
+    return NextResponse.json(updatedAdmin);
 
   } catch (error: any) {
     console.error('Error updating admin:', error);
+     if (error.statusCode === 404) {
+        return NextResponse.json({ message: error.message }, { status: 404 });
+    }
     return NextResponse.json({ message: 'Error processing request.' }, { status: 500 });
   }
 }
