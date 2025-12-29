@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { Loader } from '@/components/loader';
 
 
 const formSchema = z.object({
@@ -62,10 +63,7 @@ export default function AdminLoginPage() {
   if (isLoading || adminUser?.isVerified) {
      return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
-            <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-muted-foreground">Loading...</p>
-            </div>
+            <Loader isFadingOut={false} />
         </div>
     )
   }

@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { useAdminAuth } from '@/hooks/use-admin-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Loader } from '@/components/loader';
 
 
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
@@ -67,21 +68,12 @@ export default function AdminPage() {
             fetchData();
         }
     }, [adminUser, fetchData]);
-    
-    useEffect(() => {
-        if (adminUser) {
-            const interval = setInterval(() => {
-                fetchData();
-            }, 5000);
-            return () => clearInterval(interval);
-        }
-    }, [adminUser, fetchData]);
 
 
     if (isAuthLoading) {
          return (
              <main className="flex flex-1 flex-col items-center justify-center p-4 md:p-6 bg-muted/40">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader isFadingOut={false} />
              </main>
         )
     }
@@ -201,7 +193,7 @@ export default function AdminPage() {
                         </CardHeader>
                         <CardContent>
                             {isDataLoading ? (
-                                <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                                <div className="flex items-center justify-center p-8"><Loader isFadingOut={false} /></div>
                             ) : error ? (
                                 <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
                             ) : (
@@ -273,7 +265,7 @@ export default function AdminPage() {
                         </CardHeader>
                         <CardContent>
                             {isDataLoading ? (
-                                <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                                <div className="flex items-center justify-center p-8"><Loader isFadingOut={false} /></div>
                             ) : error ? (
                                  <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
                             ) : (

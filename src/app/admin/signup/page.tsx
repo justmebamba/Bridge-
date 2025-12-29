@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Loader } from '@/components/loader';
 
 
 const formSchema = z.object({
@@ -103,7 +104,7 @@ export default function AdminSignupPage() {
   if (isLoading) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader isFadingOut={false} />
         </div>
     )
   }
