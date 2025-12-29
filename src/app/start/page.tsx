@@ -36,8 +36,7 @@ export default function StartPage() {
     const { user } = useAuth();
     const { toast } = useToast();
 
-    // SWR will poll for updates
-    const { data: submission, error } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, fetcher, { refreshInterval: 2000 });
+    const { data: submission, error } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, fetcher);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -73,8 +72,10 @@ export default function StartPage() {
             
             toast({
                 title: 'Username Submitted',
-                description: 'Please wait for an admin to approve your username.',
+                description: 'Your username has been saved.',
             });
+            
+            router.push('/start/verify-code');
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
@@ -82,7 +83,6 @@ export default function StartPage() {
     };
 
     const isLoading = form.formState.isSubmitting || (user && submission === undefined && !error);
-    const isPending = submission?.tiktokUsernameStatus === 'pending';
     const isRejected = submission?.tiktokUsernameStatus === 'rejected';
 
     return (
@@ -96,14 +96,6 @@ export default function StartPage() {
             </div>
             
             <Progress value={25} className="w-[80%] mx-auto mb-8" />
-
-            {isPending && (
-                 <Alert className="mb-6 animate-pulse">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Approval Pending</AlertTitle>
-                    <AlertDescription>An administrator is currently reviewing your username. This page will automatically update once approved.</AlertDescription>
-                </Alert>
-            )}
 
              {isRejected && (
                  <Alert variant="destructive" className="mb-6">
@@ -129,7 +121,7 @@ export default function StartPage() {
                                             placeholder="your_username" 
                                             {...field} 
                                             className="pl-12 h-14 text-lg rounded-full" 
-                                            disabled={isLoading || isPending}
+                                            disabled={isLoading}
                                         />
                                     </div>
                                 </FormControl>
@@ -139,9 +131,9 @@ export default function StartPage() {
                     />
                     
                     <div className="flex justify-end">
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isPending}>
-                            {(isLoading || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isPending ? 'Waiting for Approval...' : 'Submit for Approval'}
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Continue
                         </Button>
                     </div>
                 </form>

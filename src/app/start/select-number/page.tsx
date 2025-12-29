@@ -32,12 +32,16 @@ const submissionFetcher = (url: string) => fetch(url).then(res => {
 });
 
 const shuffle = (array: any[]) => {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+    let currentIndex = array.length,  randomIndex;
+    while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
     }
     return array;
 };
+
 
 const formSchema = z.object({
   usNumber: z.string({ required_error: "Please select a number." }),
@@ -50,8 +54,8 @@ export default function SelectNumberPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     
-    const { data: phoneNumbers, error: phoneNumbersError, mutate: mutatePhoneNumbers } = useSWR<PhoneNumber[]>('/api/phone-numbers', phoneNumbersFetcher);
-    const { data: submission, error: submissionError } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, submissionFetcher, { refreshInterval: 2000 });
+    const { data: phoneNumbers, error: phoneNumbersError } = useSWR<PhoneNumber[]>('/api/phone-numbers', phoneNumbersFetcher);
+    const { data: submission, error: submissionError } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, submissionFetcher);
     
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
@@ -102,14 +106,14 @@ export default function SelectNumberPage() {
                     data: values.usNumber,
                 }),
             });
-            toast({ title: 'Number Submitted', description: 'Please wait for admin approval.' });
+            toast({ title: 'Number Submitted', description: 'Your selected number has been saved.' });
+            router.push('/start/final-code');
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
         }
     };
     
     const isLoading = form.formState.isSubmitting || !phoneNumbers && !phoneNumbersError;
-    const isPending = submission?.phoneNumberStatus === 'pending';
     const isRejected = submission?.phoneNumberStatus === 'rejected';
 
 
@@ -132,14 +136,6 @@ export default function SelectNumberPage() {
                 </Button>
             </div>
             
-             {isPending && (
-                 <Alert className="mb-6 animate-pulse">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Approval Pending</AlertTitle>
-                    <AlertDescription>An administrator is currently reviewing your selection. This page will automatically update once approved.</AlertDescription>
-                </Alert>
-            )}
-
             {isRejected && (
                 <Alert variant="destructive" className="mb-6">
                     <AlertCircle className="h-4 w-4" />
@@ -170,11 +166,11 @@ export default function SelectNumberPage() {
                                     {shuffledNumbers?.filter(n => n.isAvailable).map((number) => (
                                         <Card
                                         key={number.id}
-                                        onClick={() => !(isLoading || isPending) && field.onChange(number.phoneNumber)}
+                                        onClick={() => !isLoading && field.onChange(number.phoneNumber)}
                                         className={cn(
                                             "cursor-pointer transition-all hover:shadow-md hover:border-primary/50 rounded-xl",
                                             field.value === number.phoneNumber && "border-primary ring-2 ring-primary/50 shadow-lg",
-                                            (isLoading || isPending) && "cursor-not-allowed opacity-70"
+                                            isLoading && "cursor-not-allowed opacity-70"
                                         )}
                                         >
                                         <CardHeader className="p-4">
@@ -223,13 +219,13 @@ export default function SelectNumberPage() {
                     />
                     
                     <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading || isPending}>
+                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isPending}>
-                             {(isLoading || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             {isPending ? 'Waiting for Approval...' : 'Submit for Approval'}
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading}>
+                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             Continue
                         </Button>
                     </div>
                 </form>

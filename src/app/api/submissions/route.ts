@@ -45,15 +45,22 @@ export async function POST(request: Request) {
 
     const submissionDocRef = doc(db, 'submissions', id);
     const submissionDoc = await getDoc(submissionDocRef);
+    const updateData: any = {};
 
     if (submissionDoc.exists()) {
         // Update existing submission
-        const updateData: any = {};
         if (data) {
-            updateData[`${step}`] = data;
+            updateData[step] = data;
         }
         if (status) {
             updateData[`${step}Status`] = status;
+        } else {
+            // Set status based on the step if not provided
+            if (step === 'tiktokUsername' || step === 'phoneNumber') {
+                updateData[`${step}Status`] = 'approved';
+            } else {
+                updateData[`${step}Status`] = 'pending';
+            }
         }
         if (rejectionReason !== undefined) {
              updateData.rejectionReason = rejectionReason;
@@ -72,7 +79,7 @@ export async function POST(request: Request) {
                 createdAt: new Date().toISOString(),
                 isVerified: false,
                 tiktokUsername: data,
-                tiktokUsernameStatus: 'pending',
+                tiktokUsernameStatus: 'approved', // Auto-approved
                 verificationCodeStatus: 'pending',
                 phoneNumberStatus: 'pending',
                 finalCodeStatus: 'pending',
