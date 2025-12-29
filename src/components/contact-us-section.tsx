@@ -16,13 +16,13 @@ export function ContactUsSection() {
                     </p>
                     <div className="mt-10 flex justify-center gap-4">
                         <Button asChild variant="outline" size="icon">
-                           <Link href="#"><Facebook /></Link>
+                           <Link href="#"><Facebook className="h-5 w-5" /></Link>
                         </Button>
                          <Button asChild variant="outline" size="icon">
-                           <Link href="#"><Twitter /></Link>
+                           <Link href="#"><Twitter className="h-5 w-5" /></Link>
                         </Button>
                          <Button asChild variant="outline" size="icon">
-                           <Link href="#"><Instagram /></Link>
+                           <Link href="#"><Instagram className="h-5 w-5" /></Link>
                         </Button>
                     </div>
                 </div>
