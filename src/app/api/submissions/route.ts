@@ -2,29 +2,46 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { collection, getDocs, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase-admin';
+import path from 'path';
+import fs from 'fs/promises';
 import type { Submission } from '@/lib/types';
 
+const dataFilePath = path.join(process.cwd(), 'src/data/submissions.json');
+
+async function readSubmissions(): Promise<Submission[]> {
+  try {
+    const fileContents = await fs.readFile(dataFilePath, 'utf8');
+    if (!fileContents) return [];
+    return JSON.parse(fileContents);
+  } catch (error) {
+    // If the file doesn't exist or is invalid JSON, start fresh
+    return [];
+  }
+}
+
+async function writeSubmissions(data: Submission[]): Promise<void> {
+  const dir = path.dirname(dataFilePath);
+  try {
+    await fs.access(dir);
+  } catch {
+    await fs.mkdir(dir, { recursive: true });
+  }
+  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
+}
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
-
+    
     try {
+        const submissions = await readSubmissions();
         if (userId) {
-            // Fetch a single submission
-            const submissionDocRef = doc(db, 'submissions', userId);
-            const submissionDoc = await getDoc(submissionDocRef);
-            if (!submissionDoc.exists()) {
+            const submission = submissions.find(s => s.id === userId);
+            if (!submission) {
                 return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
             }
-            return NextResponse.json(submissionDoc.data());
+            return NextResponse.json(submission);
         } else {
-            // Fetch all submissions
-            const submissionsCollection = collection(db, 'submissions');
-            const snapshot = await getDocs(submissionsCollection);
-            const submissions = snapshot.docs.map(d => d.data() as Submission);
             return NextResponse.json(submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         }
     } catch (error: any) {
@@ -37,50 +54,60 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, step, data, status, rejectionReason } = body;
+    const { id, step, data, status, rejectionReason, login } = body;
+
+    let submissions = await readSubmissions();
+    
+    // Handle Login request
+    if (login) {
+        if (!id) {
+            return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
+        }
+        const submission = submissions.find(s => s.id === id);
+        if (submission) {
+            return NextResponse.json(submission);
+        } else {
+            return NextResponse.json({ message: 'No submission found for this username.' }, { status: 404 });
+        }
+    }
+
 
     if (!id || !step) {
       return NextResponse.json({ message: 'Submission ID and step are required' }, { status: 400 });
     }
 
-    const submissionDocRef = doc(db, 'submissions', id);
-    const submissionDoc = await getDoc(submissionDocRef);
-    const updateData: any = {};
+    const submissionIndex = submissions.findIndex(s => s.id === id);
+    let submission: Submission;
 
-    // This handles both creation of a new submission and updates to an existing one.
-    if (submissionDoc.exists()) {
+    if (submissionIndex > -1) {
+        // Update existing submission
+        submission = submissions[submissionIndex];
+        
         if (data !== undefined) {
-            updateData[step] = data;
+            (submission as any)[step] = data;
+             // Reset rejection reason on new data submission
+            submission.rejectionReason = undefined;
         }
+
+        const statusKey = `${step}Status` as keyof Submission;
         if (status) {
-            updateData[`${step}Status`] = status;
-        } else if (step !== 'isVerified') {
-             // Set status based on the step if not provided
-            if (step === 'tiktokUsername') {
-                updateData[`${step}Status`] = 'approved'; // Step 1 is auto-approved
-            } else {
-                updateData[`${step}Status`] = 'pending'; // Subsequent steps need admin approval
-            }
+            (submission as any)[statusKey] = status;
+        } else {
+             (submission as any)[statusKey] = 'pending';
         }
 
         if (rejectionReason !== undefined) {
-             updateData.rejectionReason = rejectionReason;
-        }
-        if (step === 'isVerified' && typeof data === 'boolean') {
-             updateData.isVerified = data;
+            submission.rejectionReason = rejectionReason;
         }
         
-        // Reset rejection reason on new data submission for a step
-        if (data !== undefined) {
-            updateData.rejectionReason = null;
-        }
-
-        await updateDoc(submissionDocRef, updateData);
-        
+        submissions[submissionIndex] = submission;
     } else {
-        // Create new submission (should only happen on step 1)
+        // Create new submission (should only happen on step 1: tiktokUsername)
         if (step === 'tiktokUsername') {
-            const newSubmission: Submission = {
+             if (submissions.some(s => s.id === id)) {
+                return NextResponse.json({ message: 'This TikTok username is already registered.' }, { status: 409 });
+            }
+            submission = {
                 id,
                 createdAt: new Date().toISOString(),
                 isVerified: false,
@@ -92,18 +119,16 @@ export async function POST(request: Request) {
                 phoneNumberStatus: 'pending',
                 finalCode: '',
                 finalCodeStatus: 'pending',
-                rejectionReason: '',
             };
-            await setDoc(submissionDocRef, newSubmission);
+            submissions.push(submission);
         } else {
-            // This prevents creating a doc from any step other than the first.
             return NextResponse.json({ message: 'Submission does not exist. Please start from the beginning.' }, { status: 400 });
         }
     }
 
-    const updatedDoc = await getDoc(submissionDocRef);
+    await writeSubmissions(submissions);
 
-    return NextResponse.json(updatedDoc.data(), { status: 200 });
+    return NextResponse.json(submission, { status: 200 });
 
   } catch (error: any) {
     console.error("Error processing submission:", error);

@@ -7,18 +7,15 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword, updateProfile, AuthError } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 const formSchema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters.'),
-  email: z.string().email('Please enter a valid email address.'),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
+  tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -26,49 +23,40 @@ type FormValues = z.infer<typeof formSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      displayName: '',
-      email: '',
-      password: '',
+      tiktokUsername: '',
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      
-      // Update the user's profile with their display name
-      await updateProfile(userCredential.user, {
-        displayName: values.displayName,
+      const response = await fetch('/api/submissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              id: values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername,
+              step: 'tiktokUsername',
+              data: values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername,
+          }),
       });
 
-      // Redirect to the start of the flow
+      if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create account.');
+      }
+      
+      await login(values.tiktokUsername);
       router.push('/start');
 
     } catch (error) {
-      const authError = error as AuthError;
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      switch (authError.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'This email address is already in use.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'The password is too weak. Please choose a stronger password.';
-          break;
-        default:
-          console.error(authError);
-          break;
-      }
       toast({
         variant: 'destructive',
         title: 'Sign-up Failed',
-        description: errorMessage,
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
       });
     }
   };
@@ -90,38 +78,12 @@ export default function SignupPage() {
                     <div className="grid gap-4">
                         <FormField
                             control={form.control}
-                            name="displayName"
+                            name="tiktokUsername"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Full Name</FormLabel>
+                                <FormLabel>TikTok Username</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="John Doe" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="name@example.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="password"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                    <Input type="password" placeholder="••••••••" {...field} />
+                                    <Input placeholder="@username" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

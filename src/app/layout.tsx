@@ -24,20 +24,23 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
+  const isAdminPage = pathname.startsWith('/admin');
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
         <AuthProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
-            <SiteHeader />
+            {!isAdminPage && <SiteHeader />}
             {isHomePage && <TikTokBridgeHero />}
             <main className="flex-1">
               {children}
             </main>
-            <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
-                <SiteFooter />
-            </div>
+            {!isAdminPage && (
+              <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
+                  <SiteFooter />
+              </div>
+            )}
           </div>
           <CookieConsentBanner />
         </AuthProvider>

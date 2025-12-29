@@ -2,18 +2,30 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase-admin';
+import path from 'path';
+import fs from 'fs/promises';
 import type { AdminUser } from '@/lib/types';
 
-const adminsCollection = collection(db, 'admins');
+// Simple in-memory password store for demonstration. 
+// DO NOT USE IN PRODUCTION. Use a secure hashing library like bcrypt.
+const passwords: Record<string, string> = {};
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
+
+const dataFilePath = path.join(process.cwd(), 'src/data/admins.json');
 
 async function readAdmins(): Promise<AdminUser[]> {
-  const snapshot = await getDocs(adminsCollection);
-  if (snapshot.empty) {
+  try {
+    const fileContents = await fs.readFile(dataFilePath, 'utf8');
+    if (!fileContents) return [];
+    return JSON.parse(fileContents);
+  } catch (error) {
     return [];
   }
-  return snapshot.docs.map(d => d.data() as AdminUser);
+}
+
+async function writeAdmins(data: AdminUser[]): Promise<void> {
+  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
 }
 
 export async function GET() {
@@ -29,45 +41,63 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id } = body;
+    const { id, email, password, isVerified, login } = body;
 
-    if (!id) {
-      return NextResponse.json({ message: 'Admin ID is required' }, { status: 400 });
+    let admins = await readAdmins();
+
+    // Handle Login
+    if (login) {
+        if (!email || !password) {
+            return NextResponse.json({ message: 'Email and password are required for login.' }, { status: 400 });
+        }
+        const admin = admins.find(a => a.email === email);
+        if (!admin) {
+             return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
+        }
+        if (passwords[admin.id] !== password) {
+             return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
+        }
+        if (!admin.isVerified) {
+            return NextResponse.json({ message: 'Your account is pending approval.' }, { status: 403 });
+        }
+        return NextResponse.json(admin, { status: 200 });
     }
 
-    const adminDocRef = doc(db, 'admins', id);
-    const adminDoc = await getDoc(adminDocRef);
+    const adminIndex = admins.findIndex(admin => admin.id === id);
 
-    if (adminDoc.exists()) {
-      // Update existing admin (e.g., verification status)
-      const { isVerified } = body;
-      if (typeof isVerified === 'boolean') {
-        await updateDoc(adminDocRef, { isVerified });
-      }
-    } else {
-      // Create new admin
-      if (!body.email) {
-          return NextResponse.json({ message: 'Email is required for new admin' }, { status: 400 });
-      }
-
-      const admins = await readAdmins();
-      // The first user to register is the main admin
-      const isMainAdmin = admins.length === 0;
-
-      const newAdmin: AdminUser = {
-        id: id,
-        email: body.email,
-        isVerified: isMainAdmin, // Main admin is auto-verified
-        isMainAdmin: isMainAdmin,
-        createdAt: new Date().toISOString(),
-      };
-      await setDoc(adminDocRef, newAdmin);
+    // Update existing admin (verification)
+    if (id && adminIndex > -1) {
+        if (typeof isVerified === 'boolean') {
+            admins[adminIndex].isVerified = isVerified;
+            await writeAdmins(admins);
+            return NextResponse.json(admins[adminIndex], { status: 200 });
+        }
     }
+    
+    // Create new admin
+    if (email && password) {
+        if (admins.some(admin => admin.email === email)) {
+            return NextResponse.json({ message: 'Email already in use.' }, { status: 409 });
+        }
+        
+        const isMainAdmin = admins.length === 0;
+        const newAdmin: AdminUser = {
+            id: generateId(),
+            email: email,
+            isVerified: isMainAdmin,
+            isMainAdmin: isMainAdmin,
+            createdAt: new Date().toISOString(),
+        };
 
-    const updatedDoc = await getDoc(adminDocRef);
-    const responseData = updatedDoc.data();
+        // Store password in memory (NOT FOR PRODUCTION)
+        passwords[newAdmin.id] = password;
 
-    return NextResponse.json(responseData, { status: 200 });
+        admins.push(newAdmin);
+        await writeAdmins(admins);
+        return NextResponse.json(newAdmin, { status: 200 });
+    }
+    
+    return NextResponse.json({ message: 'Invalid request body' }, { status: 400 });
 
   } catch (error: any) {
     console.error('Error processing admin request:', error);

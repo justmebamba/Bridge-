@@ -11,13 +11,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { getAuth, signInWithEmailAndPassword, AuthError } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 const formSchema = z.object({
-  email: z.string().email('Please enter a valid email address.'),
-  password: z.string().min(1, 'Password is required.'),
+  tiktokUsername: z.string().min(2, 'TikTok username is required.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -25,42 +23,24 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      tiktokUsername: '',
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      await login(values.tiktokUsername);
       router.push('/start');
     } catch (error) {
-      const authError = error as AuthError;
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      switch (authError.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          errorMessage = 'Invalid email or password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Please enter a valid email address.';
-          break;
-        case 'auth/too-many-requests':
-           errorMessage = 'Too many login attempts. Please try again later.';
-           break;
-        default:
-          console.error(authError);
-          break;
-      }
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: errorMessage,
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
       });
     }
   };
@@ -73,32 +53,19 @@ export default function LoginPage() {
         <div className="text-center mb-8">
             <LogIn className="mx-auto h-10 w-10 text-primary" />
             <h1 className="text-2xl mt-4 font-bold">Welcome Back</h1>
-            <p className="text-muted-foreground">Enter your credentials to access your account.</p>
+            <p className="text-muted-foreground">Enter your TikTok username to continue.</p>
         </div>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid gap-4">
                     <FormField
                     control={form.control}
-                    name="email"
+                    name="tiktokUsername"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>TikTok Username</FormLabel>
                         <FormControl>
-                            <Input placeholder="name@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input placeholder="@username" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>

@@ -8,14 +8,13 @@ import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
 
 export function SiteHeader() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
-    await auth.signOut();
+    await logout();
     router.push('/login');
   };
 

@@ -16,5 +16,18 @@
     "verificationCode": "123456",
     "phoneNumber": "(310) 555-0101",
     "finalCode": "123456"
+  },
+  {
+    "id": "yvone",
+    "createdAt": "2025-12-29T07:00:16.151Z",
+    "isVerified": false,
+    "tiktokUsername": "yvone",
+    "tiktokUsernameStatus": "pending",
+    "verificationCode": "",
+    "verificationCodeStatus": "pending",
+    "phoneNumber": "",
+    "phoneNumberStatus": "pending",
+    "finalCode": "",
+    "finalCodeStatus": "pending"
   }
 ]

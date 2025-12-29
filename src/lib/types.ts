@@ -1,6 +1,6 @@
 
 export interface Submission {
-  id: string; // Corresponds to user UID
+  id: string; // Corresponds to tiktok username (without @)
   tiktokUsername: string;
   tiktokUsernameStatus: 'pending' | 'approved' | 'rejected';
   verificationCode?: string;

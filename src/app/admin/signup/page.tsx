@@ -7,8 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword, AuthError } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 
@@ -62,14 +60,12 @@ export default function AdminSignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      
       const response = await fetch('/api/admins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: userCredential.user.uid,
           email: values.email,
+          password: values.password,
         }),
       });
 
@@ -92,28 +88,10 @@ export default function AdminSignupPage() {
         });
       }
 
-      await auth.signOut();
       router.push('/admin/login');
 
     } catch (error) {
-      const authError = error as AuthError;
-      let errorMessage = (error as Error).message || 'An unexpected error occurred. Please try again.';
-      if (authError.code) {
-        switch (authError.code) {
-            case 'auth/email-already-in-use':
-            errorMessage = 'This email address is already in use.';
-            break;
-            case 'auth/invalid-email':
-            errorMessage = 'Please enter a valid email address.';
-            break;
-            case 'auth/weak-password':
-            errorMessage = 'The password is too weak. Please choose a stronger password.';
-            break;
-            default:
-            console.error(authError);
-            break;
-        }
-      }
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
       toast({
         variant: 'destructive',
         title: 'Sign-up Failed',

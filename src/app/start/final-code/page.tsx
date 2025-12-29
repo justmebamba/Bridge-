@@ -34,7 +34,7 @@ export default function FinalCodePage() {
     });
 
     const [submission, setSubmission] = useState<Submission | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isPageLoading, setIsPageLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
     const [canResend, setCanResend] = useState(false);
@@ -42,10 +42,10 @@ export default function FinalCodePage() {
     const isPending = submission?.finalCodeStatus === 'pending' && !!submission.finalCode;
 
     const fetchSubmission = useCallback(async () => {
-        if (!user) return;
-        setIsLoading(true);
+        if (!user?.id) return;
+        setIsPageLoading(true);
         try {
-            const res = await fetch(`/api/submissions?id=${user.uid}`);
+            const res = await fetch(`/api/submissions?id=${user.id}`);
             if (res.status === 404) {
                 toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
                 router.replace('/start');
@@ -69,13 +69,15 @@ export default function FinalCodePage() {
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
-            setIsLoading(false);
+            setIsPageLoading(false);
         }
-    }, [user, router, toast, form]);
+    }, [user?.id, router, toast, form]);
 
     useEffect(() => {
         if(user){
             fetchSubmission();
+        } else {
+            setIsPageLoading(false);
         }
     }, [user, fetchSubmission]);
     
@@ -116,13 +118,13 @@ export default function FinalCodePage() {
     
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-        setIsLoading(true);
+
         try {
              const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    id: user.uid,
+                    id: user.id,
                     step: 'finalCode',
                     data: values.finalCode,
                 }),
@@ -135,15 +137,13 @@ export default function FinalCodePage() {
             fetchSubmission();
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-        } finally {
-            setIsLoading(false);
         }
     };
     
     const { isSubmitting } = formState;
     const isRejected = submission?.finalCodeStatus === 'rejected';
 
-    if (isLoading && !submission) {
+    if (isPageLoading) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
     }
 
@@ -233,5 +233,3 @@ export default function FinalCodePage() {
         </div>
     );
 }
-
-    
