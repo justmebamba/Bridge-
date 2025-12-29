@@ -52,7 +52,7 @@ export default function AdminSignupPage() {
         }
     };
     checkMainAdmin();
-  }, [toast]);
+  }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

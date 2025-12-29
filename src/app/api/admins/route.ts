@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     return await store.update(async (admins) => {
         if (admins.some(admin => admin.email === email)) {
-            const err = new Error('Email already in use.');
+            const err = new Error('An admin with this email already exists.');
             (err as any).statusCode = 409;
             throw err;
         }
@@ -73,16 +73,23 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Error creating admin:', error);
-    if (error.statusCode === 409) {
-        return NextResponse.json({ message: error.message }, { status: 409 });
+    let message = 'An unexpected error occurred.';
+    let status = 500;
+
+    if (error.statusCode) {
+        message = error.message;
+        status = error.statusCode;
+    } else if (error.code === 'auth/email-already-exists') {
+        message = 'An admin with this email already exists in Firebase.';
+        status = 409;
+    } else if (error.code === 'auth/invalid-password') {
+         message = 'Password must be at least 6 characters long.';
+         status = 400;
+    } else if (error.message) {
+        message = error.message;
     }
-    if (error.code === 'auth/email-already-exists') {
-        return NextResponse.json({ message: 'An admin with this email already exists in Firebase.' }, { status: 409 });
-    }
-    if (error.code === 'auth/invalid-password') {
-         return NextResponse.json({ message: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ message: error.message || 'Error creating admin account.' }, { status: 500 });
+    
+    return NextResponse.json({ message }, { status });
   }
 }
 
@@ -118,8 +125,8 @@ export async function PATCH(request: Request) {
 
   } catch (error: any) {
     console.error('Error updating admin:', error);
-     if (error.statusCode === 404) {
-        return NextResponse.json({ message: error.message }, { status: 404 });
+     if (error.statusCode) {
+        return NextResponse.json({ message: error.message }, { status: error.statusCode });
     }
     return NextResponse.json({ message: 'Error processing request.' }, { status: 500 });
   }
