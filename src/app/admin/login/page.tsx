@@ -29,7 +29,8 @@ export default function AdminLoginPage() {
   const { adminUser, adminLogin, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && adminUser) {
+    // Redirect if the user is already logged in and verified
+    if (!isLoading && adminUser?.isVerified) {
       router.replace('/admin');
     }
   }, [adminUser, isLoading, router]);
@@ -46,7 +47,7 @@ export default function AdminLoginPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       await adminLogin(values.email, values.password);
-      router.push('/admin');
+      // The useEffect will handle the redirect on successful login
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -58,7 +59,7 @@ export default function AdminLoginPage() {
 
   const { isSubmitting } = form.formState;
 
-  if (isLoading || adminUser) {
+  if (isLoading || adminUser?.isVerified) {
      return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
             <div className="flex flex-col items-center gap-4">
@@ -108,8 +109,8 @@ export default function AdminLoginPage() {
                         />
                     </div>
                     <div className="flex flex-col gap-4">
-                        <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
+                        {(isSubmitting || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Log In
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">

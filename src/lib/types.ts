@@ -26,7 +26,7 @@ export interface PhoneNumber {
 }
 
 export interface AdminUser {
-  id: string;
+  id: string; // This will now be the Firebase UID
   email: string;
   isVerified: boolean;
   isMainAdmin: boolean;

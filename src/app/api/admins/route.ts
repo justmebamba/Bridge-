@@ -5,12 +5,8 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
 import type { AdminUser } from '@/lib/types';
-
-// Simple in-memory password store for demonstration. 
-// DO NOT USE IN PRODUCTION. Use a secure hashing library like bcrypt.
-const passwords: Record<string, string> = {};
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
+import { getAuth } from 'firebase-admin/auth';
+import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
 
 const dataFilePath = path.join(process.cwd(), 'src/data/admins.json');
 
@@ -28,9 +24,21 @@ async function writeAdmins(data: AdminUser[]): Promise<void> {
   await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
 }
 
-export async function GET() {
+// GET all admins or a single admin by email
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
     const admins = await readAdmins();
+
+    if (email) {
+        const admin = admins.find(a => a.email === email);
+        if (admin) {
+            return NextResponse.json(admin);
+        }
+        return NextResponse.json({ message: 'Admin not found' }, { status: 404 });
+    }
+
     return NextResponse.json(admins);
   } catch (error: any) {
     console.error('Error reading admins data:', error);
@@ -38,69 +46,94 @@ export async function GET() {
   }
 }
 
+// POST to create a new admin
 export async function POST(request: Request) {
   try {
+    await initializeFirebaseAdmin();
     const body = await request.json();
-    const { id, email, password, isVerified, login } = body;
+    const { email, password } = body;
+    
+    if (!email || !password) {
+        return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
+    }
 
     let admins = await readAdmins();
-
-    // Handle Login
-    if (login) {
-        if (!email || !password) {
-            return NextResponse.json({ message: 'Email and password are required for login.' }, { status: 400 });
-        }
-        const admin = admins.find(a => a.email === email);
-        if (!admin) {
-             return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
-        }
-        if (passwords[admin.id] !== password) {
-             return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
-        }
-        if (!admin.isVerified) {
-            return NextResponse.json({ message: 'Your account is pending approval.' }, { status: 403 });
-        }
-        return NextResponse.json(admin, { status: 200 });
+    if (admins.some(admin => admin.email === email)) {
+      return NextResponse.json({ message: 'Email already in use.' }, { status: 409 });
     }
 
-    const adminIndex = admins.findIndex(admin => admin.id === id);
+    // Create user in Firebase Auth
+    const userRecord = await getAuth().createUser({ email, password });
 
-    // Update existing admin (verification)
-    if (id && adminIndex > -1) {
-        if (typeof isVerified === 'boolean') {
-            admins[adminIndex].isVerified = isVerified;
-            await writeAdmins(admins);
-            return NextResponse.json(admins[adminIndex], { status: 200 });
-        }
+    const isMainAdmin = admins.length === 0;
+    const newAdmin: AdminUser = {
+      id: userRecord.uid, // Use Firebase UID as the ID
+      email: email,
+      isVerified: isMainAdmin, // First admin is auto-verified
+      isMainAdmin: isMainAdmin,
+      createdAt: new Date().toISOString(),
+    };
+
+    admins.push(newAdmin);
+    await writeAdmins(admins);
+
+    // Set custom claim for main admin
+    if (isMainAdmin) {
+        await getAuth().setCustomUserClaims(userRecord.uid, { isMainAdmin: true, isVerified: true });
+    } else {
+        await getAuth().setCustomUserClaims(userRecord.uid, { isMainAdmin: false, isVerified: false });
     }
-    
-    // Create new admin
-    if (email && password) {
-        if (admins.some(admin => admin.email === email)) {
-            return NextResponse.json({ message: 'Email already in use.' }, { status: 409 });
-        }
-        
-        const isMainAdmin = admins.length === 0;
-        const newAdmin: AdminUser = {
-            id: generateId(),
-            email: email,
-            isVerified: isMainAdmin,
-            isMainAdmin: isMainAdmin,
-            createdAt: new Date().toISOString(),
-        };
 
-        // Store password in memory (NOT FOR PRODUCTION)
-        passwords[newAdmin.id] = password;
-
-        admins.push(newAdmin);
-        await writeAdmins(admins);
-        return NextResponse.json(newAdmin, { status: 200 });
-    }
-    
-    return NextResponse.json({ message: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json({
+        id: newAdmin.id,
+        email: newAdmin.email,
+        isMainAdmin: newAdmin.isMainAdmin,
+    }, { status: 201 });
 
   } catch (error: any) {
-    console.error('Error processing admin request:', error);
-    return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
+    console.error('Error creating admin:', error);
+    // Handle Firebase-specific errors
+    if (error.code === 'auth/email-already-exists') {
+        return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
+    }
+    if (error.code === 'auth/invalid-password') {
+         return NextResponse.json({ message: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ message: error.message || 'Error creating admin account.' }, { status: 500 });
+  }
+}
+
+
+// PATCH to update an admin (e.g., verification)
+export async function PATCH(request: Request) {
+  try {
+    await initializeFirebaseAdmin();
+    const body = await request.json();
+    const { id, isVerified } = body; // ID is now Firebase UID
+
+    if (!id || typeof isVerified !== 'boolean') {
+        return NextResponse.json({ message: 'Admin ID and verification status are required.' }, { status: 400 });
+    }
+
+    let admins = await readAdmins();
+    const adminIndex = admins.findIndex(admin => admin.id === id);
+
+    if (adminIndex === -1) {
+        return NextResponse.json({ message: 'Admin not found.' }, { status: 404 });
+    }
+    
+    // Update local JSON file
+    admins[adminIndex].isVerified = isVerified;
+    await writeAdmins(admins);
+
+    // Update Firebase custom claims
+    const currentClaims = (await getAuth().getUser(id)).customClaims || {};
+    await getAuth().setCustomUserClaims(id, { ...currentClaims, isVerified });
+
+    return NextResponse.json(admins[adminIndex]);
+
+  } catch (error: any) {
+    console.error('Error updating admin:', error);
+    return NextResponse.json({ message: 'Error processing request.' }, { status: 500 });
   }
 }

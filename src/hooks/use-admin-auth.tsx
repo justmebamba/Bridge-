@@ -5,7 +5,7 @@ import { useAuth } from './use-auth';
 import { useMemo } from 'react';
 
 export const useAdminAuth = () => {
-    const { adminUser, isLoading } = useAuth();
+    const { adminUser, firebaseUser, isLoading } = useAuth();
 
     const isAdmin = useMemo(() => {
         return !!adminUser && adminUser.isVerified;
@@ -17,10 +17,9 @@ export const useAdminAuth = () => {
 
     return {
         adminUser,
+        firebaseUser,
         isLoading,
         isAdmin,
         isMainAdmin,
     };
 };
-
-    

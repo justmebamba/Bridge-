@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -30,6 +31,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        "localhost:3000",
+        "*.firebaseapp.com",
+        "*.web.app"
+      ]
+    }
+  }
 };
 
 export default nextConfig;

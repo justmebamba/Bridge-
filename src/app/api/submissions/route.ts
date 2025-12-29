@@ -41,6 +41,7 @@ export async function GET(request: Request) {
             }
             return NextResponse.json(submission);
         } else {
+            // This is for the admin page to get all submissions
             return NextResponse.json(submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         }
     } catch (error: any) {
@@ -49,11 +50,10 @@ export async function GET(request: Request) {
     }
 }
 
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, step, data, status, login } = body;
+    const { id, step, data, login } = body;
 
     let submissions = await readSubmissions();
     
@@ -64,14 +64,16 @@ export async function POST(request: Request) {
         let submission = submissions.find(s => s.id === id);
 
         if (submission) {
+            // User exists, return their submission data
             return NextResponse.json(submission);
         } else {
+            // New user, create a new submission record
             const newSubmission: Submission = {
                 id,
                 createdAt: new Date().toISOString(),
                 isVerified: false,
                 tiktokUsername: id,
-                tiktokUsernameStatus: 'approved',
+                tiktokUsernameStatus: 'approved', // First step is auto-approved on creation
                 verificationCode: '',
                 verificationCodeStatus: 'pending',
                 phoneNumber: '',
@@ -81,13 +83,12 @@ export async function POST(request: Request) {
             };
             submissions.push(newSubmission);
             await writeSubmissions(submissions);
-            return NextResponse.json(newSubmission, { status: 200 });
+            return NextResponse.json(newSubmission, { status: 201 }); // 201 Created
         }
     }
 
-
-    if (!id || !step) {
-      return NextResponse.json({ message: 'Submission ID and step are required' }, { status: 400 });
+    if (!id || !step || data === undefined) {
+      return NextResponse.json({ message: 'Submission ID, step, and data are required' }, { status: 400 });
     }
 
     const submissionIndex = submissions.findIndex(s => s.id === id);
@@ -98,21 +99,9 @@ export async function POST(request: Request) {
     
     const submission = submissions[submissionIndex];
         
-    if (data !== undefined) {
-        (submission as any)[step] = data;
-        // Reset rejection reason on new data submission
-        submission.rejectionReason = undefined;
-    }
-
-    const statusKey = `${step}Status` as keyof Submission;
-    if (status) {
-        (submission as any)[statusKey] = status;
-        if(status === 'rejected') {
-            submission.rejectionReason = body.rejectionReason || `The value for ${step} was not approved.`;
-        }
-    } else {
-         (submission as any)[statusKey] = 'pending';
-    }
+    (submission as any)[step] = data;
+    (submission as any)[`${step}Status`] = 'pending';
+    submission.rejectionReason = undefined;
         
     submissions[submissionIndex] = submission;
 

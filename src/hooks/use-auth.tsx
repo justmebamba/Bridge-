@@ -3,6 +3,8 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
 import type { Submission, AdminUser } from '@/lib/types';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { firebaseApp } from '@/lib/firebase/client';
 
 interface AuthUser {
     id: string; // This will be the tiktok username
@@ -12,6 +14,7 @@ interface AuthUser {
 interface AdminAuthContextType {
   user: AuthUser | null;
   adminUser: AdminUser | null;
+  firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (username: string) => Promise<void>;
   logout: () => void;
@@ -23,39 +26,58 @@ interface AdminAuthContextType {
 const AuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 const USER_SESSION_KEY = 'user-session';
-const ADMIN_SESSION_KEY = 'admin-session';
-
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This effect runs once on mount to load session from sessionStorage
-    setIsLoading(true);
-    try {
-        const storedUser = sessionStorage.getItem(USER_SESSION_KEY);
-        if (storedUser) {
+    // Client-side session loading
+    const storedUser = sessionStorage.getItem(USER_SESSION_KEY);
+    if (storedUser) {
+        try {
             const parsedUser = JSON.parse(storedUser);
-            // Basic validation
             if(parsedUser && parsedUser.id && parsedUser.submission){
-              setUser(parsedUser);
+                setUser(parsedUser);
             } else {
-               sessionStorage.removeItem(USER_SESSION_KEY);
+                sessionStorage.removeItem(USER_SESSION_KEY);
             }
+        } catch (e) {
+            console.error("Failed to parse user session", e);
+            sessionStorage.removeItem(USER_SESSION_KEY);
         }
-        const storedAdminUser = sessionStorage.getItem(ADMIN_SESSION_KEY);
-        if (storedAdminUser) {
-            setAdminUser(JSON.parse(storedAdminUser));
-        }
-    } catch (e) {
-        console.error("Failed to parse user session", e);
-        sessionStorage.removeItem(USER_SESSION_KEY);
-        sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    } finally {
-        setIsLoading(false);
     }
+    
+    // Firebase auth state listener
+    const auth = getAuth(firebaseApp);
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+        setFirebaseUser(fbUser);
+        if (fbUser) {
+            try {
+                const token = await fbUser.getIdToken();
+                const response = await fetch('/api/auth/session', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const fullAdminUser = await response.json();
+                    setAdminUser(fullAdminUser);
+                } else {
+                    setAdminUser(null);
+                }
+            } catch (error) {
+                console.error("Error fetching admin session:", error);
+                setAdminUser(null);
+            }
+        } else {
+            setAdminUser(null);
+        }
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = useCallback(async (username: string) => {
@@ -98,40 +120,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const adminLogin = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
+    const auth = getAuth(firebaseApp);
     try {
-        const res = await fetch('/api/admins', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, login: true }),
-        });
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.message || 'Login failed.');
+        await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged will handle setting the user and session
+    } catch (error: any) {
+        setIsLoading(false);
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+             const res = await fetch(`/api/admins?email=${email}`);
+             if(res.ok) {
+                const admin = await res.json();
+                if(admin && !admin.isVerified) {
+                    throw new Error('Your account is pending approval.');
+                }
+             }
+            throw new Error('Invalid email or password.');
         }
-        const adminData: AdminUser = await res.json();
-        sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(adminData));
-        setAdminUser(adminData);
+        throw new Error(error.message || 'An unknown error occurred during login.');
+    }
+  }, []);
+
+  const adminLogout = useCallback(async () => {
+    setIsLoading(true);
+    const auth = getAuth(firebaseApp);
+    try {
+        await signOut(auth); // Sign out from Firebase client
+        await fetch('/api/auth/session', { method: 'DELETE' }); // Clear server session
+        // onAuthStateChanged will set adminUser to null
+    } catch (error) {
+        console.error("Error signing out:", error);
     } finally {
         setIsLoading(false);
     }
   }, []);
 
-  const adminLogout = useCallback(() => {
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    setAdminUser(null);
-  }, []);
-
-
   const value = useMemo(() => ({ 
       user, 
       adminUser,
+      firebaseUser,
       isLoading,
       login,
       logout,
       adminLogin,
       adminLogout,
       setSubmission
-    }), [user, adminUser, isLoading, login, logout, adminLogin, adminLogout, setSubmission]);
+    }), [user, adminUser, firebaseUser, isLoading, login, logout, adminLogin, adminLogout, setSubmission]);
 
   return (
     <AuthContext.Provider value={value}>
