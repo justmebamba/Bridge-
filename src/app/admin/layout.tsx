@@ -2,7 +2,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
@@ -15,31 +15,31 @@ export default function AdminLayout({
 }) {
     const { adminUser, firebaseUser, isLoading, checked } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
+    
+    const isAuthPage = pathname === '/admin/login' || pathname === '/admin/signup';
 
     useEffect(() => {
-        // Only run logic after the initial auth check is complete.
         if (!checked) {
-            return;
+            return; // Wait for auth check to complete
         }
 
-        // If check is complete and there's no Firebase user, redirect to login.
-        if (!firebaseUser) {
+        // If on a protected page (not login/signup) and not verified, redirect to login
+        if (!isAuthPage && !adminUser?.isVerified) {
             router.replace('/admin/login');
             return;
         }
         
-        // If there is a firebase user but no verified adminUser object, it means
-        // they are either not in the admin list or not verified.
-        if (firebaseUser && !adminUser?.isVerified) {
-             router.replace('/admin/login');
+        // If on an auth page (login/signup) but already verified, redirect to dashboard
+        if (isAuthPage && adminUser?.isVerified) {
+            router.replace('/admin');
+            return;
         }
-        // If they are logged in and verified, they can stay.
 
-    }, [checked, firebaseUser, adminUser, router]);
+    }, [checked, firebaseUser, adminUser, router, isAuthPage, pathname]);
 
-    // Show a loader until the auth state is fully checked and confirmed.
-    // Also show loader if we are in the process of redirecting.
-    if (!checked || !firebaseUser || !adminUser?.isVerified) {
+    // Show a loader while auth state is being checked, or if on a protected page without verification
+    if (!checked || (!isAuthPage && !adminUser?.isVerified)) {
         return (
             <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
                 <Loader isFadingOut={false} />
@@ -47,7 +47,12 @@ export default function AdminLayout({
         );
     }
     
-    // Once everything is confirmed, render the main layout.
+    // For login/signup pages, just render the children without the sidebar layout
+    if (isAuthPage) {
+        return <>{children}</>;
+    }
+    
+    // For protected pages, render the full admin dashboard layout
     return (
         <SidebarProvider>
             <Sidebar>

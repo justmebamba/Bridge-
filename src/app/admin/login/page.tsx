@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader } from '@/components/loader';
 
@@ -27,15 +26,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { adminUser, adminLogin, isLoading } = useAuth();
-
-  useEffect(() => {
-    // Redirect if the user is already logged in and verified
-    if (!isLoading && adminUser?.isVerified) {
-      router.replace('/admin');
-    }
-  }, [adminUser, isLoading, router]);
-
+  const { adminUser, adminLogin, isLoading, checked } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -48,7 +39,8 @@ export default function AdminLoginPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       await adminLogin(values.email, values.password);
-      // The useEffect will handle the redirect on successful login
+      // The layout's useEffect will handle the redirect on successful login
+      router.push('/admin');
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -60,7 +52,9 @@ export default function AdminLoginPage() {
 
   const { isSubmitting } = form.formState;
 
-  if (isLoading || adminUser?.isVerified) {
+  // Show a loader while auth state is being determined, or if the user is already
+  // logged in and is in the process of being redirected.
+  if (!checked || (checked && adminUser?.isVerified)) {
      return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
             <Loader isFadingOut={false} />
@@ -108,7 +102,7 @@ export default function AdminLoginPage() {
                     </div>
                     <div className="flex flex-col gap-4">
                         <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                        {(isSubmitting || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isSubmitting && <Loader isFadingOut={false} />}
                         Log In
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">

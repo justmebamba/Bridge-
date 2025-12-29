@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -28,24 +28,27 @@ export default function AdminSignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [hasMainAdmin, setHasMainAdmin] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   useEffect(() => {
     const checkMainAdmin = async () => {
+        setIsCheckingAdmin(true);
         try {
             const res = await fetch('/api/admins');
+            if (!res.ok) {
+                // If API fails (e.g. no admins file yet), assume no main admin exists
+                setHasMainAdmin(false);
+                return;
+            }
             const admins = await res.json();
             const mainAdminExists = admins.some((admin: any) => admin.isMainAdmin);
             setHasMainAdmin(mainAdminExists);
         } catch (error) {
             console.error("Failed to check for main admin", error);
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Could not verify admin status. Please try again later.',
-            });
+            // On fetch error, assume no main admin so the first one can be created
+            setHasMainAdmin(false);
         } finally {
-            setIsLoading(false);
+            setIsCheckingAdmin(false);
         }
     };
     checkMainAdmin();
@@ -101,7 +104,7 @@ export default function AdminSignupPage() {
     }
   };
 
-  if (isLoading) {
+  if (isCheckingAdmin) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
             <Loader isFadingOut={false} />
@@ -171,7 +174,7 @@ export default function AdminSignupPage() {
                     </div>
                     <div className="flex flex-col gap-4">
                         <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isSubmitting && <Loader isFadingOut={false} />}
                         Create Admin Account
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">
