@@ -17,22 +17,29 @@ export default function AdminLayout({
     const router = useRouter();
 
     useEffect(() => {
-        if (!checked) return; // Do nothing until auth state is checked
+        // Only run logic after the initial auth check is complete.
+        if (!checked) {
+            return;
+        }
 
+        // If check is complete and there's no Firebase user, redirect to login.
         if (!firebaseUser) {
             router.replace('/admin/login');
+            return;
         }
+        
+        // If there is a firebase user but no verified adminUser object, it means
+        // they are either not in the admin list or not verified.
         if (firebaseUser && !adminUser?.isVerified) {
-             // This case handles a signed in but unverified user.
-             // We can keep them on a page that might show a "pending approval" message,
-             // but redirect from the main dashboard.
-             // For now, let's redirect to login and let the login page show the error.
              router.replace('/admin/login');
         }
+        // If they are logged in and verified, they can stay.
+
     }, [checked, firebaseUser, adminUser, router]);
 
-    // Show loader until auth state is confirmed
-    if (isLoading || !checked || !firebaseUser || !adminUser?.isVerified) {
+    // Show a loader until the auth state is fully checked and confirmed.
+    // Also show loader if we are in the process of redirecting.
+    if (!checked || !firebaseUser || !adminUser?.isVerified) {
         return (
             <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
                 <Loader isFadingOut={false} />
@@ -40,6 +47,7 @@ export default function AdminLayout({
         );
     }
     
+    // Once everything is confirmed, render the main layout.
     return (
         <SidebarProvider>
             <Sidebar>
