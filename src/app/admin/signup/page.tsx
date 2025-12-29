@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -175,7 +175,7 @@ export default function AdminSignupPage() {
                                 <FormItem>
                                 <FormLabel>Password</FormLabel>
                                 <FormControl>
-                                    <Input type="password" placeholder="••••••••" />
+                                    <Input type="password" placeholder="••••••••" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -184,7 +184,7 @@ export default function AdminSignupPage() {
                     </div>
                     <div className="flex flex-col gap-4">
                         <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting ?  <div className="h-6 w-6"><Loader isFadingOut={false}/></div> : 'Create Admin Account'}
+                        {isSubmitting ?  <Loader2 className="animate-spin" /> : 'Create Admin Account'}
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">
                             Already have an admin account?{' '}
