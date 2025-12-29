@@ -6,7 +6,7 @@ import type { Submission, AdminUser } from '@/lib/types';
 
 interface AuthUser {
     id: string; // This will be the tiktok username
-    submission: Submission | null;
+    submission: Submission;
 }
 
 interface AdminAuthContextType {
@@ -17,8 +17,7 @@ interface AdminAuthContextType {
   logout: () => void;
   adminLogin: (email: string, password: string) => Promise<void>;
   adminLogout: () => void;
-  setSubmission: (submission: Submission | null) => void;
-  setIsLoading: (isLoading: boolean) => void;
+  setSubmission: (submission: Submission) => void;
 }
 
 const AuthContext = createContext<AdminAuthContextType | undefined>(undefined);
@@ -38,7 +37,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
         const storedUser = sessionStorage.getItem(USER_SESSION_KEY);
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            const parsedUser = JSON.parse(storedUser);
+            // Basic validation
+            if(parsedUser && parsedUser.id && parsedUser.submission){
+              setUser(parsedUser);
+            } else {
+               sessionStorage.removeItem(USER_SESSION_KEY);
+            }
         }
         const storedAdminUser = sessionStorage.getItem(ADMIN_SESSION_KEY);
         if (storedAdminUser) {
@@ -65,11 +70,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         const submissionData = await res.json();
 
-        if (!res.ok && res.status !== 404) {
+        if (!res.ok) {
              throw new Error(submissionData.message || 'Could not log in.');
         }
 
-        const newUser: AuthUser = { id, submission: res.ok ? submissionData : null };
+        const newUser: AuthUser = { id, submission: submissionData };
         sessionStorage.setItem(USER_SESSION_KEY, JSON.stringify(newUser));
         setUser(newUser);
     } finally {
@@ -82,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   }, []);
   
-  const setSubmission = useCallback((submission: Submission | null) => {
+  const setSubmission = useCallback((submission: Submission) => {
     setUser(prevUser => {
         if (!prevUser) return null;
         const updatedUser = { ...prevUser, submission };
@@ -125,8 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout,
       adminLogin,
       adminLogout,
-      setSubmission,
-      setIsLoading
+      setSubmission
     }), [user, adminUser, isLoading, login, logout, adminLogin, adminLogout, setSubmission]);
 
   return (

@@ -39,11 +39,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SelectNumberPage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, setSubmission: setAuthSubmission } = useAuth();
     const { toast } = useToast();
     
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
-    const [submission, setSubmission] = useState<Submission | null>(null);
+    const [submission, setSubmission] = useState<Submission | null>(user?.submission || null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
@@ -55,57 +55,48 @@ export default function SelectNumberPage() {
     });
 
     const fetchData = useCallback(async () => {
-        setIsLoading(true);
         setError(null);
         try {
-            const [pRes, sRes] = await Promise.all([
-                fetch('/api/phone-numbers'),
-                user ? fetch(`/api/submissions?id=${user.uid}`) : Promise.resolve(null),
-            ]);
-
+            const pRes = await fetch('/api/phone-numbers');
             if (!pRes.ok) throw new Error('Failed to fetch phone numbers');
             const phoneNumbersData = await pRes.json();
             setPhoneNumbers(phoneNumbersData);
             setShuffledNumbers(shuffle([...phoneNumbersData]));
-
-            if (sRes) {
-                 if (sRes.status === 404) {
-                    toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
-                    router.replace('/start');
-                    return;
-                }
-                if (!sRes.ok) {
-                    throw new Error('Failed to fetch your submission data.');
-                }
-                const submissionData = await sRes.json();
-                setSubmission(submissionData);
-
-                if (submissionData.verificationCodeStatus !== 'approved') {
-                    router.replace('/start/verify-code');
-                    return;
-                }
-                if (submissionData.phoneNumberStatus === 'approved') {
-                    router.push('/start/final-code');
-                    return;
-                }
-                if (submissionData.phoneNumber) {
-                    form.setValue('usNumber', submissionData.phoneNumber);
-                }
-            }
-
         } catch (err: any) {
             setError(err.message);
             toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
             setIsLoading(false);
         }
-    }, [user, router, form, toast]);
+    }, [toast]);
+
+    useEffect(() => {
+       fetchData();
+    }, [fetchData]);
 
     useEffect(() => {
         if (user) {
-            fetchData();
+            setIsLoading(false);
+            const currentSubmission = user.submission;
+            setSubmission(currentSubmission);
+
+            if (currentSubmission.verificationCodeStatus !== 'approved') {
+                router.replace('/start/verify-code');
+                return;
+            }
+            if (currentSubmission.phoneNumberStatus === 'approved') {
+                router.push('/start/final-code');
+                return;
+            }
+            if (currentSubmission.phoneNumber) {
+                form.setValue('usNumber', currentSubmission.phoneNumber);
+            }
+        } else if (!user && isLoading) {
+            // still waiting for auth context
+        } else {
+             router.replace('/start');
         }
-    }, [user, fetchData]);
+    }, [user, isLoading, router, form]);
 
 
     const handleRefresh = () => {
@@ -122,7 +113,7 @@ export default function SelectNumberPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    id: user.uid,
+                    id: user.id,
                     step: 'phoneNumber',
                     data: values.usNumber,
                 }),
@@ -131,6 +122,8 @@ export default function SelectNumberPage() {
                  const errorData = await response.json();
                  throw new Error(errorData.message || 'Failed to submit phone number.');
             }
+            const updatedSubmission = await response.json();
+            setAuthSubmission(updatedSubmission);
             toast({ title: 'Number Submitted', description: 'Your selected number has been saved.' });
             router.push('/start/final-code');
         } catch (err: any)
@@ -142,6 +135,10 @@ export default function SelectNumberPage() {
     
     const { isSubmitting } = formState;
     const isRejected = submission?.phoneNumberStatus === 'rejected';
+
+    if (isLoading || !submission) {
+         return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
+    }
 
     return (
         <div className="w-full max-w-lg">
@@ -260,5 +257,3 @@ export default function SelectNumberPage() {
         </div>
     );
 }
-
-    

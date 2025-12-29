@@ -26,14 +26,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function FinalCodePage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, setSubmission: setAuthSubmission } = useAuth();
     const { toast } = useToast();
     const { formState, ...form } = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { finalCode: "" },
     });
 
-    const [submission, setSubmission] = useState<Submission | null>(null);
+    const [submission, setSubmission] = useState<Submission | null>(user?.submission || null);
     const [isPageLoading, setIsPageLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
@@ -43,7 +43,7 @@ export default function FinalCodePage() {
 
     const fetchSubmission = useCallback(async () => {
         if (!user?.id) return;
-        setIsPageLoading(true);
+        
         try {
             const res = await fetch(`/api/submissions?id=${user.id}`);
             if (res.status === 404) {
@@ -54,6 +54,7 @@ export default function FinalCodePage() {
             if (!res.ok) throw new Error('Failed to fetch submission data.');
             const data: Submission = await res.json();
             setSubmission(data);
+            setAuthSubmission(data); // keep auth context in sync
             
             if (data.phoneNumberStatus !== 'approved') {
                 router.replace('/start/select-number');
@@ -71,15 +72,31 @@ export default function FinalCodePage() {
         } finally {
             setIsPageLoading(false);
         }
-    }, [user?.id, router, toast, form]);
+    }, [user?.id, router, toast, form, setAuthSubmission]);
 
     useEffect(() => {
         if(user){
-            fetchSubmission();
-        } else {
             setIsPageLoading(false);
+            const currentSubmission = user.submission;
+            setSubmission(currentSubmission);
+
+            if (currentSubmission.phoneNumberStatus !== 'approved') {
+                router.replace('/start/select-number');
+                return;
+            }
+            if (currentSubmission.finalCodeStatus === 'approved') {
+                router.push('/success');
+                return;
+            }
+            if (currentSubmission.finalCode) {
+                form.setValue('finalCode', currentSubmission.finalCode);
+            }
+        } else if (!user && isPageLoading) {
+            // still waiting for auth context
+        } else {
+             router.replace('/start');
         }
-    }, [user, fetchSubmission]);
+    }, [user, isPageLoading, router, form]);
     
     // Polling effect
     useEffect(() => {
@@ -133,8 +150,10 @@ export default function FinalCodePage() {
                  const errorData = await response.json();
                  throw new Error(errorData.message || 'Failed to submit final code.');
             }
+            const updatedSubmission = await response.json();
+            setSubmission(updatedSubmission);
+            setAuthSubmission(updatedSubmission);
             toast({ title: 'Final Code Submitted', description: 'Please wait for final admin approval.' });
-            fetchSubmission();
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
         }
@@ -143,7 +162,7 @@ export default function FinalCodePage() {
     const { isSubmitting } = formState;
     const isRejected = submission?.finalCodeStatus === 'rejected';
 
-    if (isPageLoading) {
+    if (isPageLoading || !submission) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
     }
 

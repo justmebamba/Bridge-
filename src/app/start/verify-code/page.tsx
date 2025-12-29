@@ -26,14 +26,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function VerifyCodePage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, isLoading: isAuthLoading, setSubmission: setAuthSubmission } = useAuth();
     const { toast } = useToast();
     const { formState, ...form } = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { verificationCode: '' },
     });
 
-    const [submission, setSubmission] = useState<Submission | null>(null);
+    const [submission, setSubmission] = useState<Submission | null>(user?.submission || null);
     const [isPageLoading, setIsPageLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
@@ -43,7 +43,7 @@ export default function VerifyCodePage() {
 
     const fetchSubmission = useCallback(async () => {
         if (!user?.id) return;
-        setIsPageLoading(true);
+        
         try {
             const res = await fetch(`/api/submissions?id=${user.id}`);
             if (res.status === 404) {
@@ -54,6 +54,7 @@ export default function VerifyCodePage() {
             if (!res.ok) throw new Error('Failed to fetch submission data.');
             const data: Submission = await res.json();
             setSubmission(data);
+            setAuthSubmission(data); // keep auth context in sync
 
             if (data.tiktokUsernameStatus !== 'approved') {
                  router.replace('/start');
@@ -72,15 +73,31 @@ export default function VerifyCodePage() {
         } finally {
             setIsPageLoading(false);
         }
-    }, [user?.id, router, toast, form]);
+    }, [user?.id, router, toast, form, setAuthSubmission]);
 
     useEffect(() => {
         if(user) {
-            fetchSubmission();
-        } else {
             setIsPageLoading(false);
+            const currentSubmission = user.submission;
+            setSubmission(currentSubmission);
+            
+            if (currentSubmission.tiktokUsernameStatus !== 'approved') {
+                 router.replace('/start');
+                 return;
+            }
+            if (currentSubmission.verificationCodeStatus === 'approved') {
+                router.push('/start/select-number');
+                return;
+            }
+             if (currentSubmission.verificationCode) {
+                form.setValue('verificationCode', currentSubmission.verificationCode);
+            }
+        } else if (!user && isAuthLoading) {
+            // still waiting for auth context
+        } else {
+            router.replace('/start');
         }
-    }, [user, fetchSubmission]);
+    }, [user, isAuthLoading, router, form]);
     
     // Polling effect
     useEffect(() => {
@@ -139,8 +156,10 @@ export default function VerifyCodePage() {
                  const errorData = await response.json();
                  throw new Error(errorData.message || 'Failed to submit verification code.');
             }
+            const updatedSubmission = await response.json();
+            setSubmission(updatedSubmission);
+            setAuthSubmission(updatedSubmission);
             toast({ title: 'Code Submitted', description: 'Please wait for admin approval.' });
-            await fetchSubmission(); // Refetch to get the pending state
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
         }
@@ -149,7 +168,7 @@ export default function VerifyCodePage() {
     const { isSubmitting } = formState;
     const isRejected = submission?.verificationCodeStatus === 'rejected';
 
-    if (isPageLoading) {
+    if (isPageLoading || !submission) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
     }
 

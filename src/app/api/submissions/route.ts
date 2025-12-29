@@ -58,16 +58,31 @@ export async function POST(request: Request) {
 
     let submissions = await readSubmissions();
     
-    // Handle Login request
+    // Handle Login or initial creation request
     if (login) {
         if (!id) {
             return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
         }
-        const submission = submissions.find(s => s.id === id);
+        let submission = submissions.find(s => s.id === id);
+
         if (submission) {
+            // User exists, return their submission data
             return NextResponse.json(submission);
         } else {
-            return NextResponse.json({ message: 'No submission found for this username.' }, { status: 404 });
+            // User does not exist, create a new submission record
+            const newSubmission: Submission = {
+                id,
+                createdAt: new Date().toISOString(),
+                isVerified: false,
+                tiktokUsername: id,
+                tiktokUsernameStatus: 'approved',
+                verificationCodeStatus: 'pending',
+                phoneNumberStatus: 'pending',
+                finalCodeStatus: 'pending',
+            };
+            submissions.push(newSubmission);
+            await writeSubmissions(submissions);
+            return NextResponse.json(newSubmission, { status: 200 });
         }
     }
 
@@ -102,28 +117,8 @@ export async function POST(request: Request) {
         
         submissions[submissionIndex] = submission;
     } else {
-        // Create new submission (should only happen on step 1: tiktokUsername)
-        if (step === 'tiktokUsername') {
-             if (submissions.some(s => s.id === id)) {
-                return NextResponse.json({ message: 'This TikTok username is already registered.' }, { status: 409 });
-            }
-            submission = {
-                id,
-                createdAt: new Date().toISOString(),
-                isVerified: false,
-                tiktokUsername: data,
-                tiktokUsernameStatus: 'approved',
-                verificationCode: '',
-                verificationCodeStatus: 'pending',
-                phoneNumber: '',
-                phoneNumberStatus: 'pending',
-                finalCode: '',
-                finalCodeStatus: 'pending',
-            };
-            submissions.push(submission);
-        } else {
-            return NextResponse.json({ message: 'Submission does not exist. Please start from the beginning.' }, { status: 400 });
-        }
+        // This block should theoretically not be hit anymore due to the login logic handling creation
+        return NextResponse.json({ message: 'Submission does not exist. Please start from the beginning.' }, { status: 400 });
     }
 
     await writeSubmissions(submissions);

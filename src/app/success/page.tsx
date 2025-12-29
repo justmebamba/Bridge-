@@ -19,7 +19,7 @@ export default function SuccessPage() {
     if (!user) return;
     setIsLoadingData(true);
     try {
-        const res = await fetch(`/api/submissions?id=${user.uid}`);
+        const res = await fetch(`/api/submissions?id=${user.id}`);
         if (res.status === 404) {
             setSubmission(null);
             router.replace('/start'); // If no submission, they shouldn't be here
@@ -83,5 +83,3 @@ export default function SuccessPage() {
     </main>
   );
 }
-
-    
