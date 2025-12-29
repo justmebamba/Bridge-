@@ -9,7 +9,6 @@ import * as z from 'zod';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -38,20 +37,24 @@ export default function AdminSignupPage() {
             const res = await fetch('/api/admins');
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                // If API fails (e.g. no admins file yet), assume no main admin exists
+                // If API fails with ENOENT, it means no file, so no main admin
                 if (res.status === 500 && errorData.message?.includes('Could not read admins data')) {
                      setHasMainAdmin(false);
-                } else {
-                    throw new Error(errorData.message || 'Failed to check for main admin.');
+                     return;
                 }
-                return;
+                // If we get an empty array from a file that just has '[]', there's no main admin
+                if (res.status === 200 && (await res.clone().json()).length === 0) {
+                    setHasMainAdmin(false);
+                    return;
+                }
+                throw new Error(errorData.message || 'Failed to check for main admin.');
             }
             const admins = await res.json();
             const mainAdminExists = admins.some((admin: any) => admin.isMainAdmin);
             setHasMainAdmin(mainAdminExists);
         } catch (error) {
             console.error("Failed to check for main admin", error);
-            // On fetch error, assume no main admin so the first one can be created
+            // On any error, assume no main admin so the first one can be created
             setHasMainAdmin(false);
         } finally {
             setIsCheckingAdmin(false);
@@ -181,7 +184,7 @@ export default function AdminSignupPage() {
                     </div>
                     <div className="flex flex-col gap-4">
                         <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting ? <Loader2 className="animate-spin" /> : 'Create Admin Account'}
+                        {isSubmitting ?  <div className="h-6 w-6"><Loader isFadingOut={false}/></div> : 'Create Admin Account'}
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">
                             Already have an admin account?{' '}

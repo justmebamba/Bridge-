@@ -1,9 +1,8 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import { NextResponse } from 'next/server';
 
-// Simple mutex implementation
+// Simple mutex implementation to prevent race conditions on file access
 class Mutex {
   private queue: (() => void)[] = [];
   private locked = false;
@@ -21,13 +20,17 @@ class Mutex {
 
   unlock(): void {
     if (this.queue.length > 0) {
-      this.queue.shift()!();
+      const next = this.queue.shift();
+      if (next) {
+        next();
+      }
     } else {
       this.locked = false;
     }
   }
 }
 
+// Maintain a map of locks, one for each file path
 const locks = new Map<string, Mutex>();
 
 function getLock(filePath: string): Mutex {
@@ -35,12 +38,6 @@ function getLock(filePath: string): Mutex {
     locks.set(filePath, new Mutex());
   }
   return locks.get(filePath)!;
-}
-
-type UpdateResult<R> = {
-  updatedData: T;
-  result: R;
-  status?: number;
 }
 
 export class JsonStore<T> {
@@ -56,12 +53,22 @@ export class JsonStore<T> {
     const lock = getLock(this.dataFilePath);
     await lock.lock();
     try {
+      // Ensure the directory exists before trying to read
+      const dir = path.dirname(this.dataFilePath);
+      try {
+        await fs.access(dir);
+      } catch {
+        await fs.mkdir(dir, { recursive: true });
+      }
+
       await fs.access(this.dataFilePath);
       const fileContents = await fs.readFile(this.dataFilePath, 'utf8');
       if (!fileContents) return this.defaultValue;
       return JSON.parse(fileContents);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        // File doesn't exist, so we write the default value and return it
+        await this.write(this.defaultValue);
         return this.defaultValue;
       }
       throw error;
@@ -81,41 +88,6 @@ export class JsonStore<T> {
         await fs.mkdir(dir, { recursive: true });
       }
       await fs.writeFile(this.dataFilePath, JSON.stringify(data, null, 2));
-    } finally {
-      lock.unlock();
-    }
-  }
-  
-  async update<R>(
-    updater: (data: T) => Promise<{ updatedData: T, result: R, status?: number }>
-  ): Promise<NextResponse> {
-    const lock = getLock(this.dataFilePath);
-    await lock.lock();
-    let currentData;
-    try {
-      try {
-          await fs.access(this.dataFilePath);
-          const fileContents = await fs.readFile(this.dataFilePath, 'utf8');
-          currentData = fileContents ? JSON.parse(fileContents) : this.defaultValue;
-      } catch (error) {
-           if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-                currentData = this.defaultValue;
-           } else {
-            throw error;
-           }
-      }
-
-      const { updatedData, result, status = 200 } = await updater(currentData);
-
-      const dir = path.dirname(this.dataFilePath);
-      try {
-        await fs.access(dir);
-      } catch {
-        await fs.mkdir(dir, { recursive: true });
-      }
-      await fs.writeFile(this.dataFilePath, JSON.stringify(updatedData, null, 2));
-      
-      return NextResponse.json(result, { status });
     } finally {
       lock.unlock();
     }
