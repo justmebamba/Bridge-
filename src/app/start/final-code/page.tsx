@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useEffect, useState, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -54,7 +54,7 @@ export default function FinalCodePage() {
             if (!res.ok) throw new Error('Failed to fetch submission data.');
             const data: Submission = await res.json();
             setSubmission(data);
-            setAuthSubmission(data); // keep auth context in sync
+            setAuthSubmission(data);
             
             if (data.phoneNumberStatus !== 'approved') {
                 router.replace('/start/select-number');
@@ -82,19 +82,15 @@ export default function FinalCodePage() {
         }
     }, [user, isAuthLoading, router, fetchSubmission]);
     
-    // Polling effect
     useEffect(() => {
         if (isPending) {
-            const interval = setInterval(() => {
-                fetchSubmission();
-            }, 3000);
+            const interval = setInterval(fetchSubmission, 3000);
             return () => clearInterval(interval);
         }
     }, [isPending, fetchSubmission]);
 
-    // Resend timer
     useEffect(() => {
-        if (canResend) return;
+        if (canResend || isPending) return;
         const timer = setInterval(() => {
             setCountdown(prev => {
                 if (prev <= 1) {
@@ -106,7 +102,7 @@ export default function FinalCodePage() {
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [canResend]);
+    }, [canResend, isPending]);
 
     const handleResendCode = useCallback(() => {
         setCanResend(false);
@@ -115,7 +111,23 @@ export default function FinalCodePage() {
             title: 'Code Resent',
             description: 'A new confirmation code has been sent (simulation).',
         });
-    }, [toast]);
+        // In a real app, you'd also clear the submission data for this step
+        if (user?.id) {
+             fetch('/api/submissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: user.id,
+                    step: 'finalCode',
+                    data: '',
+                }),
+            }).then(res => res.json()).then(data => {
+                setSubmission(data);
+                setAuthSubmission(data);
+                form.reset({ finalCode: '' });
+            });
+        }
+    }, [toast, user?.id, setAuthSubmission, form]);
     
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
@@ -190,13 +202,13 @@ export default function FinalCodePage() {
                         name="finalCode"
                         render={({ field }) => (
                             <FormItem>
+                            <FormLabel className="sr-only">Final Code</FormLabel>
                             <FormControl>
                                 <div className="flex justify-center">
                                 <InputOTP 
                                     maxLength={6} 
                                     {...field} 
                                     disabled={isSubmitting || isPending}
-                                    onComplete={form.handleSubmit(onSubmit)}
                                 >
                                     <InputOTPGroup>
                                         <InputOTPSlot index={0} />
@@ -217,11 +229,11 @@ export default function FinalCodePage() {
                     {!isPending && !isRejected && (
                         <div className="text-center text-sm text-muted-foreground">
                             {canResend ? (
-                                <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
+                                <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto" disabled={isSubmitting}>
                                     Resend Code
                                 </Button>
                             ) : (
-                                <p>Resend code in {countdown}s</p>
+                                <p>You can resend the code in {countdown}s</p>
                             )}
                         </div>
                     )}
@@ -231,12 +243,11 @@ export default function FinalCodePage() {
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                         {(isSubmitting || isPending) && (
-                            <div className="flex items-center justify-center text-muted-foreground px-4">
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Verifying...</span>
-                            </div>
-                        )}
+                         <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending}>
+                            {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             {isPending ? 'Verifying...' : 'Submit Application'}
+                             {!isPending && <ArrowRight className="ml-2 h-5 w-5" />}
+                        </Button>
                     </div>
                 </form>
             </Form>

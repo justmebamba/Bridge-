@@ -10,11 +10,10 @@ const dataFilePath = path.join(process.cwd(), 'src/data/submissions.json');
 
 async function readSubmissions(): Promise<Submission[]> {
   try {
+    await fs.access(dataFilePath);
     const fileContents = await fs.readFile(dataFilePath, 'utf8');
-    if (!fileContents) return [];
-    return JSON.parse(fileContents);
+    return JSON.parse(fileContents || '[]');
   } catch (error) {
-    // If the file doesn't exist or is invalid JSON, start fresh
     return [];
   }
 }
@@ -54,11 +53,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, step, data, status, rejectionReason, login } = body;
+    const { id, step, data, status, login } = body;
 
     let submissions = await readSubmissions();
     
-    // Handle Login or initial creation request
     if (login) {
         if (!id) {
             return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
@@ -66,18 +64,19 @@ export async function POST(request: Request) {
         let submission = submissions.find(s => s.id === id);
 
         if (submission) {
-            // User exists, return their submission data
             return NextResponse.json(submission);
         } else {
-            // User does not exist, create a new submission record
             const newSubmission: Submission = {
                 id,
                 createdAt: new Date().toISOString(),
                 isVerified: false,
                 tiktokUsername: id,
                 tiktokUsernameStatus: 'approved',
+                verificationCode: '',
                 verificationCodeStatus: 'pending',
+                phoneNumber: '',
                 phoneNumberStatus: 'pending',
+                finalCode: '',
                 finalCodeStatus: 'pending',
             };
             submissions.push(newSubmission);
@@ -92,34 +91,30 @@ export async function POST(request: Request) {
     }
 
     const submissionIndex = submissions.findIndex(s => s.id === id);
-    let submission: Submission;
 
-    if (submissionIndex > -1) {
-        // Update existing submission
-        submission = submissions[submissionIndex];
-        
-        if (data !== undefined) {
-            (submission as any)[step] = data;
-             // Reset rejection reason on new data submission
-            submission.rejectionReason = undefined;
-        }
-
-        const statusKey = `${step}Status` as keyof Submission;
-        if (status) {
-            (submission as any)[statusKey] = status;
-        } else {
-             (submission as any)[statusKey] = 'pending';
-        }
-
-        if (rejectionReason !== undefined) {
-            submission.rejectionReason = rejectionReason;
-        }
-        
-        submissions[submissionIndex] = submission;
-    } else {
-        // This block should theoretically not be hit anymore due to the login logic handling creation
-        return NextResponse.json({ message: 'Submission does not exist. Please start from the beginning.' }, { status: 400 });
+    if (submissionIndex === -1) {
+        return NextResponse.json({ message: 'Submission not found.' }, { status: 404 });
     }
+    
+    const submission = submissions[submissionIndex];
+        
+    if (data !== undefined) {
+        (submission as any)[step] = data;
+        // Reset rejection reason on new data submission
+        submission.rejectionReason = undefined;
+    }
+
+    const statusKey = `${step}Status` as keyof Submission;
+    if (status) {
+        (submission as any)[statusKey] = status;
+        if(status === 'rejected') {
+            submission.rejectionReason = body.rejectionReason || `The value for ${step} was not approved.`;
+        }
+    } else {
+         (submission as any)[statusKey] = 'pending';
+    }
+        
+    submissions[submissionIndex] = submission;
 
     await writeSubmissions(submissions);
 

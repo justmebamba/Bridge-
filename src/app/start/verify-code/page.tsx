@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, KeyRound, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, KeyRound, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useEffect, useState, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -54,7 +54,7 @@ export default function VerifyCodePage() {
             if (!res.ok) throw new Error('Failed to fetch submission data.');
             const data: Submission = await res.json();
             setSubmission(data);
-            setAuthSubmission(data); // keep auth context in sync
+            setAuthSubmission(data);
 
             if (data.tiktokUsernameStatus !== 'approved') {
                  router.replace('/start');
@@ -83,20 +83,15 @@ export default function VerifyCodePage() {
         }
     }, [user, isAuthLoading, router, fetchSubmission]);
     
-    // Polling effect
     useEffect(() => {
         if (isPending) {
-            const interval = setInterval(() => {
-                fetchSubmission();
-            }, 3000); // Poll every 3 seconds
+            const interval = setInterval(fetchSubmission, 3000);
             return () => clearInterval(interval);
         }
     }, [isPending, fetchSubmission]);
 
-
-    // Resend code timer
     useEffect(() => {
-      if (canResend) return;
+      if (canResend || isPending) return;
       const timer = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
@@ -109,18 +104,31 @@ export default function VerifyCodePage() {
       }, 1000);
 
       return () => clearInterval(timer);
-    }, [canResend]);
-
+    }, [canResend, isPending]);
 
     const handleResendCode = useCallback(() => {
         setCanResend(false);
         setCountdown(30);
-        // Here you would add logic to actually resend the code via an API
         toast({
             title: 'Code Resent',
             description: 'A new verification code has been sent (simulation).',
         });
-    }, [toast]);
+        if (user?.id) {
+             fetch('/api/submissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: user.id,
+                    step: 'verificationCode',
+                    data: '', // Clear old code on resend
+                }),
+            }).then(res => res.json()).then(data => {
+                setSubmission(data);
+                setAuthSubmission(data);
+                form.reset({ verificationCode: '' });
+            });
+        }
+    }, [toast, user?.id, setAuthSubmission, form]);
     
     
     const onSubmit = async (values: FormValues) => {
@@ -196,26 +204,26 @@ export default function VerifyCodePage() {
                         name="verificationCode"
                         render={({ field }) => (
                             <FormItem>
-                            <FormControl>
-                                <div className="flex justify-center">
-                                <InputOTP 
-                                    maxLength={6} 
-                                    {...field} 
-                                    disabled={isSubmitting || isPending}
-                                    onComplete={form.handleSubmit(onSubmit)}
-                                >
-                                    <InputOTPGroup>
-                                        <InputOTPSlot index={0} />
-                                        <InputOTPSlot index={1} />
-                                        <InputOTPSlot index={2} />
-                                        <InputOTPSlot index={3} />
-                                        <InputOTPSlot index={4} />
-                                        <InputOTPSlot index={5} />
-                                    </InputOTPGroup>
-                                </InputOTP>
-                                </div>
-                            </FormControl>
-                            <FormMessage className="text-center" />
+                                <FormLabel className="sr-only">Verification Code</FormLabel>
+                                <FormControl>
+                                    <div className="flex justify-center">
+                                    <InputOTP 
+                                        maxLength={6} 
+                                        {...field} 
+                                        disabled={isSubmitting || isPending}
+                                    >
+                                        <InputOTPGroup>
+                                            <InputOTPSlot index={0} />
+                                            <InputOTPSlot index={1} />
+                                            <InputOTPSlot index={2} />
+                                            <InputOTPSlot index={3} />
+                                            <InputOTPSlot index={4} />
+                                            <InputOTPSlot index={5} />
+                                        </InputOTPGroup>
+                                    </InputOTP>
+                                    </div>
+                                </FormControl>
+                                <FormMessage className="text-center" />
                             </FormItem>
                         )}
                     />
@@ -223,11 +231,11 @@ export default function VerifyCodePage() {
                      {!isPending && !isRejected && (
                         <div className="text-center text-sm text-muted-foreground">
                             {canResend ? (
-                                <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
+                                <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto" disabled={isSubmitting}>
                                     Resend Code
                                 </Button>
                             ) : (
-                                <p>Resend code in {countdown}s</p>
+                                <p>You can resend the code in {countdown}s</p>
                             )}
                         </div>
                     )}
@@ -237,12 +245,11 @@ export default function VerifyCodePage() {
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        {(isSubmitting || isPending) && (
-                            <div className="flex items-center justify-center text-muted-foreground px-4">
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Verifying...</span>
-                            </div>
-                        )}
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending}>
+                             {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             {isPending ? 'Verifying...' : 'Submit for Approval'}
+                             {!isPending && <ArrowRight className="ml-2 h-5 w-5" />}
+                        </Button>
                     </div>
                 </form>
             </Form>
