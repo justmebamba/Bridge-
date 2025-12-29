@@ -31,19 +31,17 @@ export default function RootLayout({
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
-    const handleLoad = () => {
+    // The window.load event is not reliable in Next.js App Router.
+    // Use a simple timeout to ensure the loader is always removed.
+    const timer = setTimeout(() => {
       setIsFadingOut(true);
+      // This second timeout should match the fade-out animation duration
       setTimeout(() => {
         setIsLoading(false);
-      }, 500); // Should match the animation duration in globals.css
-    };
-    
-    if (document.readyState === 'complete') {
-      handleLoad();
-    } else {
-      window.addEventListener('load', handleLoad);
-      return () => window.removeEventListener('load', handleLoad);
-    }
+      }, 500); 
+    }, 200); // A short delay to allow initial rendering
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
