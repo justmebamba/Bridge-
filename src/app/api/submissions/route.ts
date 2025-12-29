@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         }
     } catch (error: any) {
         console.error('Error fetching submissions:', error);
-        return NextResponse.json({ message: error.message }, { status: 500 });
+        return NextResponse.json({ message: error.message || "Could not fetch submissions." }, { status: 500 });
     }
 }
 
@@ -47,21 +47,22 @@ export async function POST(request: Request) {
     const submissionDoc = await getDoc(submissionDocRef);
     const updateData: any = {};
 
+    // This handles both creation of a new submission and updates to an existing one.
     if (submissionDoc.exists()) {
-        // Update existing submission
         if (data) {
             updateData[step] = data;
         }
         if (status) {
             updateData[`${step}Status`] = status;
-        } else {
+        } else if (step !== 'isVerified') { // Don't auto-set status for admin verification
             // Set status based on the step if not provided
-            if (step === 'tiktokUsername' || step === 'phoneNumber') {
-                updateData[`${step}Status`] = 'approved';
+            if (step === 'tiktokUsername') {
+                updateData[`${step}Status`] = 'approved'; // Step 1 is auto-approved
             } else {
-                updateData[`${step}Status`] = 'pending';
+                updateData[`${step}Status`] = 'pending'; // Subsequent steps need admin approval
             }
         }
+
         if (rejectionReason !== undefined) {
              updateData.rejectionReason = rejectionReason;
         }
@@ -86,7 +87,8 @@ export async function POST(request: Request) {
             };
             await setDoc(submissionDocRef, newSubmission);
         } else {
-            return NextResponse.json({ message: 'Cannot update a submission that does not exist.' }, { status: 400 });
+            // This prevents creating a doc from any step other than the first.
+            return NextResponse.json({ message: 'Submission does not exist. Please start from the beginning.' }, { status: 400 });
         }
     }
 

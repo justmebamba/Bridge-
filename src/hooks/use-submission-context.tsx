@@ -6,8 +6,8 @@ import type { Submission } from '@/lib/types';
 
 
 interface SubmissionContextType {
-  submission: Partial<Submission>;
-  setSubmission: React.Dispatch<React.SetStateAction<Partial<Submission>>>;
+  submission: Partial<Submission> | null;
+  setSubmission: React.Dispatch<React.SetStateAction<Partial<Submission> | null>>;
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }
@@ -15,7 +15,7 @@ interface SubmissionContextType {
 const SubmissionContext = createContext<SubmissionContextType | undefined>(undefined);
 
 export const SubmissionProvider = ({ children }: { children: ReactNode }) => {
-  const [submission, setSubmission] = useState<Partial<Submission>>({});
+  const [submission, setSubmission] = useState<Partial<Submission> | null>({});
   const [currentStep, setCurrentStep] = useState(1);
   
   const value = useMemo(() => ({ 

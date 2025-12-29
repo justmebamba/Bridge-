@@ -69,33 +69,37 @@ export default function SelectNumberPage() {
             setShuffledNumbers(shuffle([...phoneNumbersData]));
 
             if (sRes) {
-                if (sRes.status === 404) {
-                    setSubmission(null);
-                } else if (!sRes.ok) {
-                    throw new Error('Failed to fetch submission');
-                } else {
-                    const submissionData = await sRes.json();
-                    setSubmission(submissionData);
-                    if (submissionData.verificationCodeStatus !== 'approved') {
-                        router.replace('/start/verify-code');
-                        return;
-                    }
-                    if (submissionData.phoneNumberStatus === 'approved') {
-                        router.push('/start/final-code');
-                        return;
-                    }
-                    if (submissionData.phoneNumber) {
-                        form.reset({ usNumber: submissionData.phoneNumber });
-                    }
+                 if (sRes.status === 404) {
+                    toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
+                    router.replace('/start');
+                    return;
+                }
+                if (!sRes.ok) {
+                    throw new Error('Failed to fetch your submission data.');
+                }
+                const submissionData = await sRes.json();
+                setSubmission(submissionData);
+
+                if (submissionData.verificationCodeStatus !== 'approved') {
+                    router.replace('/start/verify-code');
+                    return;
+                }
+                if (submissionData.phoneNumberStatus === 'approved') {
+                    router.push('/start/final-code');
+                    return;
+                }
+                if (submissionData.phoneNumber) {
+                    form.setValue('usNumber', submissionData.phoneNumber);
                 }
             }
 
         } catch (err: any) {
             setError(err.message);
+            toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
             setIsLoading(false);
         }
-    }, [user, router, form]);
+    }, [user, router, form, toast]);
 
     useEffect(() => {
         if (user) {
@@ -114,7 +118,7 @@ export default function SelectNumberPage() {
          if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
         setIsLoading(true);
         try {
-             await fetch('/api/submissions', {
+             const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -123,18 +127,20 @@ export default function SelectNumberPage() {
                     data: values.usNumber,
                 }),
             });
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 throw new Error(errorData.message || 'Failed to submit phone number.');
+            }
             toast({ title: 'Number Submitted', description: 'Your selected number has been saved.' });
             router.push('/start/final-code');
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-        } finally {
             setIsLoading(false);
         }
     };
     
     const isSubmitting = form.formState.isSubmitting;
     const isRejected = submission?.phoneNumberStatus === 'rejected';
-
 
     return (
         <div className="w-full max-w-lg">
@@ -179,7 +185,7 @@ export default function SelectNumberPage() {
                                         <Loader2 className="animate-spin h-8 w-8 text-primary" />
                                     </div>
                                 ) : error ? (
-                                    <div className="text-destructive text-center h-full flex items-center justify-center">Failed to load numbers.</div>
+                                    <div className="text-destructive text-center h-full flex items-center justify-center">{error}</div>
                                 ) : (
                                     <div className="space-y-3">
                                     {shuffledNumbers?.filter(n => n.isAvailable).map((number) => (
@@ -245,6 +251,7 @@ export default function SelectNumberPage() {
                         <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting}>
                              {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              Continue
+                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
                     </div>
                 </form>

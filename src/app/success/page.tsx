@@ -1,20 +1,18 @@
 
 'use client';
 
-import { CheckCircle, PartyPopper } from 'lucide-react';
+import { CheckCircle, PartyPopper, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import type { Submission } from '@/lib/types';
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
 
 export default function SuccessPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
   const [submission, setSubmission] = useState<Submission | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const fetchSubmission = useCallback(async () => {
@@ -24,17 +22,24 @@ export default function SuccessPage() {
         const res = await fetch(`/api/submissions?id=${user.uid}`);
         if (res.status === 404) {
             setSubmission(null);
+            router.replace('/start'); // If no submission, they shouldn't be here
             return;
         }
-        if (!res.ok) throw new Error('An error occurred while fetching the data.');
+        if (!res.ok) throw new Error('Failed to fetch submission data.');
         const data: Submission = await res.json();
         setSubmission(data);
+
+        // Security check: ensure the submission is actually approved
+        if (data.finalCodeStatus !== 'approved') {
+          router.replace('/start');
+        }
     } catch (err: any) {
-        setError(err.message);
+        console.error(err);
+        router.replace('/start');
     } finally {
         setIsLoadingData(false);
     }
-  }, [user]);
+  }, [user, router]);
 
   useEffect(() => {
     if (!isAuthLoading && !user) {
@@ -47,22 +52,12 @@ export default function SuccessPage() {
   
   const isLoading = isAuthLoading || isLoadingData;
   
-  if (isLoading) {
+  if (isLoading || submission?.finalCodeStatus !== 'approved') {
       return (
           <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
           </div>
       )
-  }
-
-  // This check is to ensure that the user has actually completed the submission
-  if (submission?.finalCodeStatus !== 'approved') {
-      router.replace('/start');
-      return (
-           <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </div>
-      );
   }
 
   return (

@@ -44,15 +44,20 @@ export default function StartPage() {
             const res = await fetch(`/api/submissions?id=${user.uid}`);
             if (res.status === 404) {
                 setSubmission(null);
+                form.reset({ username: '' });
                 return;
             }
-            if (!res.ok) throw new Error('An error occurred while fetching the data.');
+            if (!res.ok) throw new Error('Failed to fetch your submission data.');
             const data: Submission = await res.json();
             setSubmission(data);
-
+            
+            // Populate form and redirect if necessary
             if (data) {
-                form.reset({ username: data.tiktokUsername || '' });
+                if (data.tiktokUsername) {
+                    form.setValue('username', data.tiktokUsername);
+                }
                 if (data.tiktokUsernameStatus === 'approved') {
+                    // This is the correct place to redirect, after data is fetched and processed
                     router.push('/start/verify-code');
                 }
             }
@@ -86,19 +91,22 @@ export default function StartPage() {
                 }),
             });
 
-            if (!response.ok) throw new Error('Failed to submit username.');
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 throw new Error(errorData.message || 'Failed to submit username.');
+            }
             
             toast({
                 title: 'Username Submitted',
                 description: 'Your username has been saved.',
             });
             
+            // Redirect after successful submission
             router.push('/start/verify-code');
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-        } finally {
-            setIsLoading(false);
+             setIsLoading(false);
         }
     };
 
@@ -150,10 +158,11 @@ export default function StartPage() {
                         )}
                     />
                     
-                    <div className="flex justify-end">
+                    <div className="flex justify-end pt-4">
                         <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting}>
                             {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Continue
+                            <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
                     </div>
                 </form>
