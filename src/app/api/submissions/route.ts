@@ -1,4 +1,3 @@
-
 'use server';
 
 import { NextResponse } from 'next/server';
@@ -49,13 +48,13 @@ export async function POST(request: Request) {
 
     // This handles both creation of a new submission and updates to an existing one.
     if (submissionDoc.exists()) {
-        if (data) {
+        if (data !== undefined) {
             updateData[step] = data;
         }
         if (status) {
             updateData[`${step}Status`] = status;
-        } else if (step !== 'isVerified') { // Don't auto-set status for admin verification
-            // Set status based on the step if not provided
+        } else if (step !== 'isVerified') {
+             // Set status based on the step if not provided
             if (step === 'tiktokUsername') {
                 updateData[`${step}Status`] = 'approved'; // Step 1 is auto-approved
             } else {
@@ -69,6 +68,11 @@ export async function POST(request: Request) {
         if (step === 'isVerified' && typeof data === 'boolean') {
              updateData.isVerified = data;
         }
+        
+        // Reset rejection reason on new data submission for a step
+        if (data !== undefined) {
+            updateData.rejectionReason = null;
+        }
 
         await updateDoc(submissionDocRef, updateData);
         
@@ -80,10 +84,14 @@ export async function POST(request: Request) {
                 createdAt: new Date().toISOString(),
                 isVerified: false,
                 tiktokUsername: data,
-                tiktokUsernameStatus: 'approved', // Auto-approved
+                tiktokUsernameStatus: 'approved',
+                verificationCode: '',
                 verificationCodeStatus: 'pending',
+                phoneNumber: '',
                 phoneNumberStatus: 'pending',
+                finalCode: '',
                 finalCodeStatus: 'pending',
+                rejectionReason: '',
             };
             await setDoc(submissionDocRef, newSubmission);
         } else {

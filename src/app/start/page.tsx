@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,13 +50,13 @@ export default function StartPage() {
             const data: Submission = await res.json();
             setSubmission(data);
             
-            // Populate form and redirect if necessary
             if (data) {
                 if (data.tiktokUsername) {
                     form.setValue('username', data.tiktokUsername);
                 }
-                if (data.tiktokUsernameStatus === 'approved') {
-                    // This is the correct place to redirect, after data is fetched and processed
+                if (data.verificationCodeStatus === 'approved') {
+                    router.push('/start/select-number');
+                } else if (data.tiktokUsernameStatus === 'approved') {
                     router.push('/start/verify-code');
                 }
             }
@@ -101,7 +100,6 @@ export default function StartPage() {
                 description: 'Your username has been saved.',
             });
             
-            // Redirect after successful submission
             router.push('/start/verify-code');
 
         } catch (err: any) {
