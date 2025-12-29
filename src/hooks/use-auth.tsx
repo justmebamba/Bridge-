@@ -11,7 +11,7 @@ interface AuthUser {
     submission: Submission;
 }
 
-interface AdminAuthContextType {
+interface AuthContextType {
   user: AuthUser | null;
   adminUser: AdminUser | null;
   firebaseUser: FirebaseUser | null;
@@ -24,7 +24,7 @@ interface AdminAuthContextType {
   setSubmission: (submission: Submission) => void;
 }
 
-const AuthContext = createContext<AdminAuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_SESSION_KEY = 'user-session';
 
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const res = await fetch('/api/submissions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, login: true })
+            body: JSON.stringify({ id, step: 'tiktokUsername' })
         });
         
         const submissionData = await res.json();
@@ -152,7 +152,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       // Manually trigger onAuthStateChanged logic to update local state immediately
-      // This is now handled by the onAuthStateChanged listener, but we can pre-emptively set state
       const adminDetailsResponse = await fetch('/api/auth/session');
       const adminDetails = await adminDetailsResponse.json();
       if(adminDetails.isLogged) {

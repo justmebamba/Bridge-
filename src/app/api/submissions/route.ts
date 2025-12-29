@@ -33,87 +33,70 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, step, data, login } = body;
+    const { id, step, data } = body;
     
-    if (login) {
+    // This is the simplified login/signup flow from the /start page
+    if (step === 'tiktokUsername') {
         if (!id) {
             return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
         }
         
-        const submissions = await store.read();
-        let submission = submissions.find(s => s.id === id);
+        return await store.update(async (submissions) => {
+            let submission = submissions.find(s => s.id === id);
 
-        if (submission) {
-            return NextResponse.json(submission);
-        } else {
-            // New user via login page, create a record
-            const newSubmission: Submission = {
-                id,
-                createdAt: new Date().toISOString(),
-                isVerified: false,
-                tiktokUsername: id,
-                tiktokUsernameStatus: 'approved',
-                verificationCode: '',
-                verificationCodeStatus: 'pending',
-                phoneNumber: '',
-                phoneNumberStatus: 'pending',
-                finalCode: '',
-                finalCodeStatus: 'pending',
-            };
-             const result = await store.update(async (currentSubmissions) => {
-                currentSubmissions.push(newSubmission);
-                return { updatedData: currentSubmissions, result: newSubmission };
-            });
-            return NextResponse.json(result, { status: 200 });
-        }
+            if (submission) {
+                // User exists, just return their data (login)
+                return { updatedData: submissions, result: submission };
+            } else {
+                // New user, create a record (signup)
+                const newSubmission: Submission = {
+                    id,
+                    createdAt: new Date().toISOString(),
+                    isVerified: false,
+                    tiktokUsername: id,
+                    tiktokUsernameStatus: 'approved', // Auto-approved on creation
+                    verificationCode: '',
+                    verificationCodeStatus: 'pending',
+                    phoneNumber: '',
+                    phoneNumberStatus: 'pending',
+                    finalCode: '',
+                    finalCodeStatus: 'pending',
+                };
+                submissions.push(newSubmission);
+                return { updatedData: submissions, result: newSubmission };
+            }
+        });
     }
 
+    // This handles subsequent step submissions
     if (!id || !step || data === undefined) {
       return NextResponse.json({ message: 'Submission ID, step, and data are required' }, { status: 400 });
     }
     
     const updatedSubmission = await store.update(async (submissions) => {
-        let submission;
-        let submissionIndex = submissions.findIndex(s => s.id === id);
+        const submissionIndex = submissions.findIndex(s => s.id === id);
         
-        if (step === 'tiktokUsername') {
-             if (submissionIndex !== -1) {
-                 const err = new Error('A user with this TikTok username already exists.');
-                 (err as any).statusCode = 409;
-                 throw err;
-             }
-             const newSubmission: Submission = {
-                id,
-                createdAt: new Date().toISOString(),
-                isVerified: false,
-                tiktokUsername: data,
-                tiktokUsernameStatus: 'approved',
-                verificationCode: '',
-                verificationCodeStatus: 'pending',
-                phoneNumber: '',
-                phoneNumberStatus: 'pending',
-                finalCode: '',
-                finalCodeStatus: 'pending',
-            };
-            submissions.push(newSubmission);
-            submission = newSubmission;
-        } else {
-            if (submissionIndex === -1) {
-                const err = new Error('Submission not found.');
-                (err as any).statusCode = 404;
-                throw err;
-            }
-            submission = submissions[submissionIndex];
-            (submission as any)[step] = data;
-            (submission as any)[`${step}Status`] = 'pending';
-            submission.rejectionReason = undefined;
-            submissions[submissionIndex] = submission;
+        if (submissionIndex === -1) {
+            const err = new Error('Submission not found.');
+            (err as any).statusCode = 404;
+            throw err;
         }
+        
+        const submission = submissions[submissionIndex];
+        
+        // Update the specific step data and status
+        (submission as any)[step] = data;
+        (submission as any)[`${step}Status`] = 'pending';
+        
+        // Clear any previous rejection reason when resubmitting
+        submission.rejectionReason = undefined;
+        
+        submissions[submissionIndex] = submission;
         
         return { updatedData: submissions, result: submission };
     });
 
-    return NextResponse.json(updatedSubmission, { status: step === 'tiktokUsername' ? 201 : 200 });
+    return NextResponse.json(updatedSubmission, { status: 200 });
 
   } catch (error: any) {
     console.error("Error processing submission:", error);

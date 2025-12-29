@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, UserPlus, ArrowRight } from 'lucide-react';
+import { UserPlus, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useEffect } from 'react';
+import { Loader } from '@/components/loader';
 
 const formSchema = z.object({
   tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.'),
@@ -37,21 +38,18 @@ export default function StartPage() {
     if (checked && user) {
         const submission = user.submission;
         if (!submission) {
-            // This case should be rare, but handle it by logging out.
-            // logout(); 
             return;
         };
 
         if (submission.finalCodeStatus === 'approved') {
             router.replace('/success');
-        } else if (submission.phoneNumberStatus === 'approved') {
+        } else if (submission.phoneNumberStatus === 'approved' || (submission.finalCode && submission.finalCodeStatus !== 'rejected')) {
             router.replace('/start/final-code');
-        } else if (submission.verificationCodeStatus === 'approved') {
+        } else if (submission.verificationCodeStatus === 'approved' || (submission.phoneNumber && submission.phoneNumberStatus !== 'rejected')) {
             router.replace('/start/select-number');
         } else if (submission.tiktokUsernameStatus === 'approved') {
             router.replace('/start/verify-code');
         }
-        // If no step is approved, they stay on this page to start over or see status.
     }
   }, [user, checked, router]);
 
@@ -78,8 +76,8 @@ export default function StartPage() {
   if (!checked || (checked && user)) {
      return (
          <div className="w-full max-w-lg text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <h1 className="text-xl font-semibold">Checking your status...</h1>
+            <Loader isFadingOut={false} />
+            <h1 className="text-xl font-semibold mt-4">Checking your status...</h1>
             <p className="text-muted-foreground">Please wait a moment.</p>
          </div>
     )
@@ -92,7 +90,7 @@ export default function StartPage() {
             <UserPlus className="mx-auto h-10 w-10 text-primary" />
             <h1 className="text-2xl mt-4 font-bold">Welcome!</h1>
             <p className="text-muted-foreground">
-                Link your TikTok account to get started.
+                Enter your TikTok username to get started.
             </p>
         </div>
         <Form {...form}>
@@ -114,7 +112,7 @@ export default function StartPage() {
                 </div>
                 <div className="flex flex-col gap-4">
                     <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                    {(isSubmitting || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {(isSubmitting || isLoading) && <Loader isFadingOut={false} />}
                     Continue
                     <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>

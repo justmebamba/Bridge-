@@ -41,7 +41,7 @@ export function SiteHeader() {
                 <>
                     <Button variant="secondary" onClick={handleLogout}>Log Out</Button>
                     <Button asChild>
-                        <Link href="/start">Get Started</Link>
+                        <Link href="/start">My Account</Link>
                     </Button>
                 </>
             ) : !isLoading && (
@@ -73,10 +73,13 @@ export function SiteHeader() {
                          {!isLoading && user ? (
                             <>
                                 <Button onClick={handleLogout} variant="secondary">Log Out</Button>
-                                <Button asChild size="lg"><Link href="/start">Get Started</Link></Button>
+                                <Button asChild size="lg"><Link href="/start">My Account</Link></Button>
                             </>
                         ) : !isLoading && (
-                           <Button asChild size="lg"><Link href="/start">Get Started</Link></Button>
+                           <>
+                             <Button asChild variant="ghost" size="lg"><Link href="/start">Log In</Link></Button>
+                             <Button asChild size="lg"><Link href="/start">Sign Up</Link></Button>
+                           </>
                         )}
                     </div>
                 </SheetContent>
