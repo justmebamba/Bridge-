@@ -98,4 +98,48 @@
       opacity: 0;
     }
   }
+
+  .loader-wrapper {
+    position: fixed;
+    inset: 0;
+    background: hsl(var(--background));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease-out;
+  }
+
+  .tiktok-loader {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+
+  .dot {
+    position: absolute;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    mix-blend-mode: multiply;
+    animation: move 1.2s infinite ease-in-out;
+  }
+
+  .dot.cyan {
+    background-color: #ff0050; /* TikTok Red/Pink */
+    left: 0;
+  }
+
+  .dot.red {
+    background-color: #00f2ea; /* TikTok Cyan */
+    right: 0;
+    animation-delay: -0.6s;
+  }
+
+  @keyframes move {
+    0%, 100% { transform: scale(1) translateX(0); z-index: 1; }
+    25% { transform: scale(1.2) translateX(15px); }
+    50% { transform: scale(1) translateX(40px); z-index: 0; }
+    75% { transform: scale(0.8) translateX(15px); }
+  }
 }
