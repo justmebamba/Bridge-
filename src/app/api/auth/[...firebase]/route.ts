@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const decodedClaims = await auth().verifySessionCookie(session, true);
     
     if (!decodedClaims) {
+      cookies().delete('session');
       return NextResponse.json({ isLogged: false, message: 'Invalid session cookie.' }, { status: 401 });
     }
 

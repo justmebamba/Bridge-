@@ -42,49 +42,57 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
     }
 
-    return await store.update(async (admins) => {
-        if (admins.some(admin => admin.email === email)) {
-            const err = new Error('An admin with this email already exists.');
-            (err as any).statusCode = 409;
-            throw err;
-        }
+    const admins = await store.read();
+    if (admins.some(admin => admin.email === email)) {
+        return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
+    }
 
-        const createdUser = await getAuth().createUser({ email, password });
+    const createdUser = await getAuth().createUser({ email, password });
 
-        const isMainAdmin = admins.length === 0;
-        const newAdmin: AdminUser = {
-          id: createdUser.uid,
-          email: email,
-          isVerified: isMainAdmin,
-          isMainAdmin: isMainAdmin,
-          createdAt: new Date().toISOString(),
-        };
+    const isMainAdmin = admins.length === 0;
+    const newAdmin: AdminUser = {
+      id: createdUser.uid,
+      email: email,
+      isVerified: isMainAdmin,
+      isMainAdmin: isMainAdmin,
+      createdAt: new Date().toISOString(),
+    };
 
-        admins.push(newAdmin);
-        
-        if (isMainAdmin) {
-            await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: true, isVerified: true });
-        } else {
-            await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: false, isVerified: false });
-        }
-        
-        return { updatedData: admins, result: {id: newAdmin.id, email: newAdmin.email, isMainAdmin: newAdmin.isMainAdmin}, status: 201 };
-    });
+    admins.push(newAdmin);
+    
+    if (isMainAdmin) {
+        await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: true, isVerified: true });
+    } else {
+        await getAuth().setCustomUserClaims(createdUser.uid, { isMainAdmin: false, isVerified: false });
+    }
+    
+    await store.write(admins);
+
+    return NextResponse.json({id: newAdmin.id, email: newAdmin.email, isMainAdmin: newAdmin.isMainAdmin}, { status: 201 });
 
   } catch (error: any) {
     console.error('Error creating admin:', error);
     let message = 'An unexpected error occurred.';
     let status = 500;
 
-    if (error.statusCode) {
-        message = error.message;
-        status = error.statusCode;
-    } else if (error.code === 'auth/email-already-exists') {
-        message = 'An admin with this email already exists in Firebase.';
-        status = 409;
-    } else if (error.code === 'auth/invalid-password') {
-         message = 'Password must be at least 6 characters long.';
-         status = 400;
+    if (error.code) { // Firebase Auth errors
+        switch (error.code) {
+            case 'auth/email-already-exists':
+                message = 'An admin with this email already exists in Firebase.';
+                status = 409;
+                break;
+            case 'auth/invalid-password':
+                message = 'Password must be at least 6 characters long.';
+                status = 400;
+                break;
+            case 'auth/invalid-email':
+                message = 'The email address is not valid.';
+                status = 400;
+                break;
+            default:
+                message = `Firebase Auth error: ${error.message}`;
+                break;
+        }
     } else if (error.message) {
         message = error.message;
     }

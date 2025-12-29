@@ -13,7 +13,7 @@ export default function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { adminUser, firebaseUser, isLoading, checked } = useAuth();
+    const { adminUser, isLoading, checked } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     
@@ -36,10 +36,11 @@ export default function AdminLayout({
             return;
         }
 
-    }, [checked, firebaseUser, adminUser, router, isAuthPage, pathname]);
+    }, [checked, adminUser, router, isAuthPage, pathname]);
 
-    // Show a loader while auth state is being checked, or if on a protected page without verification
-    if (!checked || (!isAuthPage && !adminUser?.isVerified)) {
+    // Show a loader while auth state is being checked.
+    // This is the primary guard against rendering pages with incomplete auth state.
+    if (!checked) {
         return (
             <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
                 <Loader isFadingOut={false} />
@@ -50,6 +51,16 @@ export default function AdminLayout({
     // For login/signup pages, just render the children without the sidebar layout
     if (isAuthPage) {
         return <>{children}</>;
+    }
+    
+    // If we are on a protected page, but the user is not verified, show a loader
+    // while the useEffect above triggers the redirect. This prevents a flicker.
+     if (!adminUser?.isVerified) {
+        return (
+            <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
+                <Loader isFadingOut={false} />
+            </div>
+        );
     }
     
     // For protected pages, render the full admin dashboard layout

@@ -40,6 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const checkAllAuth = async () => {
         setIsLoading(true);
+
+        // 1. Check for local user session (non-admin)
         const storedUser = sessionStorage.getItem(USER_SESSION_KEY);
         if (storedUser) {
             try {
@@ -55,33 +57,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         
+        // 2. Check Firebase auth state for admin user
         const auth = getAuth(firebaseApp);
         const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-            setFirebaseUser(fbUser);
-            if (fbUser) {
-                try {
-                    const res = await fetch('/api/auth/session');
-                    if (res.ok) {
-                        const sessionData = await res.json();
-                        if (sessionData.isLogged && isMounted) {
-                            setAdminUser(sessionData.user);
-                        } else if(isMounted) {
+            if (isMounted) {
+                setFirebaseUser(fbUser);
+                if (fbUser) {
+                    try {
+                        // 3. Verify session cookie with backend
+                        const res = await fetch('/api/auth/session');
+                        if (res.ok) {
+                            const sessionData = await res.json();
+                            if (sessionData.isLogged) {
+                                setAdminUser(sessionData.user);
+                            } else {
+                                setAdminUser(null);
+                            }
+                        } else {
                             setAdminUser(null);
                         }
-                    } else if (isMounted) {
+                    } catch (error) {
+                        console.error("Error fetching admin session:", error);
                         setAdminUser(null);
                     }
-                } catch (error) {
-                    console.error("Error fetching admin session:", error);
-                    if (isMounted) setAdminUser(null);
+                } else {
+                    setAdminUser(null);
                 }
-            } else if (isMounted) {
-                setAdminUser(null);
-            }
-
-            if (isMounted) {
-                setIsLoading(false);
                 setChecked(true);
+                setIsLoading(false);
             }
         });
 
@@ -134,11 +137,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
  const adminLogin = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
     const auth = getAuth(firebaseApp);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const token = await userCredential.user.getIdToken();
 
+      // Create session cookie via backend
       await fetch('/api/auth/session', {
         method: 'POST',
         headers: {
@@ -146,15 +151,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
+      // Verify session and get admin details
       const adminDetailsResponse = await fetch('/api/auth/session');
       const adminDetails = await adminDetailsResponse.json();
+      
       if(adminDetails.isLogged) {
         setFirebaseUser(userCredential.user);
         setAdminUser(adminDetails.user);
       } else {
-        throw new Error('Session login failed.');
+        throw new Error(adminDetails.message || 'Session login failed.');
       }
-
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         const res = await fetch(`/api/admins?email=${email}`);
@@ -167,10 +173,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Invalid email or password.');
       }
       throw new Error(error.message || 'An unknown error occurred during login.');
+    } finally {
+        setIsLoading(false);
     }
   }, []);
 
   const adminLogout = useCallback(async () => {
+    setIsLoading(true);
     const auth = getAuth(firebaseApp);
     try {
       await signOut(auth);
@@ -179,6 +188,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setFirebaseUser(null);
     } catch (error) {
         console.error("Error signing out:", error);
+    } finally {
+        setIsLoading(false);
     }
   }, []);
 

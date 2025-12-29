@@ -286,12 +286,12 @@ export default function AdminPage() {
                                                             <div className="flex gap-2 justify-end">
                                                                 {admin.isVerified ? (
                                                                      <Button variant="destructive" size="sm" onClick={() => handleAdminVerification(admin.id, false)} disabled={updatingId === `admin-${admin.id}`}>
-                                                                        {updatingId === `admin-${admin.id}` ? <Loader isFadingOut={false} /> : <ShieldOff className="h-4 w-4" />}
+                                                                        {updatingId === `admin-${admin.id}` ? <Loader2 className="animate-spin" /> : <ShieldOff className="h-4 w-4" />}
                                                                         <span className="ml-2 hidden sm:inline">Revoke</span>
                                                                     </Button>
                                                                 ) : (
                                                                     <Button size="sm" onClick={() => handleAdminVerification(admin.id, true)} disabled={updatingId === `admin-${admin.id}`}>
-                                                                        {updatingId === `admin-${admin.id}` ? <Loader isFadingOut={false} /> : <ShieldCheck className="h-4 w-4" />}
+                                                                        {updatingId === `admin-${admin.id}` ? <Loader2 className="animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                                                                         <span className="ml-2 hidden sm:inline">Approve</span>
                                                                     </Button>
                                                                 )}
@@ -320,7 +320,7 @@ function StepActions({ id, step, onAction, updatingId }: { id: string, step: Ste
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isUpdating}>
-                    {isUpdating ? <Loader isFadingOut={false} /> : <MoreVertical className="h-4 w-4" />}
+                    {isUpdating ? <Loader2 className="animate-spin" /> : <MoreVertical className="h-4 w-4" />}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

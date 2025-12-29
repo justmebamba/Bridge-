@@ -52,9 +52,9 @@ export default function AdminLoginPage() {
 
   const { isSubmitting } = form.formState;
 
-  // Show a loader while auth state is being determined, or if the user is already
-  // logged in and is in the process of being redirected.
-  if (!checked || (checked && adminUser?.isVerified)) {
+  // The layout handles the main loading state until 'checked' is true.
+  // This page just needs to handle the redirect case.
+  if (checked && adminUser?.isVerified) {
      return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
             <Loader isFadingOut={false} />
@@ -102,8 +102,7 @@ export default function AdminLoginPage() {
                     </div>
                     <div className="flex flex-col gap-4">
                         <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                        {isSubmitting && <Loader isFadingOut={false} />}
-                        Log In
+                        {isSubmitting || isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">
                             Need an admin account?{' '}

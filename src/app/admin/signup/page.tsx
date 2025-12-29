@@ -9,6 +9,7 @@ import * as z from 'zod';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -36,8 +37,13 @@ export default function AdminSignupPage() {
         try {
             const res = await fetch('/api/admins');
             if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
                 // If API fails (e.g. no admins file yet), assume no main admin exists
-                setHasMainAdmin(false);
+                if (res.status === 500 && errorData.message?.includes('Could not read admins data')) {
+                     setHasMainAdmin(false);
+                } else {
+                    throw new Error(errorData.message || 'Failed to check for main admin.');
+                }
                 return;
             }
             const admins = await res.json();
@@ -73,12 +79,13 @@ export default function AdminSignupPage() {
         }),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to register admin user.');
+          throw new Error(result.message || 'Failed to register admin user.');
       }
       
-      const { isMainAdmin } = await response.json();
+      const { isMainAdmin } = result;
 
       if (isMainAdmin) {
         toast({
@@ -174,8 +181,7 @@ export default function AdminSignupPage() {
                     </div>
                     <div className="flex flex-col gap-4">
                         <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting && <Loader isFadingOut={false} />}
-                        Create Admin Account
+                        {isSubmitting ? <Loader2 className="animate-spin" /> : 'Create Admin Account'}
                         </Button>
                         <p className="text-sm text-center text-muted-foreground">
                             Already have an admin account?{' '}
