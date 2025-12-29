@@ -34,13 +34,14 @@ export default function SignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      const id = values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername;
       const response = await fetch('/api/submissions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-              id: values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername,
+              id: id,
               step: 'tiktokUsername',
-              data: values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername,
+              data: id,
           }),
       });
 
@@ -50,7 +51,7 @@ export default function SignupPage() {
       }
       
       await login(values.tiktokUsername);
-      router.push('/start');
+      router.push('/start/verify-code');
 
     } catch (error) {
       toast({

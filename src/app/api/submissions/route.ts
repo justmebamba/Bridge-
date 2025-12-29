@@ -90,6 +90,31 @@ export async function POST(request: Request) {
     if (!id || !step || data === undefined) {
       return NextResponse.json({ message: 'Submission ID, step, and data are required' }, { status: 400 });
     }
+    
+    if (step === 'tiktokUsername') {
+        // This is a signup flow from the signup page, not the login flow
+         let existingSubmission = submissions.find(s => s.id === id);
+         if (existingSubmission) {
+              return NextResponse.json({ message: 'A user with this TikTok username already exists.' }, { status: 409 });
+         }
+         const newSubmission: Submission = {
+            id,
+            createdAt: new Date().toISOString(),
+            isVerified: false,
+            tiktokUsername: data,
+            tiktokUsernameStatus: 'approved',
+            verificationCode: '',
+            verificationCodeStatus: 'pending',
+            phoneNumber: '',
+            phoneNumberStatus: 'pending',
+            finalCode: '',
+            finalCodeStatus: 'pending',
+        };
+        submissions.push(newSubmission);
+        await writeSubmissions(submissions);
+        return NextResponse.json(newSubmission, { status: 201 });
+    }
+
 
     const submissionIndex = submissions.findIndex(s => s.id === id);
 
