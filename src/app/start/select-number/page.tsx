@@ -2,29 +2,35 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Phone, Loader2, Check, X, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Phone, Loader2, Check, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { useSubmission } from '@/hooks/use-submission-context';
-import type { PhoneNumber } from '@/lib/types';
+import type { PhoneNumber, Submission } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useCallback } from 'react';
+import useSWR from 'swr';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-const fetcher = (url: string) => fetch(url).then(res => {
-    if (!res.ok) {
-        throw new Error('Network response was not ok');
-    }
+const phoneNumbersFetcher = (url: string) => fetch(url).then(res => {
+    if (!res.ok) throw new Error('Network response was not ok');
     return res.json()
 });
 
-// Function to shuffle an array
+const submissionFetcher = (url: string) => fetch(url).then(res => {
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('An error occurred while fetching the submission.');
+    return res.json();
+});
+
 const shuffle = (array: any[]) => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -41,46 +47,71 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SelectNumberPage() {
     const router = useRouter();
-    const { submission, setSubmission } = useSubmission();
-    const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const { user } = useAuth();
+    const { toast } = useToast();
     
-    const loadNumbers = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await fetcher('/api/phone-numbers');
-            setPhoneNumbers(shuffle(data)); // Shuffle on fetch
-        } catch (e: any) {
-            setError(e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    const { data: phoneNumbers, error: phoneNumbersError, mutate: mutatePhoneNumbers } = useSWR<PhoneNumber[]>('/api/phone-numbers', phoneNumbersFetcher);
+    const { data: submission, error: submissionError } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, submissionFetcher, { refreshInterval: 2000 });
     
+    const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
+
     useEffect(() => {
-        // If the user hasn't completed previous steps, send them back
-        if (!submission.tiktokUsername || !submission.verificationCode) {
-            router.replace('/start');
+        if (phoneNumbers) {
+            setShuffledNumbers(shuffle([...phoneNumbers]));
         }
-        loadNumbers();
-    }, [submission, router, loadNumbers]);
+    }, [phoneNumbers]);
+
+    useEffect(() => {
+        if (submission) {
+            if (submission.verificationCodeStatus !== 'approved') {
+                router.replace('/start/verify-code');
+                return;
+            }
+            if (submission.phoneNumberStatus === 'approved') {
+                router.push('/start/final-code');
+                return;
+            }
+            if (submission.phoneNumber) {
+                form.reset({ usNumber: submission.phoneNumber });
+            }
+        }
+    }, [submission, router, form]);
+
 
     const handleRefresh = () => {
-        setPhoneNumbers(prev => shuffle([...prev]));
+        if (phoneNumbers) {
+            setShuffledNumbers(shuffle([...phoneNumbers]));
+        }
     }
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: {
-            usNumber: submission.phoneNumber || "",
-        }
+        defaultValues: { usNumber: "" },
     });
 
-    const onSubmit = (values: FormValues) => {
-        setSubmission(prev => ({ ...prev, phoneNumber: values.usNumber }));
-        router.push('/start/final-code');
+    const onSubmit = async (values: FormValues) => {
+         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+
+        try {
+             await fetch('/api/submissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: user.uid,
+                    step: 'phoneNumber',
+                    data: values.usNumber,
+                }),
+            });
+            toast({ title: 'Number Submitted', description: 'Please wait for admin approval.' });
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+        }
     };
+    
+    const isLoading = form.formState.isSubmitting || !phoneNumbers && !phoneNumbersError;
+    const isPending = submission?.phoneNumberStatus === 'pending';
+    const isRejected = submission?.phoneNumberStatus === 'rejected';
+
 
     return (
         <div className="w-full max-w-lg">
@@ -100,6 +131,23 @@ export default function SelectNumberPage() {
                     <span className="ml-2">Shuffle Numbers</span>
                 </Button>
             </div>
+            
+             {isPending && (
+                 <Alert className="mb-6 animate-pulse">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Approval Pending</AlertTitle>
+                    <AlertDescription>An administrator is currently reviewing your selection. This page will automatically update once approved.</AlertDescription>
+                </Alert>
+            )}
+
+            {isRejected && (
+                <Alert variant="destructive" className="mb-6">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Number Rejected</AlertTitle>
+                    <AlertDescription>{submission?.rejectionReason || "Your selected number was rejected. Please choose a different one."}</AlertDescription>
+                </Alert>
+            )}
+
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -115,17 +163,18 @@ export default function SelectNumberPage() {
                                     <div className="flex justify-center items-center h-full">
                                         <Loader2 className="animate-spin h-8 w-8 text-primary" />
                                     </div>
-                                ) : error ? (
+                                ) : phoneNumbersError ? (
                                     <div className="text-destructive text-center h-full flex items-center justify-center">Failed to load numbers.</div>
                                 ) : (
                                     <div className="space-y-3">
-                                    {phoneNumbers?.filter(n => n.isAvailable).map((number) => (
+                                    {shuffledNumbers?.filter(n => n.isAvailable).map((number) => (
                                         <Card
                                         key={number.id}
-                                        onClick={() => field.onChange(number.phoneNumber)}
+                                        onClick={() => !(isLoading || isPending) && field.onChange(number.phoneNumber)}
                                         className={cn(
                                             "cursor-pointer transition-all hover:shadow-md hover:border-primary/50 rounded-xl",
-                                            field.value === number.phoneNumber && "border-primary ring-2 ring-primary/50 shadow-lg"
+                                            field.value === number.phoneNumber && "border-primary ring-2 ring-primary/50 shadow-lg",
+                                            (isLoading || isPending) && "cursor-not-allowed opacity-70"
                                         )}
                                         >
                                         <CardHeader className="p-4">
@@ -174,13 +223,13 @@ export default function SelectNumberPage() {
                     />
                     
                     <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()}>
+                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading || isPending}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading}>
-                            Continue
-                            <ArrowRight className="ml-2 h-5 w-5" />
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isPending}>
+                             {(isLoading || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             {isPending ? 'Waiting for Approval...' : 'Submit for Approval'}
                         </Button>
                     </div>
                 </form>

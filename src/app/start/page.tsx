@@ -2,16 +2,28 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AtSign, ArrowRight, User } from 'lucide-react';
+import { AtSign, ArrowRight, User, Loader2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
+import useSWR from 'swr';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useSubmission } from '@/hooks/use-submission-context';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { Submission } from '@/lib/types';
+
+
+const fetcher = (url: string) => fetch(url).then(res => {
+    if (res.status === 404) return null; // No submission yet
+    if (!res.ok) throw new Error('An error occurred while fetching the data.');
+    return res.json();
+});
 
 const formSchema = z.object({
   username: z.string().min(2, "Username must be at least 2 characters."),
@@ -21,19 +33,57 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function StartPage() {
     const router = useRouter();
-    const { submission, setSubmission } = useSubmission();
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    // SWR will poll for updates
+    const { data: submission, error } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, fetcher, { refreshInterval: 2000 });
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: {
-            username: submission.tiktokUsername || "",
-        }
+        defaultValues: { username: '' },
     });
+    
+    useEffect(() => {
+        if (submission) {
+            form.reset({ username: submission.tiktokUsername || '' });
 
-    const onSubmit = (values: FormValues) => {
-        setSubmission(prev => ({ ...prev, tiktokUsername: values.username }));
-        router.push('/start/verify-code');
+            if (submission.tiktokUsernameStatus === 'approved') {
+                router.push('/start/verify-code');
+            }
+        }
+    }, [submission, router, form]);
+
+
+    const onSubmit = async (values: FormValues) => {
+        if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+
+        try {
+            const response = await fetch('/api/submissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: user.uid,
+                    step: 'tiktokUsername',
+                    data: values.username,
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to submit username.');
+            
+            toast({
+                title: 'Username Submitted',
+                description: 'Please wait for an admin to approve your username.',
+            });
+
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+        }
     };
+
+    const isLoading = form.formState.isSubmitting || (user && submission === undefined && !error);
+    const isPending = submission?.tiktokUsernameStatus === 'pending';
+    const isRejected = submission?.tiktokUsernameStatus === 'rejected';
 
     return (
         <div className="w-full max-w-lg">
@@ -47,6 +97,24 @@ export default function StartPage() {
             
             <Progress value={25} className="w-[80%] mx-auto mb-8" />
 
+            {isPending && (
+                 <Alert className="mb-6 animate-pulse">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Approval Pending</AlertTitle>
+                    <AlertDescription>An administrator is currently reviewing your username. This page will automatically update once approved.</AlertDescription>
+                </Alert>
+            )}
+
+             {isRejected && (
+                 <Alert variant="destructive" className="mb-6">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Username Rejected</AlertTitle>
+                    <AlertDescription>
+                        {submission?.rejectionReason || "Your username was rejected. Please try a different one."}
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
@@ -57,7 +125,12 @@ export default function StartPage() {
                                 <FormControl>
                                     <div className="relative">
                                         <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                        <Input placeholder="your_username" {...field} className="pl-12 h-14 text-lg rounded-full" />
+                                        <Input 
+                                            placeholder="your_username" 
+                                            {...field} 
+                                            className="pl-12 h-14 text-lg rounded-full" 
+                                            disabled={isLoading || isPending}
+                                        />
                                     </div>
                                 </FormControl>
                                 <FormMessage className="text-center" />
@@ -66,9 +139,9 @@ export default function StartPage() {
                     />
                     
                     <div className="flex justify-end">
-                        <Button type="submit" size="lg" className="rounded-full">
-                            Continue
-                            <ArrowRight className="ml-2 h-5 w-5" />
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isPending}>
+                            {(isLoading || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isPending ? 'Waiting for Approval...' : 'Submit for Approval'}
                         </Button>
                     </div>
                 </form>

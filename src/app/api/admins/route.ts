@@ -2,33 +2,18 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase-admin';
 import type { AdminUser } from '@/lib/types';
 
-const dataFilePath = path.join(process.cwd(), 'src/data/admins.json');
+const adminsCollection = collection(db, 'admins');
 
 async function readAdmins(): Promise<AdminUser[]> {
-  try {
-    const fileContents = await fs.readFile(dataFilePath, 'utf8');
-    return JSON.parse(fileContents) as AdminUser[];
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
-      return [];
-    }
-    console.error('Error reading admins data:', error);
-    throw new Error('Could not read admins data.');
+  const snapshot = await getDocs(adminsCollection);
+  if (snapshot.empty) {
+    return [];
   }
-}
-
-async function writeAdmins(admins: AdminUser[]): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(dataFilePath), { recursive: true });
-    await fs.writeFile(dataFilePath, JSON.stringify(admins, null, 2), 'utf8');
-  } catch (error) {
-    console.error('Error writing admins data:', error);
-    throw new Error('Could not write admins data.');
-  }
+  return snapshot.docs.map(d => d.data() as AdminUser);
 }
 
 export async function GET() {
@@ -36,7 +21,8 @@ export async function GET() {
     const admins = await readAdmins();
     return NextResponse.json(admins);
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+    console.error('Error reading admins data:', error);
+    return NextResponse.json({ message: 'Could not read admins data.' }, { status: 500 });
   }
 }
 
@@ -49,14 +35,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Admin ID is required' }, { status: 400 });
     }
 
-    const admins = await readAdmins();
-    const existingAdminIndex = admins.findIndex(a => a.id === id);
+    const adminDocRef = doc(db, 'admins', id);
+    const adminDoc = await getDoc(adminDocRef);
 
-    if (existingAdminIndex !== -1) {
+    if (adminDoc.exists()) {
       // Update existing admin (e.g., verification status)
       const { isVerified } = body;
       if (typeof isVerified === 'boolean') {
-        admins[existingAdminIndex].isVerified = isVerified;
+        await updateDoc(adminDocRef, { isVerified });
       }
     } else {
       // Create new admin
@@ -64,6 +50,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ message: 'Email is required for new admin' }, { status: 400 });
       }
 
+      const admins = await readAdmins();
       // The first user to register is the main admin
       const isMainAdmin = admins.length === 0;
 
@@ -74,16 +61,16 @@ export async function POST(request: Request) {
         isMainAdmin: isMainAdmin,
         createdAt: new Date().toISOString(),
       };
-      admins.push(newAdmin);
+      await setDoc(adminDocRef, newAdmin);
     }
 
-    await writeAdmins(admins);
-    
-    const responseData = admins.find(a => a.id === id);
+    const updatedDoc = await getDoc(adminDocRef);
+    const responseData = updatedDoc.data();
 
     return NextResponse.json(responseData, { status: 200 });
 
   } catch (error: any) {
+    console.error('Error processing admin request:', error);
     return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
   }
 }

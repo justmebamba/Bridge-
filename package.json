@@ -38,6 +38,7 @@
     "date-fns": "3.6.0",
     "embla-carousel-react": "8.6.0",
     "firebase": "^10.12.2",
+    "firebase-admin": "^12.1.1",
     "input-otp": "1.2.5",
     "lucide-react": "0.490.0",
     "next": "15.5.9",
@@ -46,11 +47,12 @@
     "react": "19.0.0-rc-f35664a7-20241204",
     "react-dom": "19.0.0-rc-f35664a7-20241204",
     "react-hook-form": "7.54.2",
-    "react-icons": "5.2.1",
     "recharts": "2.15.1",
+    "swr": "^2.2.5",
     "tailwind-merge": "3.0.1",
     "tailwindcss-animate": "1.0.7",
-    "zod": "3.24.2"
+    "zod": "3.24.2",
+    "react-icons": "5.2.1"
   },
   "devDependencies": {
     "@types/node": "20.14.9",

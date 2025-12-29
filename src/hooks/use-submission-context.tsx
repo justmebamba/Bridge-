@@ -1,27 +1,32 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
+import type { Submission } from '@/lib/types';
 
-export interface SubmissionData {
-  tiktokUsername?: string;
-  verificationCode?: string;
-  phoneNumber?: string;
-  finalCode?: string;
-}
 
 interface SubmissionContextType {
-  submission: SubmissionData;
-  setSubmission: React.Dispatch<React.SetStateAction<SubmissionData>>;
+  submission: Partial<Submission>;
+  setSubmission: React.Dispatch<React.SetStateAction<Partial<Submission>>>;
+  currentStep: number;
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const SubmissionContext = createContext<SubmissionContextType | undefined>(undefined);
 
 export const SubmissionProvider = ({ children }: { children: ReactNode }) => {
-  const [submission, setSubmission] = useState<SubmissionData>({});
+  const [submission, setSubmission] = useState<Partial<Submission>>({});
+  const [currentStep, setCurrentStep] = useState(1);
+  
+  const value = useMemo(() => ({ 
+      submission, 
+      setSubmission,
+      currentStep,
+      setCurrentStep
+    }), [submission, currentStep]);
 
   return (
-    <SubmissionContext.Provider value={{ submission, setSubmission }}>
+    <SubmissionContext.Provider value={value}>
       {children}
     </SubmissionContext.Provider>
   );
