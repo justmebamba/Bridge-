@@ -86,16 +86,16 @@ export default function SelectNumberPage() {
                         control={form.control}
                         name="usNumber"
                         render={({ field }) => (
-                            <FormItem className="h-full flex flex-col">
+                            <FormItem>
                             <FormMessage className="pb-2 text-center" />
-                            <FormControl className="flex-grow">
-                                <ScrollArea className="h-full w-full pr-4 max-h-[28rem] border rounded-md p-4">
+                            <FormControl>
+                                <ScrollArea className="h-96 w-full pr-4 border rounded-md p-4">
                                 {isLoading ? (
-                                    <div className="flex justify-center items-center h-48">
+                                    <div className="flex justify-center items-center h-full">
                                         <Loader2 className="animate-spin h-8 w-8 text-primary" />
                                     </div>
                                 ) : error ? (
-                                    <div className="text-destructive text-center h-48 flex items-center justify-center">Failed to load numbers.</div>
+                                    <div className="text-destructive text-center h-full flex items-center justify-center">Failed to load numbers.</div>
                                 ) : (
                                     <div className="space-y-3">
                                     {phoneNumbers?.filter(n => n.isAvailable).map((number) => (
@@ -152,7 +152,7 @@ export default function SelectNumberPage() {
                         )}
                     />
                     
-                    <div className="flex justify-between">
+                    <div className="flex justify-between pt-4">
                          <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back

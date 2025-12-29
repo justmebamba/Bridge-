@@ -6,13 +6,14 @@ import { ArrowLeft, ArrowRight, KeyRound, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useSubmission } from '@/hooks/use-submission-context';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 const formSchema = z.object({
   verificationCode: z.string().length(6, "Code must be 6 digits."),
@@ -23,6 +24,30 @@ type FormValues = z.infer<typeof formSchema>;
 export default function VerifyCodePage() {
     const router = useRouter();
     const { submission, setSubmission } = useSubmission();
+    const { toast } = useToast();
+
+    const [countdown, setCountdown] = useState(30);
+    const [isCountingDown, setIsCountingDown] = useState(true);
+
+    const handleResendCode = useCallback(() => {
+        setIsCountingDown(true);
+        setCountdown(30);
+        // Here you would add logic to actually resend the code
+        toast({
+            title: 'Code Resent',
+            description: 'A new verification code has been sent.',
+        });
+    }, [toast]);
+    
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (isCountingDown && countdown > 0) {
+            timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        } else if (countdown === 0) {
+            setIsCountingDown(false);
+        }
+        return () => clearTimeout(timer);
+    }, [countdown, isCountingDown]);
 
      useEffect(() => {
         // If the user hasn't entered a username, send them back to the start
@@ -80,8 +105,18 @@ export default function VerifyCodePage() {
                             </FormItem>
                         )}
                     />
+
+                    <div className="text-center text-sm text-muted-foreground">
+                        {isCountingDown ? (
+                            <p>Resend code in {countdown}s</p>
+                        ) : (
+                            <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
+                                Resend Code
+                            </Button>
+                        )}
+                    </div>
                     
-                    <div className="flex justify-between">
+                    <div className="flex justify-between pt-4">
                          <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back

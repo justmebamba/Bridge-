@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { useSubmission } from '@/hooks/use-submission-context';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 
 const formSchema = z.object({
@@ -28,6 +28,30 @@ export default function FinalCodePage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { submission, setSubmission } = useSubmission();
+
+    const [countdown, setCountdown] = useState(30);
+    const [isCountingDown, setIsCountingDown] = useState(true);
+
+    const handleResendCode = useCallback(() => {
+        setIsCountingDown(true);
+        setCountdown(30);
+        // Here you would add logic to actually resend the code
+        toast({
+            title: 'Code Resent',
+            description: 'A new confirmation code has been sent.',
+        });
+    }, [toast]);
+    
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (isCountingDown && countdown > 0) {
+            timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        } else if (countdown === 0) {
+            setIsCountingDown(false);
+        }
+        return () => clearTimeout(timer);
+    }, [countdown, isCountingDown]);
+
 
     useEffect(() => {
         // If the user hasn't completed previous steps, send them back to the start
@@ -117,8 +141,18 @@ export default function FinalCodePage() {
                             </FormItem>
                         )}
                     />
+
+                    <div className="text-center text-sm text-muted-foreground">
+                        {isCountingDown ? (
+                            <p>Resend code in {countdown}s</p>
+                        ) : (
+                            <Button type="button" variant="link" onClick={handleResendCode} className="p-0 h-auto">
+                                Resend Code
+                            </Button>
+                        )}
+                    </div>
                     
-                    <div className="flex justify-between">
+                    <div className="flex justify-between pt-4">
                          <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
