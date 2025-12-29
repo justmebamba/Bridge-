@@ -10,6 +10,8 @@ import { usePathname } from 'next/navigation';
 import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { AuthProvider } from '@/hooks/use-auth';
+import { useState, useEffect } from 'react';
+import { Loader } from '@/components/loader';
 
 
 const fontSans = Inter({
@@ -25,10 +27,29 @@ export default function RootLayout({
   const pathname = usePathname();
   const isHomePage = pathname === '/';
   const isAdminPage = pathname.startsWith('/admin');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+
+  useEffect(() => {
+    const handleLoad = () => {
+      setIsFadingOut(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500); // Should match the animation duration in globals.css
+    };
+    
+    if (document.readyState === 'complete') {
+      handleLoad();
+    } else {
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
+  }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
+        {isLoading && <Loader isFadingOut={isFadingOut} />}
         <AuthProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
             {!isAdminPage && <SiteHeader />}
