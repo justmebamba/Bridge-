@@ -18,7 +18,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission, AdminUser } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { useAdminAuth } from '@/hooks/use-admin-auth';
+import { useAuth } from '@/hooks/use-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Loader } from '@/components/loader';
@@ -27,7 +27,7 @@ import { Loader } from '@/components/loader';
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
 
 export default function AdminPage() {
-    const { adminUser, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
+    const { adminUser, isLoading: isAuthLoading } = useAuth();
     
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [admins, setAdmins] = useState<AdminUser[]>([]);
@@ -35,6 +35,8 @@ export default function AdminPage() {
     const [error, setError] = useState<string | null>(null);
 
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    
+    const isMainAdmin = adminUser?.isMainAdmin === true;
 
     const fetchData = useCallback(async () => {
         setIsLoadingData(true);
