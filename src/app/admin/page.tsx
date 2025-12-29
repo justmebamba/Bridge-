@@ -27,7 +27,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
 
 export default function AdminPage() {
-    const { user, isAdmin, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
+    const { adminUser, isAdmin, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
     const router = useRouter();
     
     const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -60,22 +60,22 @@ export default function AdminPage() {
     }, []);
 
     useEffect(() => {
-        if (user && isAdmin) {
+        if (adminUser && isAdmin) {
             fetchData();
         }
-    }, [user, isAdmin, fetchData]);
+    }, [adminUser, isAdmin, fetchData]);
     
     useEffect(() => {
-        if (user && isAdmin) {
+        if (adminUser && isAdmin) {
             const interval = setInterval(() => {
                 fetchData();
             }, 5000);
             return () => clearInterval(interval);
         }
-    }, [user, isAdmin, fetchData]);
+    }, [adminUser, isAdmin, fetchData]);
 
 
-    if (!isAuthLoading && (!user || !isAdmin)) {
+    if (!isAuthLoading && (!adminUser || !isAdmin)) {
         router.replace('/admin/login');
     }
 
@@ -140,7 +140,7 @@ export default function AdminPage() {
     
     const isDataLoading = isLoadingData;
 
-    if (isAuthLoading || !user || !isAdmin) {
+    if (isAuthLoading || !adminUser || !isAdmin) {
         return (
              <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-muted/40">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -246,7 +246,7 @@ export default function AdminPage() {
                                                         <TableCell>{format(new Date(admin.createdAt), "PPP")}</TableCell>
                                                         <TableCell>{getStatusBadge(admin.isVerified ? 'approved' : 'pending')}</TableCell>
                                                         <TableCell className="text-right">
-                                                            {isMainAdmin && user && admin.id !== user.uid && (
+                                                            {isMainAdmin && adminUser && admin.id !== adminUser.id && (
                                                                 <div className="flex gap-2 justify-end">
                                                                     {admin.isVerified ? (
                                                                          <Button variant="destructive" size="sm" onClick={() => handleAdminVerification(admin.id, false)} disabled={updatingId === `admin-${admin.id}`}>
@@ -301,5 +301,7 @@ function StepActions({ id, step, onAction, updatingId }: { id: string, step: Ste
         </DropdownMenu>
     );
 }
+
+    
 
     
