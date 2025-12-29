@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, KeyRound, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
+import { ArrowLeft, KeyRound, Loader2, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -73,31 +73,15 @@ export default function VerifyCodePage() {
         } finally {
             setIsPageLoading(false);
         }
-    }, [user?.id, router, toast, form, setAuthSubmission]);
+    }, [user?.id, router, toast, setAuthSubmission, form]);
 
     useEffect(() => {
         if(user) {
-            setIsPageLoading(false);
-            const currentSubmission = user.submission;
-            setSubmission(currentSubmission);
-            
-            if (currentSubmission.tiktokUsernameStatus !== 'approved') {
-                 router.replace('/start');
-                 return;
-            }
-            if (currentSubmission.verificationCodeStatus === 'approved') {
-                router.push('/start/select-number');
-                return;
-            }
-             if (currentSubmission.verificationCode) {
-                form.setValue('verificationCode', currentSubmission.verificationCode);
-            }
-        } else if (!user && isAuthLoading) {
-            // still waiting for auth context
-        } else {
+            fetchSubmission();
+        } else if (!isAuthLoading) {
             router.replace('/start');
         }
-    }, [user, isAuthLoading, router, form]);
+    }, [user, isAuthLoading, router, fetchSubmission]);
     
     // Polling effect
     useEffect(() => {
@@ -214,7 +198,12 @@ export default function VerifyCodePage() {
                             <FormItem>
                             <FormControl>
                                 <div className="flex justify-center">
-                                <InputOTP maxLength={6} {...field} disabled={isSubmitting || isPending}>
+                                <InputOTP 
+                                    maxLength={6} 
+                                    {...field} 
+                                    disabled={isSubmitting || isPending}
+                                    onComplete={form.handleSubmit(onSubmit)}
+                                >
                                     <InputOTPGroup>
                                         <InputOTPSlot index={0} />
                                         <InputOTPSlot index={1} />
@@ -248,11 +237,12 @@ export default function VerifyCodePage() {
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending}>
-                            {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isPending ? 'Waiting for Approval...' : 'Submit for Approval'}
-                             {!isPending && <ArrowRight className="ml-2 h-5 w-5" />}
-                        </Button>
+                        {(isSubmitting || isPending) && (
+                            <div className="flex items-center justify-center text-muted-foreground px-4">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Verifying...</span>
+                            </div>
+                        )}
                     </div>
                 </form>
             </Form>

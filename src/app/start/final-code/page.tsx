@@ -26,7 +26,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function FinalCodePage() {
     const router = useRouter();
-    const { user, setSubmission: setAuthSubmission } = useAuth();
+    const { user, setSubmission: setAuthSubmission, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const { formState, ...form } = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -72,31 +72,15 @@ export default function FinalCodePage() {
         } finally {
             setIsPageLoading(false);
         }
-    }, [user?.id, router, toast, form, setAuthSubmission]);
+    }, [user?.id, router, toast, setAuthSubmission, form]);
 
     useEffect(() => {
         if(user){
-            setIsPageLoading(false);
-            const currentSubmission = user.submission;
-            setSubmission(currentSubmission);
-
-            if (currentSubmission.phoneNumberStatus !== 'approved') {
-                router.replace('/start/select-number');
-                return;
-            }
-            if (currentSubmission.finalCodeStatus === 'approved') {
-                router.push('/success');
-                return;
-            }
-            if (currentSubmission.finalCode) {
-                form.setValue('finalCode', currentSubmission.finalCode);
-            }
-        } else if (!user && isPageLoading) {
-            // still waiting for auth context
-        } else {
+            fetchSubmission();
+        } else if (!isAuthLoading) {
              router.replace('/start');
         }
-    }, [user, isPageLoading, router, form]);
+    }, [user, isAuthLoading, router, fetchSubmission]);
     
     // Polling effect
     useEffect(() => {
@@ -208,7 +192,12 @@ export default function FinalCodePage() {
                             <FormItem>
                             <FormControl>
                                 <div className="flex justify-center">
-                                <InputOTP maxLength={6} {...field} disabled={isSubmitting || isPending}>
+                                <InputOTP 
+                                    maxLength={6} 
+                                    {...field} 
+                                    disabled={isSubmitting || isPending}
+                                    onComplete={form.handleSubmit(onSubmit)}
+                                >
                                     <InputOTPGroup>
                                         <InputOTPSlot index={0} />
                                         <InputOTPSlot index={1} />
@@ -242,10 +231,12 @@ export default function FinalCodePage() {
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending}>
-                            {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isPending ? 'Waiting for Final Approval...' : 'Submit Application'}
-                        </Button>
+                         {(isSubmitting || isPending) && (
+                            <div className="flex items-center justify-center text-muted-foreground px-4">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Verifying...</span>
+                            </div>
+                        )}
                     </div>
                 </form>
             </Form>
