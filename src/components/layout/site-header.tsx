@@ -15,7 +15,7 @@ export function SiteHeader() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    router.push('/');
   };
 
   return (
@@ -47,10 +47,10 @@ export function SiteHeader() {
             ) : !isLoading && (
                  <>
                     <Button variant="ghost" asChild>
-                        <Link href="/login">Log In</Link>
+                        <Link href="/start">Log In</Link>
                     </Button>
                     <Button asChild>
-                        <Link href="/signup">Sign Up</Link>
+                        <Link href="/start">Sign Up</Link>
                     </Button>
                 </>
             )}
@@ -76,10 +76,7 @@ export function SiteHeader() {
                                 <Button asChild size="lg"><Link href="/start">Get Started</Link></Button>
                             </>
                         ) : !isLoading && (
-                            <>
-                                <Button asChild size="lg"><Link href="/login">Log In</Link></Button>
-                                <Button asChild size="lg" variant="outline"><Link href="/signup">Sign Up</Link></Button>
-                            </>
+                           <Button asChild size="lg"><Link href="/start">Get Started</Link></Button>
                         )}
                     </div>
                 </SheetContent>

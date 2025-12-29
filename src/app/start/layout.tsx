@@ -14,18 +14,15 @@ export default function StartLayout({
     const { user, isLoading } = useAuth();
     const router = useRouter();
 
-    useEffect(() => {
-        if (!isLoading && !user) {
-            router.replace('/login');
-        }
-    }, [isLoading, user, router]);
+    // The logic to redirect if not logged in is now removed.
+    // The /start page itself will handle both authenticated and unauthenticated users.
 
-    if (isLoading || !user) {
+    if (isLoading) {
         return (
             <div className="container flex items-center justify-center py-16 md:py-24">
                 <div className="flex flex-col items-center justify-center text-center">
                     <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                    <h1 className="text-xl font-semibold">Loading User Session</h1>
+                    <h1 className="text-xl font-semibold">Loading Session</h1>
                     <p className="text-muted-foreground">Please wait...</p>
                 </div>
             </div>
