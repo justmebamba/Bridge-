@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Phone, Loader2, Check, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Phone, Loader2, Check, X, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 const fetcher = (url: string) => fetch(url).then(res => {
     if (!res.ok) {
@@ -23,6 +23,15 @@ const fetcher = (url: string) => fetch(url).then(res => {
     }
     return res.json()
 });
+
+// Function to shuffle an array
+const shuffle = (array: any[]) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
 
 const formSchema = z.object({
   usNumber: z.string({ required_error: "Please select a number." }),
@@ -37,24 +46,29 @@ export default function SelectNumberPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     
+    const loadNumbers = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const data = await fetcher('/api/phone-numbers');
+            setPhoneNumbers(shuffle(data)); // Shuffle on fetch
+        } catch (e: any) {
+            setError(e);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+    
     useEffect(() => {
         // If the user hasn't completed previous steps, send them back
         if (!submission.tiktokUsername || !submission.verificationCode) {
             router.replace('/start');
         }
-
-        const loadNumbers = async () => {
-            try {
-                const data = await fetcher('/api/phone-numbers');
-                setPhoneNumbers(data);
-            } catch (e: any) {
-                setError(e);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         loadNumbers();
-    }, [submission, router]);
+    }, [submission, router, loadNumbers]);
+
+    const handleRefresh = () => {
+        setPhoneNumbers(prev => shuffle([...prev]));
+    }
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -79,6 +93,13 @@ export default function SelectNumberPage() {
             </div>
 
             <Progress value={75} className="w-[80%] mx-auto mb-8" />
+
+            <div className="flex justify-end mb-4">
+                <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isLoading}>
+                    <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                    <span className="ml-2">Shuffle Numbers</span>
+                </Button>
+            </div>
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

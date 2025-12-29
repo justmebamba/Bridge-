@@ -6,6 +6,20 @@
     { "id": "3", "phoneNumber": "(786) 555-0103", "isAvailable": true, "region": "Southeast", "state": "Florida", "benefits": ["Large latin audience"], "disadvantages": [], "bonuses": ["Early access to new features"] },
     { "id": "4", "phoneNumber": "(312) 555-0104", "isAvailable": false, "region": "Midwest", "state": "Illinois", "benefits": ["Growing market"], "disadvantages": [], "bonuses": [] },
     { "id": "5", "phoneNumber": "(404) 555-0105", "isAvailable": true, "region": "Southeast", "state": "Georgia", "benefits": ["Music and entertainment focus"], "disadvantages": [], "bonuses": ["Creator workshop invite"] },
-    { "id": "6", "phoneNumber": "(512) 555-0106", "isAvailable": true, "region": "South", "state": "Texas", "benefits": ["Strong local business scene"], "disadvantages": [], "bonuses": [] }
+    { "id": "6", "phoneNumber": "(512) 555-0106", "isAvailable": true, "region": "South", "state": "Texas", "benefits": ["Strong local business scene"], "disadvantages": [], "bonuses": [] },
+    { "id": "7", "phoneNumber": "(206) 555-0107", "isAvailable": true, "region": "Pacific Northwest", "state": "Washington", "benefits": ["Tech and gaming community"], "disadvantages": [], "bonuses": [] },
+    { "id": "8", "phoneNumber": "(720) 555-0108", "isAvailable": true, "region": "Mountain", "state": "Colorado", "benefits": ["Outdoor and adventure content"], "disadvantages": [], "bonuses": ["Free gear rental voucher"] },
+    { "id": "9", "phoneNumber": "(617) 555-0109", "isAvailable": true, "region": "Northeast", "state": "Massachusetts", "benefits": ["Education and history focus"], "disadvantages": [], "bonuses": [] },
+    { "id": "10", "phoneNumber": "(602) 555-0110", "isAvailable": true, "region": "Southwest", "state": "Arizona", "benefits": ["Great for travel vlogs"], "disadvantages": [], "bonuses": [] },
+    { "id": "11", "phoneNumber": "(215) 555-0111", "isAvailable": true, "region": "Northeast", "state": "Pennsylvania", "benefits": ["Arts and culture scene"], "disadvantages": [], "bonuses": [] },
+    { "id": "12", "phoneNumber": "(615) 555-0112", "isAvailable": true, "region": "South", "state": "Tennessee", "benefits": ["Country music audience"], "disadvantages": [], "bonuses": ["Nashville studio tour"] },
+    { "id": "13", "phoneNumber": "(504) 555-0113", "isAvailable": true, "region": "South", "state": "Louisiana", "benefits": ["Food and festival content"], "disadvantages": [], "bonuses": [] },
+    { "id": "14", "phoneNumber": "(702) 555-0114", "isAvailable": true, "region": "West", "state": "Nevada", "benefits": ["Entertainment and nightlife"], "disadvantages": [], "bonuses": [] },
+    { "id": "15", "phoneNumber": "(415) 555-0115", "isAvailable": true, "region": "West Coast", "state": "California", "benefits": ["Startup and VC audience"], "disadvantages": ["High saturation"], "bonuses": [] },
+    { "id": "16", "phoneNumber": "(808) 555-0116", "isAvailable": true, "region": "Pacific", "state": "Hawaii", "benefits": ["Lush travel and nature content"], "disadvantages": [], "bonuses": ["Sponsored surf lesson"] },
+    { "id": "17", "phoneNumber": "(907) 555-0117", "isAvailable": true, "region": "Non-Contiguous", "state": "Alaska", "benefits": ["Unique wildlife and scenery"], "disadvantages": [], "bonuses": [] },
+    { "id": "18", "phoneNumber": "(313) 555-0118", "isAvailable": true, "region": "Midwest", "state": "Michigan", "benefits": ["Automotive and industry content"], "disadvantages": [], "bonuses": [] },
+    { "id": "19", "phoneNumber": "(801) 555-0119", "isAvailable": true, "region": "Mountain", "state": "Utah", "benefits": ["Family and outdoor content"], "disadvantages": [], "bonuses": [] },
+    { "id": "20", "phoneNumber": "(503) 555-0120", "isAvailable": true, "region": "Pacific Northwest", "state": "Oregon", "benefits": ["Hipster and alternative vibes"], "disadvantages": [], "bonuses": [] }
   ]
 }
