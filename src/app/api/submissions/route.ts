@@ -73,7 +73,7 @@ export async function POST(request: Request) {
                 createdAt: new Date().toISOString(),
                 isVerified: false,
                 tiktokUsername: id,
-                tiktokUsernameStatus: 'approved', // First step is auto-approved on creation
+                tiktokUsernameStatus: 'approved', // Auto-approve first step on creation
                 verificationCode: '',
                 verificationCodeStatus: 'pending',
                 phoneNumber: '',
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
             };
             submissions.push(newSubmission);
             await writeSubmissions(submissions);
-            return NextResponse.json(newSubmission, { status: 201 }); // 201 Created
+            return NextResponse.json(newSubmission, { status: 200 }); // Return 200 OK
         }
     }
 

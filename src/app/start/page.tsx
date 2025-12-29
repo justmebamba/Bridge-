@@ -23,7 +23,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function StartPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, login, isLoading } = useAuth();
+  const { user, login, isLoading, checked } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -34,19 +34,26 @@ export default function StartPage() {
   
   useEffect(() => {
     // If the user is already logged in, route them to the correct step
-    if (user && !isLoading) {
+    if (checked && user) {
         const submission = user.submission;
-        if (submission?.finalCodeStatus === 'approved') {
+        if (!submission) {
+            // This case should be rare, but handle it by logging out.
+            // logout(); 
+            return;
+        };
+
+        if (submission.finalCodeStatus === 'approved') {
             router.replace('/success');
-        } else if (submission?.phoneNumberStatus === 'approved') {
+        } else if (submission.phoneNumberStatus === 'approved') {
             router.replace('/start/final-code');
-        } else if (submission?.verificationCodeStatus === 'approved') {
+        } else if (submission.verificationCodeStatus === 'approved') {
             router.replace('/start/select-number');
-        } else if (submission?.tiktokUsernameStatus === 'approved') {
+        } else if (submission.tiktokUsernameStatus === 'approved') {
             router.replace('/start/verify-code');
         }
+        // If no step is approved, they stay on this page to start over or see status.
     }
-  }, [user, isLoading, router]);
+  }, [user, checked, router]);
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -67,8 +74,8 @@ export default function StartPage() {
 
   const { isSubmitting } = form.formState;
 
-  // While loading or if user is logged in and is being redirected by useEffect
-  if (isLoading || user) {
+  // While loading auth state, or if user is logged in and is being redirected by useEffect
+  if (!checked || (checked && user)) {
      return (
          <div className="w-full max-w-lg text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
@@ -106,8 +113,8 @@ export default function StartPage() {
                     />
                 </div>
                 <div className="flex flex-col gap-4">
-                    <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
+                    {(isSubmitting || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Continue
                     <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>

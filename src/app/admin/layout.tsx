@@ -13,23 +13,26 @@ export default function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { adminUser, firebaseUser, isLoading } = useAuth();
+    const { adminUser, firebaseUser, isLoading, checked } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!isLoading && !firebaseUser) {
+        if (!checked) return; // Do nothing until auth state is checked
+
+        if (!firebaseUser) {
             router.replace('/admin/login');
         }
-        if (!isLoading && firebaseUser && !adminUser?.isVerified) {
+        if (firebaseUser && !adminUser?.isVerified) {
              // This case handles a signed in but unverified user.
              // We can keep them on a page that might show a "pending approval" message,
              // but redirect from the main dashboard.
              // For now, let's redirect to login and let the login page show the error.
              router.replace('/admin/login');
         }
-    }, [isLoading, firebaseUser, adminUser, router]);
+    }, [checked, firebaseUser, adminUser, router]);
 
-    if (isLoading || !firebaseUser || !adminUser?.isVerified) {
+    // Show loader until auth state is confirmed
+    if (isLoading || !checked || !firebaseUser || !adminUser?.isVerified) {
         return (
             <div className="flex min-h-screen w-full items-center justify-center bg-muted/40">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

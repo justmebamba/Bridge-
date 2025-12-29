@@ -11,13 +11,14 @@ export default function StartLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, checked } = useAuth(); // Use the new 'checked' flag
     const router = useRouter();
 
-    // The logic to redirect if not logged in is now removed.
+    // The logic to redirect if not logged in is now removed from here.
     // The /start page itself will handle both authenticated and unauthenticated users.
 
-    if (isLoading) {
+    // Show a loading screen until the initial authentication check is complete.
+    if (!checked) {
         return (
             <div className="container flex items-center justify-center py-16 md:py-24">
                 <div className="flex flex-col items-center justify-center text-center">
