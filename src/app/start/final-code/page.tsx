@@ -8,7 +8,6 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import useSWR from 'swr';
 import { useEffect, useState, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,6 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission } from '@/lib/types';
-import { useInterval } from '@/hooks/use-interval';
 
 
 const formSchema = z.object({
@@ -26,29 +24,67 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const fetcher = (url: string) => fetch(url).then(res => {
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error('An error occurred while fetching the data.');
-    return res.json();
-});
-
 export default function FinalCodePage() {
     const router = useRouter();
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const { data: submission, error } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, fetcher, { refreshInterval: 2000 });
+    const [submission, setSubmission] = useState<Submission | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [countdown, setCountdown] = useState(30);
     const [canResend, setCanResend] = useState(false);
 
-    useInterval(() => {
-        if (countdown > 0) {
-            setCountdown(prev => prev - 1);
-        } else {
-            setCanResend(true);
+    const isPending = submission?.finalCodeStatus === 'pending' && !!submission.finalCode;
+
+    const fetchSubmission = useCallback(async () => {
+        if (!user) return;
+        try {
+            const res = await fetch(`/api/submissions?id=${user.uid}`);
+            if (res.status === 404) {
+                setSubmission(null);
+                return;
+            }
+            if (!res.ok) throw new Error('An error occurred while fetching the data.');
+            const data: Submission = await res.json();
+            setSubmission(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
         }
-    }, canResend ? null : 1000);
+    }, [user]);
+
+    useEffect(() => {
+        if(user){
+            fetchSubmission();
+        }
+    }, [user, fetchSubmission]);
+    
+    useEffect(() => {
+        if (isPending) {
+            const interval = setInterval(() => {
+                fetchSubmission();
+            }, 2000);
+            return () => clearInterval(interval);
+        }
+    }, [isPending, fetchSubmission]);
+
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    setCanResend(true);
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [canResend]);
 
     const handleResendCode = useCallback(() => {
         setCanResend(false);
@@ -59,6 +95,11 @@ export default function FinalCodePage() {
         });
     }, [toast]);
     
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: { finalCode: "" },
+    });
+
     useEffect(() => {
         if (submission) {
             if (submission.phoneNumberStatus !== 'approved') {
@@ -70,19 +111,15 @@ export default function FinalCodePage() {
                 return;
             }
              if (submission.finalCode) {
-                form.reset({ finalCode: submission.finalCode });
+                form.setValue('finalCode', submission.finalCode);
             }
         }
     }, [submission, router, form]);
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { finalCode: "" },
-    });
 
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-
+        setIsLoading(true);
         try {
              await fetch('/api/submissions', {
                 method: 'POST',
@@ -94,13 +131,16 @@ export default function FinalCodePage() {
                 }),
             });
             toast({ title: 'Final Code Submitted', description: 'Please wait for final admin approval.' });
+            fetchSubmission();
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+        } finally {
+            setIsLoading(false);
         }
     };
     
-    const isLoading = form.formState.isSubmitting || (user && submission === undefined && !error);
-    const isPending = submission?.finalCodeStatus === 'pending' && !!submission.finalCode;
+    const isSubmitting = form.formState.isSubmitting;
+    
     const isRejected = submission?.finalCodeStatus === 'rejected';
 
     return (
@@ -143,7 +183,7 @@ export default function FinalCodePage() {
                             <FormItem>
                             <FormControl>
                                 <div className="flex justify-center">
-                                <InputOTP maxLength={6} {...field} disabled={isLoading || isPending}>
+                                <InputOTP maxLength={6} {...field} disabled={isSubmitting || isPending}>
                                     <InputOTPGroup>
                                         <InputOTPSlot index={0} />
                                         <InputOTPSlot index={1} />
@@ -171,12 +211,12 @@ export default function FinalCodePage() {
                     </div>
                     
                     <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading || isPending}>
+                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isSubmitting || isPending}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isPending || isRejected}>
-                            {(isLoading || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting || isPending || isRejected}>
+                            {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isPending ? 'Waiting for Final Approval...' : 'Submit Application'}
                         </Button>
                     </div>

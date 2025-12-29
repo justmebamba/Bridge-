@@ -15,21 +15,9 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useCallback } from 'react';
-import useSWR from 'swr';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-
-const phoneNumbersFetcher = (url: string) => fetch(url).then(res => {
-    if (!res.ok) throw new Error('Network response was not ok');
-    return res.json()
-});
-
-const submissionFetcher = (url: string) => fetch(url).then(res => {
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error('An error occurred while fetching the submission.');
-    return res.json();
-});
 
 const shuffle = (array: any[]) => {
     let currentIndex = array.length,  randomIndex;
@@ -54,32 +42,66 @@ export default function SelectNumberPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     
-    const { data: phoneNumbers, error: phoneNumbersError } = useSWR<PhoneNumber[]>('/api/phone-numbers', phoneNumbersFetcher);
-    const { data: submission, error: submissionError } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, submissionFetcher);
+    const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
+    const [submission, setSubmission] = useState<Submission | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
-    useEffect(() => {
-        if (phoneNumbers) {
-            setShuffledNumbers(shuffle([...phoneNumbers]));
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: { usNumber: "" },
+    });
+
+    const fetchData = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const [pRes, sRes] = await Promise.all([
+                fetch('/api/phone-numbers'),
+                user ? fetch(`/api/submissions?id=${user.uid}`) : Promise.resolve(null),
+            ]);
+
+            if (!pRes.ok) throw new Error('Failed to fetch phone numbers');
+            const phoneNumbersData = await pRes.json();
+            setPhoneNumbers(phoneNumbersData);
+            setShuffledNumbers(shuffle([...phoneNumbersData]));
+
+            if (sRes) {
+                if (sRes.status === 404) {
+                    setSubmission(null);
+                } else if (!sRes.ok) {
+                    throw new Error('Failed to fetch submission');
+                } else {
+                    const submissionData = await sRes.json();
+                    setSubmission(submissionData);
+                    if (submissionData.verificationCodeStatus !== 'approved') {
+                        router.replace('/start/verify-code');
+                        return;
+                    }
+                    if (submissionData.phoneNumberStatus === 'approved') {
+                        router.push('/start/final-code');
+                        return;
+                    }
+                    if (submissionData.phoneNumber) {
+                        form.reset({ usNumber: submissionData.phoneNumber });
+                    }
+                }
+            }
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
         }
-    }, [phoneNumbers]);
+    }, [user, router, form]);
 
     useEffect(() => {
-        if (submission) {
-            if (submission.verificationCodeStatus !== 'approved') {
-                router.replace('/start/verify-code');
-                return;
-            }
-            if (submission.phoneNumberStatus === 'approved') {
-                router.push('/start/final-code');
-                return;
-            }
-            if (submission.phoneNumber) {
-                form.reset({ usNumber: submission.phoneNumber });
-            }
+        if (user) {
+            fetchData();
         }
-    }, [submission, router, form]);
+    }, [user, fetchData]);
 
 
     const handleRefresh = () => {
@@ -88,14 +110,9 @@ export default function SelectNumberPage() {
         }
     }
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { usNumber: "" },
-    });
-
     const onSubmit = async (values: FormValues) => {
          if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-
+        setIsLoading(true);
         try {
              await fetch('/api/submissions', {
                 method: 'POST',
@@ -110,10 +127,12 @@ export default function SelectNumberPage() {
             router.push('/start/final-code');
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+        } finally {
+            setIsLoading(false);
         }
     };
     
-    const isLoading = form.formState.isSubmitting || !phoneNumbers && !phoneNumbersError;
+    const isSubmitting = form.formState.isSubmitting;
     const isRejected = submission?.phoneNumberStatus === 'rejected';
 
 
@@ -130,8 +149,8 @@ export default function SelectNumberPage() {
             <Progress value={75} className="w-[80%] mx-auto mb-8" />
 
             <div className="flex justify-end mb-4">
-                <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isLoading}>
-                    <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isLoading || isSubmitting}>
+                    <RefreshCw className={cn("h-4 w-4", (isLoading || isSubmitting) && "animate-spin")} />
                     <span className="ml-2">Shuffle Numbers</span>
                 </Button>
             </div>
@@ -159,18 +178,18 @@ export default function SelectNumberPage() {
                                     <div className="flex justify-center items-center h-full">
                                         <Loader2 className="animate-spin h-8 w-8 text-primary" />
                                     </div>
-                                ) : phoneNumbersError ? (
+                                ) : error ? (
                                     <div className="text-destructive text-center h-full flex items-center justify-center">Failed to load numbers.</div>
                                 ) : (
                                     <div className="space-y-3">
                                     {shuffledNumbers?.filter(n => n.isAvailable).map((number) => (
                                         <Card
                                         key={number.id}
-                                        onClick={() => !isLoading && field.onChange(number.phoneNumber)}
+                                        onClick={() => !(isLoading || isSubmitting) && field.onChange(number.phoneNumber)}
                                         className={cn(
                                             "cursor-pointer transition-all hover:shadow-md hover:border-primary/50 rounded-xl",
                                             field.value === number.phoneNumber && "border-primary ring-2 ring-primary/50 shadow-lg",
-                                            isLoading && "cursor-not-allowed opacity-70"
+                                            (isLoading || isSubmitting) && "cursor-not-allowed opacity-70"
                                         )}
                                         >
                                         <CardHeader className="p-4">
@@ -219,12 +238,12 @@ export default function SelectNumberPage() {
                     />
                     
                     <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading}>
+                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading || isSubmitting}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading}>
-                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting}>
+                             {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              Continue
                         </Button>
                     </div>

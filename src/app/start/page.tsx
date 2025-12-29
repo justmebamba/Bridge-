@@ -8,8 +8,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
-import useSWR from 'swr';
+import { useEffect, useState, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -18,12 +17,6 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Submission } from '@/lib/types';
 
-
-const fetcher = (url: string) => fetch(url).then(res => {
-    if (res.status === 404) return null; // No submission yet
-    if (!res.ok) throw new Error('An error occurred while fetching the data.');
-    return res.json();
-});
 
 const formSchema = z.object({
   username: z.string().min(2, "Username must be at least 2 characters."),
@@ -35,28 +28,53 @@ export default function StartPage() {
     const router = useRouter();
     const { user } = useAuth();
     const { toast } = useToast();
-
-    const { data: submission, error } = useSWR<Submission | null>(user ? `/api/submissions?id=${user.uid}` : null, fetcher);
+    
+    const [submission, setSubmission] = useState<Submission | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { username: '' },
     });
     
-    useEffect(() => {
-        if (submission) {
-            form.reset({ username: submission.tiktokUsername || '' });
-
-            if (submission.tiktokUsernameStatus === 'approved') {
-                router.push('/start/verify-code');
+    const fetchSubmission = useCallback(async () => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/submissions?id=${user.uid}`);
+            if (res.status === 404) {
+                setSubmission(null);
+                return;
             }
+            if (!res.ok) throw new Error('An error occurred while fetching the data.');
+            const data: Submission = await res.json();
+            setSubmission(data);
+
+            if (data) {
+                form.reset({ username: data.tiktokUsername || '' });
+                if (data.tiktokUsernameStatus === 'approved') {
+                    router.push('/start/verify-code');
+                }
+            }
+
+        } catch (err: any) {
+             toast({ variant: 'destructive', title: 'Error', description: err.message });
+        } finally {
+            setIsLoading(false);
         }
-    }, [submission, router, form]);
+    }, [user, router, form, toast]);
+
+    useEffect(() => {
+        if(user) {
+            fetchSubmission();
+        }
+    }, [user, fetchSubmission]);
 
 
     const onSubmit = async (values: FormValues) => {
         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-
+        
+        setIsLoading(true);
         try {
             const response = await fetch('/api/submissions', {
                 method: 'POST',
@@ -79,10 +97,12 @@ export default function StartPage() {
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const isLoading = form.formState.isSubmitting || (user && submission === undefined && !error);
+    const isSubmitting = form.formState.isSubmitting;
     const isRejected = submission?.tiktokUsernameStatus === 'rejected';
 
     return (
@@ -121,7 +141,7 @@ export default function StartPage() {
                                             placeholder="your_username" 
                                             {...field} 
                                             className="pl-12 h-14 text-lg rounded-full" 
-                                            disabled={isLoading}
+                                            disabled={isLoading || isSubmitting}
                                         />
                                     </div>
                                 </FormControl>
@@ -131,8 +151,8 @@ export default function StartPage() {
                     />
                     
                     <div className="flex justify-end">
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting}>
+                            {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Continue
                         </Button>
                     </div>

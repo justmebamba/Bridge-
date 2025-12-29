@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, Clock, Loader2, RefreshCw, XCircle, ShieldCheck, ShieldOff, MoreVertical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -21,16 +21,8 @@ import { cn } from '@/lib/utils';
 import { useAdminAuth } from '@/hooks/use-admin-auth';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import useSWR from 'swr';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-
-const fetcher = (url: string) => fetch(url).then((res) => {
-    if (!res.ok) {
-        throw new Error('Failed to fetch data');
-    }
-    return res.json()
-});
 
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
 
@@ -38,18 +30,53 @@ export default function AdminPage() {
     const { user, isAdmin, isMainAdmin, isLoading: isAuthLoading } = useAdminAuth();
     const router = useRouter();
     
-    const { data: submissions, error: submissionsError, mutate: mutateSubmissions } = useSWR<Submission[]>('/api/submissions', fetcher, { refreshInterval: 5000 });
-    const { data: admins, error: adminsError, mutate: mutateAdmins } = useSWR<AdminUser[]>('/api/admins', fetcher, { refreshInterval: 5000 });
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [admins, setAdmins] = useState<AdminUser[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+    const fetchData = useCallback(async () => {
+        setIsLoadingData(true);
+        setError(null);
+        try {
+            const [submissionsRes, adminsRes] = await Promise.all([
+                fetch('/api/submissions'),
+                fetch('/api/admins')
+            ]);
+            if (!submissionsRes.ok || !adminsRes.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            const submissionsData = await submissionsRes.json();
+            const adminsData = await adminsRes.json();
+            setSubmissions(submissionsData);
+            setAdmins(adminsData);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsLoadingData(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+    
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchData();
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [fetchData]);
+
 
     if (!isAuthLoading && (!user || !isAdmin)) {
         router.replace('/admin/login');
     }
 
     const mutateAll = () => {
-        mutateSubmissions();
-        mutateAdmins();
+        fetchData();
     };
 
     const handleSubmissionStepApproval = async (id: string, step: Step, status: 'approved' | 'rejected') => {
@@ -62,7 +89,7 @@ export default function AdminPage() {
             });
 
             if (!res.ok) throw new Error(`Failed to update ${step}.`);
-            mutateSubmissions();
+            mutateAll();
         } catch (error) {
             console.error(`Failed to update ${step}`, error);
         } finally {
@@ -80,7 +107,7 @@ export default function AdminPage() {
             });
 
             if (!res.ok) throw new Error('Failed to update admin.');
-            mutateAdmins();
+            mutateAll();
         } catch (error) {
             console.error('Failed to update admin', error);
         } finally {
@@ -107,7 +134,7 @@ export default function AdminPage() {
         return <Badge variant="secondary" className="border-blue-200 bg-blue-100 text-blue-800">Sub-Admin</Badge>;
     }
     
-    const isDataLoading = !submissions && !submissionsError || !admins && !adminsError;
+    const isDataLoading = isLoadingData;
 
     if (isAuthLoading || !user || !isAdmin) {
         return (
@@ -137,7 +164,7 @@ export default function AdminPage() {
                             <TabsContent value="submissions">
                                 {isDataLoading ? (
                                     <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                                ) : submissionsError ? (
+                                ) : error ? (
                                     <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>Failed to load submissions.</AlertDescription></Alert>
                                 ) : (
                                     <Table>
@@ -201,7 +228,7 @@ export default function AdminPage() {
                              <TabsContent value="admins">
                                 {isDataLoading ? (
                                     <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                                ) : adminsError ? (
+                                ) : error ? (
                                      <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>Failed to load admins.</AlertDescription></Alert>
                                 ) : (
                                     <Table>
