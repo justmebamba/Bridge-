@@ -5,23 +5,24 @@ const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
   ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
   : undefined;
 
-let adminApp: App;
+// This ensures we have a single instance of the app.
+let adminApp: App | undefined;
 
-export async function initializeFirebaseAdmin() {
-  if (getApps().some(app => app.name === 'admin')) {
-      adminApp = getApps().find(app => app.name === 'admin')!;
-      return adminApp;
+export function initializeFirebaseAdmin() {
+  if (!adminApp) {
+      if (getApps().length > 0) {
+        adminApp = getApps().find(app => app.name === 'admin') || getApps()[0];
+      } else {
+        if (!serviceAccount) {
+            throw new Error('Firebase service account credentials are not set in the environment variables.');
+        }
+        adminApp = initializeApp(
+            {
+                credential: cert(serviceAccount),
+            },
+            'admin'
+        );
+      }
   }
-  
-  if (!serviceAccount) {
-      throw new Error('Firebase service account credentials are not set in the environment variables.');
-  }
-
-  adminApp = initializeApp(
-    {
-      credential: cert(serviceAccount),
-    },
-    'admin'
-  );
   return adminApp;
 }

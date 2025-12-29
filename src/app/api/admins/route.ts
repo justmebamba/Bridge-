@@ -13,6 +13,7 @@ const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 // GET all admins or a single admin by email
 export async function GET(request: Request) {
   try {
+    await initializeFirebaseAdmin();
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
     const admins = await store.read();
@@ -28,7 +29,6 @@ export async function GET(request: Request) {
     return NextResponse.json(admins);
   } catch (error: any) {
     console.error('Error reading admins data:', error);
-    // Specifically check for ENOENT (file not found) which is a recoverable state
     if (error.code === 'ENOENT') {
         return NextResponse.json([]);
     }
@@ -38,7 +38,6 @@ export async function GET(request: Request) {
 
 // POST to create a new admin
 export async function POST(request: Request) {
-    let firebaseUser;
     try {
         await initializeFirebaseAdmin();
         const body = await request.json();
@@ -49,32 +48,26 @@ export async function POST(request: Request) {
         }
 
         const admins = await store.read().catch(err => {
-            // If the file doesn't exist, start with an empty array.
-             if (err.code === 'ENOENT') {
-                return [];
-            }
-            throw err;
+             if (err.code === 'ENOENT') return [];
+             throw err;
         });
         
         if (admins.some(admin => admin.email === email)) {
             return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
         }
 
+        let firebaseUser;
         try {
             firebaseUser = await getAuth().createUser({ email, password });
         } catch (error) {
             const authError = error as AuthError;
             if (authError.code === 'auth/email-already-exists') {
-                // This is a recoverable state. The user might exist in Firebase Auth but not in our admins.json
-                // We can fetch the user and proceed with adding them to our JSON store.
                 firebaseUser = await getAuth().getUserByEmail(email);
             } else {
-                // Re-throw other auth errors to be caught by the outer catch block
                 throw error;
             }
         }
         
-        // Final check to ensure we have a user one way or another
         if (!firebaseUser) {
              throw new Error('Could not create or retrieve Firebase user.');
         }
@@ -90,25 +83,22 @@ export async function POST(request: Request) {
 
         admins.push(newAdmin);
 
-        if (isMainAdmin) {
-            await getAuth().setCustomUserClaims(firebaseUser.uid, { isMainAdmin: true, isVerified: true });
-        } else {
-            await getAuth().setCustomUserClaims(firebaseUser.uid, { isMainAdmin: false, isVerified: false });
-        }
+        const claims = { isMainAdmin: isMainAdmin, isVerified: isMainAdmin };
+        await getAuth().setCustomUserClaims(firebaseUser.uid, claims);
         
         await store.write(admins);
 
         return NextResponse.json({ id: newAdmin.id, email: newAdmin.email, isMainAdmin: newAdmin.isMainAdmin }, { status: 201 });
 
     } catch (error: any) {
-        console.error('Error creating admin:', error);
+        console.error('[API/ADMINS/POST] Error:', error);
+        
         let message = 'An unexpected error occurred.';
         let status = 500;
 
         if (error.code) { // Firebase Auth errors
             switch (error.code) {
                 case 'auth/email-already-exists':
-                    // This case should now be handled, but as a fallback:
                     message = 'An admin with this email already exists.';
                     status = 409;
                     break;
@@ -121,7 +111,7 @@ export async function POST(request: Request) {
                     status = 400;
                     break;
                 default:
-                    message = `Firebase Auth error: ${error.message}`;
+                    message = error.message || 'A Firebase authentication error occurred.';
                     break;
             }
         } else if (error.message) {
