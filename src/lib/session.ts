@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getIronSession } from 'iron-session';
@@ -12,8 +13,9 @@ const sessionOptions = {
   },
 };
 
-interface SessionData {
-  user?: AdminUser;
+// Define the session data structure, omitting sensitive fields like passwordHash
+type SessionData = {
+  user?: Omit<AdminUser, 'passwordHash'>;
   isLoggedIn?: boolean;
 }
 
@@ -22,7 +24,7 @@ export async function getSession() {
   return session;
 }
 
-export async function login(user: AdminUser) {
+export async function login(user: Omit<AdminUser, 'passwordHash'>) {
   const session = await getSession();
   session.user = user;
   session.isLoggedIn = true;

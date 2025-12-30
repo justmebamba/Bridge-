@@ -16,22 +16,30 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { Submission, AdminUser } from '@/lib/types';
+import type { Submission } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Loader } from '@/components/loader';
 
+// This type represents the "safe" admin user object without the password hash
+type SafeAdminUser = {
+  id: string;
+  email: string;
+  isVerified: boolean;
+  isMainAdmin: boolean;
+  createdAt: string;
+}
 
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
 
 export default function AdminPage() {
     const [submissions, setSubmissions] = useState<Submission[]>([]);
-    const [admins, setAdmins] = useState<AdminUser[]>([]);
+    const [admins, setAdmins] = useState<SafeAdminUser[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
-    const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+    const [currentUser, setCurrentUser] = useState<SafeAdminUser | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoadingData(true);

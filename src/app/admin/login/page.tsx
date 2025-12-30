@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { firebaseAuth } from '@/lib/firebase/client';
 
 
 const formSchema = z.object({
@@ -37,15 +35,10 @@ export default function AdminLoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-        // Step 1: Sign in with Firebase client auth to get an ID token
-        const userCredential = await signInWithEmailAndPassword(firebaseAuth, values.email, values.password);
-        const idToken = await userCredential.user.getIdToken();
-
-        // Step 2: Send the ID token to our backend to create a session
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
+            body: JSON.stringify({ email: values.email, password: values.password }),
         });
 
         const result = await response.json();
@@ -63,27 +56,11 @@ export default function AdminLoginPage() {
         router.refresh(); // This ensures the layout re-evaluates the session
 
     } catch (error: any) {
-        let errorMessage = 'An unknown error occurred.';
-        switch (error.code) {
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-            case 'auth/invalid-credential':
-                errorMessage = 'Invalid email or password.';
-                break;
-            case 'auth/too-many-requests':
-                errorMessage = 'Too many login attempts. Please try again later.';
-                break;
-        }
-
-        if (error instanceof Error && !(error as any).code) {
-            errorMessage = error.message;
-        }
-
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: errorMessage,
-      });
+        toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: error.message || 'An unknown error occurred.',
+        });
     }
   };
 

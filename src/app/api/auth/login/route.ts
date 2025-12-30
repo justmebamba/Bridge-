@@ -2,53 +2,48 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
 import { login } from '@/lib/session';
 import type { AdminUser } from '@/lib/types';
+import { JsonStore } from '@/lib/json-store';
+import { compare } from 'bcryptjs';
+
+const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { idToken } = body;
+        const { email, password } = body;
 
-        if (!idToken) {
-            return NextResponse.json({ message: 'ID token is required.' }, { status: 400 });
+        if (!email || !password) {
+            return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
         }
         
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
-        
-        const firebaseUser = await adminAuth.getUser(decodedToken.uid);
+        const admins = await store.read();
+        const admin = admins.find(a => a.email === email);
 
-        const claims = firebaseUser.customClaims || {};
+        if (!admin) {
+            return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
+        }
 
-        // This claim is set during admin registration. If it's not present, they are not an admin.
-        if (claims.isMainAdmin === undefined) {
-             return NextResponse.json({ message: 'You are not registered as an admin.' }, { status: 403 });
+        const isPasswordValid = await compare(password, admin.passwordHash);
+
+        if (!isPasswordValid) {
+             return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
         }
         
-        if (!claims.isVerified) {
+        if (!admin.isVerified) {
             return NextResponse.json({ message: 'Your admin account is pending approval.' }, { status: 403 });
         }
         
-        const adminUser: AdminUser = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email!,
-            isVerified: claims.isVerified,
-            isMainAdmin: claims.isMainAdmin,
-            createdAt: firebaseUser.metadata.creationTime,
-        };
+        // Don't include passwordHash in the session
+        const { passwordHash, ...sessionUser } = admin;
 
-        await login(adminUser);
+        await login(sessionUser);
 
         return NextResponse.json({ message: "Login successful" }, { status: 200 });
 
     } catch (error: any) {
         console.error('[API/AUTH/LOGIN] Error:', error);
-        
-        if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
-            return NextResponse.json({ message: 'Invalid or expired session token. Please log in again.' }, { status: 401 });
-        }
-        
         return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
     }
 }

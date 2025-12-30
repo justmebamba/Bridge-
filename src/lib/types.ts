@@ -26,8 +26,9 @@ export interface PhoneNumber {
 }
 
 export interface AdminUser {
-  id: string; // This will now be the Firebase UID
+  id: string;
   email: string;
+  passwordHash: string; // Store hashed password instead of plain text
   isVerified: boolean;
   isMainAdmin: boolean;
   createdAt: string;
