@@ -54,7 +54,7 @@ export async function POST(request: Request) {
                 createdAt: new Date().toISOString(),
                 isVerified: false,
                 tiktokUsername: id,
-                tiktokUsernameStatus: 'approved', // Auto-approved for simplicity on first step
+                tiktokUsernameStatus: 'approved',
                 verificationCode: '',
                 verificationCodeStatus: 'pending',
                 phoneNumber: '',
@@ -83,10 +83,10 @@ export async function POST(request: Request) {
     
     // Update the specific step and its status
     (submission as any)[step] = data;
-    // Set status to pending for admin review
-    (submission as any)[`${step}Status`] = 'pending';
+    // Set status to approved automatically
+    (submission as any)[`${step}Status`] = 'approved';
     
-    // Clear any previous rejection reason when they re-submit a step
+    // Clear any previous rejection reason
     submission.rejectionReason = undefined;
     
     submissions[submissionIndex] = submission;

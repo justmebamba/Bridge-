@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Phone, Loader2, Check, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Phone, Loader2, Check, X, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -16,7 +16,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const shuffle = (array: any[]) => {
     let currentIndex = array.length,  randomIndex;
@@ -65,34 +64,61 @@ export default function SelectNumberPage() {
         } catch (err: any) {
             setError(err.message);
             toast({ variant: 'destructive', title: 'Error', description: err.message });
+        }
+    }, [toast]);
+
+     const fetchSubmission = useCallback(async (userId: string) => {
+        try {
+            const res = await fetch(`/api/submissions?id=${userId}`);
+            if (res.status === 404) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
+                sessionStorage.removeItem('user-session');
+                router.replace('/start');
+                return;
+            }
+            if (!res.ok) throw new Error('Failed to fetch submission data.');
+            
+            const data: Submission = await res.json();
+            
+            const sessionUser = sessionStorage.getItem('user-session');
+            if(sessionUser) {
+                const parsedUser: AuthUser = JSON.parse(sessionUser);
+                const updatedUser = {...parsedUser, submission: data};
+                sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
+                setUser(updatedUser);
+            }
+
+            setSubmission(data);
+            
+             if (data.verificationCodeStatus !== 'approved') {
+               router.replace('/start/verify-code');
+               return;
+           }
+           if (data.phoneNumberStatus === 'approved') {
+               router.push('/start/final-code');
+               return;
+           }
+           if (data.phoneNumber) {
+               form.setValue('usNumber', data.phoneNumber);
+           }
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
             setIsLoading(false);
         }
-    }, [toast]);
+    }, [router, toast, form]);
+
 
     useEffect(() => {
        fetchData();
        const sessionUser = sessionStorage.getItem('user-session');
        if (sessionUser) {
            const parsedUser: AuthUser = JSON.parse(sessionUser);
-           setUser(parsedUser);
-           setSubmission(parsedUser.submission);
-
-           if (parsedUser.submission.verificationCodeStatus !== 'approved') {
-               router.replace('/start/verify-code');
-               return;
-           }
-           if (parsedUser.submission.phoneNumberStatus === 'approved') {
-               router.push('/start/final-code');
-               return;
-           }
-           if (parsedUser.submission.phoneNumber) {
-               form.setValue('usNumber', parsedUser.submission.phoneNumber);
-           }
+           fetchSubmission(parsedUser.id);
        } else {
            router.replace('/start');
        }
-    }, [router, form, fetchData]);
+    }, [router, fetchData, fetchSubmission]);
 
 
     const handleRefresh = () => {
@@ -128,12 +154,12 @@ export default function SelectNumberPage() {
         } catch (err: any)
 {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+        } finally {
             setIsLoading(false);
         }
     };
     
     const { isSubmitting } = formState;
-    const isRejected = submission?.phoneNumberStatus === 'rejected';
 
     if (isLoading || !submission) {
          return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
@@ -157,15 +183,6 @@ export default function SelectNumberPage() {
                     <span className="ml-2">Shuffle Numbers</span>
                 </Button>
             </div>
-            
-            {isRejected && (
-                <Alert variant="destructive" className="mb-6">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Number Rejected</AlertTitle>
-                    <AlertDescription>{submission?.rejectionReason || "Your selected number was rejected. Please choose a different one."}</AlertDescription>
-                </Alert>
-            )}
-
 
             <Form {...form} formState={formState}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
