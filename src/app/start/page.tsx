@@ -24,7 +24,6 @@ type FormValues = z.infer<typeof formSchema>;
 export default function StartPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const form = useForm<FormValues>({
@@ -39,7 +38,6 @@ export default function StartPage() {
     const storedUser = sessionStorage.getItem('user-session');
     if (storedUser) {
         const parsedUser: AuthUser = JSON.parse(storedUser);
-        setUser(parsedUser);
         const submission = parsedUser.submission;
 
         if (submission.finalCodeStatus === 'approved') {
@@ -50,13 +48,15 @@ export default function StartPage() {
             router.replace('/start/select-number');
         } else if (submission.tiktokUsernameStatus === 'approved') {
             router.replace('/start/verify-code');
+        } else {
+             setIsLoading(false);
         }
+    } else {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   }, [router]);
 
   const onSubmit = async (values: FormValues) => {
-    setIsLoading(true);
     try {
         const id = values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername;
         
@@ -83,14 +83,12 @@ export default function StartPage() {
         title: 'An Error Occurred',
         description: error instanceof Error ? error.message : 'An unexpected error occurred.',
       });
-    } finally {
-        setIsLoading(false);
     }
   };
 
   const { isSubmitting } = form.formState;
 
-  if (isLoading || user) {
+  if (isLoading) {
      return (
          <div className="w-full max-w-lg text-center">
             <Loader isFadingOut={false} />
@@ -128,8 +126,8 @@ export default function StartPage() {
                     />
                 </div>
                 <div className="flex flex-col gap-4">
-                    <Button type="submit" disabled={isSubmitting || isLoading} className="w-full">
-                    {(isSubmitting || isLoading) ? <Loader2 className="animate-spin" /> : 'Continue'}
+                    <Button type="submit" disabled={isSubmitting} className="w-full">
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : 'Continue'}
                     <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>

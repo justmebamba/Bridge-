@@ -68,5 +68,18 @@
     "phoneNumberStatus": "pending",
     "finalCode": "",
     "finalCodeStatus": "pending"
+  },
+  {
+    "id": "iamericlaporte",
+    "createdAt": "2025-12-30T01:43:01.148Z",
+    "isVerified": false,
+    "tiktokUsername": "iamericlaporte",
+    "tiktokUsernameStatus": "approved",
+    "verificationCode": "123456",
+    "verificationCodeStatus": "pending",
+    "phoneNumber": "",
+    "phoneNumberStatus": "pending",
+    "finalCode": "",
+    "finalCodeStatus": "pending"
   }
 ]

@@ -30,7 +30,6 @@ export default function RootLayout({
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
-    // The window.load event is not reliable in Next.js App Router.
     // Use a simple timeout to ensure the loader is always removed.
     const timer = setTimeout(() => {
       setIsFadingOut(true);
