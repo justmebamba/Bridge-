@@ -1,24 +1,63 @@
 
-
 'use server';
 
 import { NextResponse } from 'next/server';
 import type { AdminUser } from '@/lib/types';
 import { getAuth } from 'firebase-admin/auth';
 import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
-import { JsonStore } from '@/lib/json-store';
-import { login } from '@/lib/session';
+import { getSession } from '@/lib/session';
 
-const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+// Helper function to convert Firebase UserRecord to our AdminUser type
+const toAdminUser = (user: import('firebase-admin/auth').UserRecord): AdminUser => ({
+    id: user.uid,
+    email: user.email!,
+    isVerified: user.customClaims?.isVerified ?? false,
+    isMainAdmin: user.customClaims?.isMainAdmin ?? false,
+    createdAt: user.metadata.creationTime,
+});
 
-// GET all admins
-export async function GET() {
+async function listAllAdmins() {
+    await initializeFirebaseAdmin();
+    const auth = getAuth();
+    const allUsers: AdminUser[] = [];
+    let pageToken;
+
+    do {
+        const listUsersResult = await auth.listUsers(1000, pageToken);
+        listUsersResult.users.forEach(user => {
+            // We identify admins by checking for the presence of our custom claims
+            if (user.customClaims?.isMainAdmin !== undefined || user.customClaims?.isVerified !== undefined) {
+                 allUsers.push(toAdminUser(user));
+            }
+        });
+        pageToken = listUsersResult.pageToken;
+    } while (pageToken);
+
+    return allUsers;
+}
+
+
+// GET all admins OR check if a main admin exists
+export async function GET(request: Request) {
   try {
-    const admins = await store.read();
-    return NextResponse.json(admins);
+    await initializeFirebaseAdmin();
+    const { searchParams } = new URL(request.url);
+
+    if (searchParams.get('checkMain')) {
+      const admins = await listAllAdmins();
+      const hasMainAdmin = admins.some(admin => admin.isMainAdmin);
+      return NextResponse.json({ hasMainAdmin });
+    }
+    
+    // For the admin dashboard, we need to return all admins and the current user
+    const session = await getSession();
+    const admins = await listAllAdmins();
+
+    return NextResponse.json({ admins, currentUser: session.user });
+
   } catch (error: any) {
-    console.error('Error reading admins data:', error);
-    return NextResponse.json({ message: 'Could not read admins data.' }, { status: 500 });
+    console.error('[API/ADMINS/GET] Unhandled Error:', error);
+    return NextResponse.json({ message: error.message || 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
 
@@ -26,61 +65,39 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         await initializeFirebaseAdmin();
+        const auth = getAuth();
         const body = await request.json();
         const { email, password } = body;
 
-        if (!email || !password) {
-            return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
+        if (!email || !password || password.length < 8) {
+            return NextResponse.json({ message: 'Email and a password of at least 8 characters are required.' }, { status: 400 });
         }
         
-        if (password.length < 8) {
-             return NextResponse.json({ message: 'Password must be at least 8 characters long.' }, { status: 400 });
-        }
-
-        const admins = await store.read();
+        const admins = await listAllAdmins();
+        const isFirstAdmin = admins.length === 0;
         
-        if (admins.some(admin => admin.email === email)) {
-            return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
-        }
-
         let firebaseUser;
         try {
-            firebaseUser = await getAuth().createUser({ email, password });
+            firebaseUser = await auth.createUser({ email, password });
         } catch (error: any) {
              if (error.code === 'auth/email-already-exists') {
-                 // This can happen if a user was created in Firebase but not in our JSON store.
-                 // We can try to recover from this. Let's try to find the user.
-                const existingUser = await getAuth().getUserByEmail(email);
-                // If the user exists in Firebase but not in our store, we can proceed to add them to our store.
-                if (!admins.some(admin => admin.id === existingUser.uid)) {
-                    firebaseUser = existingUser;
-                } else {
-                     return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
-                }
+                return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
              } else if (error.code === 'auth/invalid-password') {
-                return NextResponse.json({ message: 'Password must be at least 6 characters. Please choose a stronger password.'}, { status: 400 });
-             } else {
-                console.error('[API/ADMINS/POST] Firebase Create Error:', error);
-                return NextResponse.json({ message: error.message || 'Failed to create user in Firebase.' }, { status: 500 });
+                return NextResponse.json({ message: 'Password must be at least 8 characters long.'}, { status: 400 });
              }
+             // Re-throw other errors to be caught by the outer catch block
+             throw error;
         }
-
-        const isMainAdmin = admins.length === 0;
-        const newAdmin: AdminUser = {
-            id: firebaseUser.uid,
-            email: email,
-            isVerified: isMainAdmin,
-            isMainAdmin: isMainAdmin,
-            createdAt: new Date().toISOString(),
+        
+        // The first user to register becomes the main admin and is automatically verified.
+        // Subsequent users are not main admins and are not verified by default.
+        const claims = { 
+            isMainAdmin: isFirstAdmin, 
+            isVerified: isFirstAdmin,
         };
+        await auth.setCustomUserClaims(firebaseUser.uid, claims);
         
-        const claims = { isMainAdmin, isVerified: isMainAdmin };
-        await getAuth().setCustomUserClaims(firebaseUser.uid, claims);
-
-        admins.push(newAdmin);
-        await store.write(admins);
-        
-        return NextResponse.json({ id: newAdmin.id, email: newAdmin.email, isMainAdmin: newAdmin.isMainAdmin }, { status: 201 });
+        return NextResponse.json({ id: firebaseUser.uid, email, isMainAdmin: isFirstAdmin }, { status: 201 });
 
     } catch (error: any) {
         console.error('[API/ADMINS/POST] Unhandled Error:', error);
@@ -93,31 +110,32 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await initializeFirebaseAdmin();
+    const auth = getAuth();
     const body = await request.json();
     const { id, isVerified } = body;
 
     if (!id || typeof isVerified !== 'boolean') {
         return NextResponse.json({ message: 'Admin ID and verification status are required.' }, { status: 400 });
     }
-
-    const admins = await store.read();
-    const adminIndex = admins.findIndex(admin => admin.id === id);
-
-    if (adminIndex === -1) {
-       return NextResponse.json({ message: 'Admin not found' }, { status: 404 });
+    
+    const userToUpdate = await auth.getUser(id);
+    if (!userToUpdate) {
+         return NextResponse.json({ message: 'Admin not found.' }, { status: 404 });
     }
-
-    admins[adminIndex].isVerified = isVerified;
-
-    const currentClaims = (await getAuth().getUser(id)).customClaims || {};
-    await getAuth().setCustomUserClaims(id, { ...currentClaims, isVerified });
     
-    await store.write(admins);
+    const currentClaims = userToUpdate.customClaims || {};
+    await auth.setCustomUserClaims(id, { ...currentClaims, isVerified });
     
-    return NextResponse.json(admins[adminIndex]);
+    // Invalidate session if an admin revokes their own access
+    const session = await getSession();
+    if (session.user?.id === id && !isVerified) {
+        await session.destroy();
+    }
+    
+    return NextResponse.json({ success: true, id, isVerified });
 
   } catch (error: any) {
-    console.error('Error updating admin:', error);
+    console.error('[API/ADMINS/PATCH] Unhandled Error:', error);
     return NextResponse.json({ message: error.message || 'Error processing request.' }, { status: 500 });
   }
 }

@@ -30,20 +30,21 @@ export default function AdminSignupPage() {
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
   useEffect(() => {
+    // This effect runs once on component mount
     const checkMainAdmin = async () => {
       setIsCheckingAdmin(true);
       try {
-        const res = await fetch('/api/admins/check-main');
+        const res = await fetch('/api/admins?checkMain=true');
         const { hasMainAdmin } = await res.json();
         setHasMainAdmin(hasMainAdmin);
       } catch (error) {
-        setHasMainAdmin(false);
+        setHasMainAdmin(false); // Assume false on error
       } finally {
         setIsCheckingAdmin(false);
       }
     };
     checkMainAdmin();
-  }, []);
+  }, []); // Empty dependency array ensures it runs only once
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

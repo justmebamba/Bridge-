@@ -37,10 +37,9 @@ export default function AdminPage() {
         setIsLoadingData(true);
         setError(null);
         try {
-             const [submissionsRes, adminsRes, currentUserRes] = await Promise.all([
+             const [submissionsRes, adminsRes] = await Promise.all([
                 fetch('/api/submissions'),
                 fetch('/api/admins'),
-                fetch('/api/auth/session-user'), // New endpoint to get current user
             ]);
             
             if (!submissionsRes.ok) {
@@ -51,17 +50,13 @@ export default function AdminPage() {
                 const adminsError = await adminsRes.json();
                 throw new Error(adminsError.message || 'Failed to fetch admins');
             }
-             if (!currentUserRes.ok) {
-                throw new Error('Failed to fetch current user data.');
-            }
-
+            
             const submissionsData = await submissionsRes.json();
-            const adminsData = await adminsRes.json();
-            const currentUserData = await currentUserRes.json();
+            const { admins: adminsData, currentUser: currentUserData } = await adminsRes.json();
 
             setSubmissions(submissionsData);
             setAdmins(adminsData);
-            setCurrentUser(currentUserData.user);
+            setCurrentUser(currentUserData);
 
         } catch (err: any) {
             setError(err.message);
