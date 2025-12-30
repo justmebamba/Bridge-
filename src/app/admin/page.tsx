@@ -31,6 +31,7 @@ export default function AdminPage() {
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoadingData(true);
@@ -68,18 +69,12 @@ export default function AdminPage() {
             setIsLoadingData(false);
         }
     }, []);
-    
-    const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
     const isMainAdmin = currentUser?.isMainAdmin === true;
-
-    const mutateAll = () => {
-        fetchData();
-    };
 
     const handleSubmissionStepApproval = async (id: string, step: Step, status: 'approved' | 'rejected') => {
         setUpdatingId(`${id}-${step}`);
@@ -91,7 +86,7 @@ export default function AdminPage() {
             });
 
             if (!res.ok) throw new Error(`Failed to update ${step}.`);
-            mutateAll();
+            fetchData();
         } catch (error) {
             console.error(`Failed to update ${step}`, error);
         } finally {
@@ -109,7 +104,7 @@ export default function AdminPage() {
             });
 
             if (!res.ok) throw new Error('Failed to update admin.');
-            mutateAll();
+            fetchData();
         } catch (error) {
             console.error('Failed to update admin', error);
         } finally {
@@ -178,7 +173,7 @@ export default function AdminPage() {
                         <TabsTrigger value="submissions">User Submissions</TabsTrigger>
                         <TabsTrigger value="admins">Admin Management</TabsTrigger>
                     </TabsList>
-                    <Button onClick={mutateAll} variant="outline" size="icon" disabled={isLoadingData}>
+                    <Button onClick={fetchData} variant="outline" size="icon" disabled={isLoadingData}>
                        <RefreshCw className={cn("h-4 w-4", isLoadingData && "animate-spin")} />
                        <span className="sr-only">Refresh</span>
                     </Button>

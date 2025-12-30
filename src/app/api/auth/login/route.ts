@@ -22,13 +22,24 @@ export async function POST(request: Request) {
         if (!email || !password) {
             return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
         }
-
-        // We use the client SDK on the backend to verify the password.
-        // This is a common pattern to avoid handling passwords directly.
-        // The admin SDK's `verifyIdToken` is for tokens, not passwords.
-        const clientAuth = getAuth(firebaseApp);
-        const userCredential = await signInWithEmailAndPassword(clientAuth, email, password);
-        const firebaseUser = userCredential.user;
+        
+        // This is a workaround to verify passwords since the Admin SDK cannot directly do this.
+        // We MUST wrap this in a try/catch because it will throw on incorrect passwords.
+        try {
+            const clientAuth = getAuth(firebaseApp);
+            await signInWithEmailAndPassword(clientAuth, email, password);
+        } catch (error: any) {
+            // These error codes are from the CLIENT SDK
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
+            }
+            // Catch network or other unexpected client SDK errors
+            console.error('[API/AUTH/LOGIN] Client SDK Error:', error);
+            return NextResponse.json({ message: 'An unexpected error occurred during authentication.' }, { status: 500 });
+        }
+        
+        // If password is correct, now use the Admin SDK to get the full user record and claims
+        const firebaseUser = await getAuth().getUserByEmail(email);
 
         const admins = await store.read();
         const adminUser = admins.find(admin => admin.id === firebaseUser.uid);
@@ -47,9 +58,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: "Login successful" }, { status: 200 });
 
     } catch (error: any) {
-        console.error('[API/AUTH/LOGIN] Error:', error);
-
-        if (error.code?.startsWith('auth/')) {
+        console.error('[API/AUTH/LOGIN] Main Error:', error);
+         // These error codes are from the ADMIN SDK
+        if (error.code === 'auth/user-not-found') {
             return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });
         }
 

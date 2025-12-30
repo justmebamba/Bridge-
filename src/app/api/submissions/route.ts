@@ -83,6 +83,7 @@ export async function POST(request: Request) {
     
     // Update the specific step and its status
     (submission as any)[step] = data;
+    // Set status to pending for admin review
     (submission as any)[`${step}Status`] = 'pending';
     
     // Clear any previous rejection reason when they re-submit a step

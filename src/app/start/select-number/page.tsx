@@ -54,6 +54,7 @@ export default function SelectNumberPage() {
     });
 
     const fetchData = useCallback(async () => {
+        setIsLoading(true);
         setError(null);
         try {
             const pRes = await fetch('/api/phone-numbers');

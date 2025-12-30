@@ -33,7 +33,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
         }
         
-        // Use a more specific check for password length for clearer error messages
         if (password.length < 8) {
              return NextResponse.json({ message: 'Password must be at least 8 characters long.' }, { status: 400 });
         }
@@ -51,9 +50,15 @@ export async function POST(request: Request) {
              if (error.code === 'auth/email-already-exists') {
                  // This can happen if a user was created in Firebase but not in our JSON store.
                  // We can try to recover from this. Let's try to find the user.
-                firebaseUser = await getAuth().getUserByEmail(email);
+                const existingUser = await getAuth().getUserByEmail(email);
+                // If the user exists in Firebase but not in our store, we can proceed to add them to our store.
+                if (!admins.some(admin => admin.id === existingUser.uid)) {
+                    firebaseUser = existingUser;
+                } else {
+                     return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
+                }
              } else if (error.code === 'auth/invalid-password') {
-                return NextResponse.json({ message: error.message || 'Password must be at least 6 characters long.'}, { status: 400 });
+                return NextResponse.json({ message: 'Password must be at least 6 characters. Please choose a stronger password.'}, { status: 400 });
              } else {
                 console.error('[API/ADMINS/POST] Firebase Create Error:', error);
                 return NextResponse.json({ message: error.message || 'Failed to create user in Firebase.' }, { status: 500 });
