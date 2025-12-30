@@ -114,8 +114,8 @@ export default function FinalCodePage() {
             }
 
             setTimeout(() => {
-                toast({ title: 'Application Complete!', description: 'Congratulations, your account is fully bridged.' });
                 router.push('/success');
+                setIsVerifying(false);
             }, 8000);
 
         } catch (err: any) {

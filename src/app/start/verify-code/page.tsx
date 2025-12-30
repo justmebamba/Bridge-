@@ -114,8 +114,8 @@ export default function VerifyCodePage() {
             }
 
             setTimeout(() => {
-                toast({ title: 'Account Verified!', description: 'You can now proceed to the next step.' });
                 router.push('/start/select-number');
+                setIsVerifying(false);
             }, 8000);
 
         } catch (err: any) {
