@@ -9,7 +9,6 @@ import { SiteFooter } from '@/components/layout/site-footer';
 import { usePathname } from 'next/navigation';
 import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
-import { AuthProvider } from '@/hooks/use-auth';
 import { useState, useEffect } from 'react';
 import { Loader } from '@/components/loader';
 
@@ -48,7 +47,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
         {isLoading && <Loader isFadingOut={isFadingOut} />}
-        <AuthProvider>
           <div className="relative flex min-h-dvh flex-col bg-background">
             {!isAdminPage && <SiteHeader />}
             {isHomePage && <TikTokBridgeHero />}
@@ -62,7 +60,6 @@ export default function RootLayout({
             )}
           </div>
           <CookieConsentBanner />
-        </AuthProvider>
         <Toaster />
       </body>
     </html>
