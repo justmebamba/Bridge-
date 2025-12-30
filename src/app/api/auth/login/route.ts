@@ -2,14 +2,12 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
 import { login } from '@/lib/session';
 import type { AdminUser } from '@/lib/types';
 
 export async function POST(request: Request) {
     try {
-        await initializeFirebaseAdmin();
         const body = await request.json();
         const { idToken } = body;
 
@@ -17,13 +15,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'ID token is required.' }, { status: 400 });
         }
         
-        const adminAuth = getAuth();
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         
         const firebaseUser = await adminAuth.getUser(decodedToken.uid);
 
         const claims = firebaseUser.customClaims || {};
 
+        // This claim is set during admin registration. If it's not present, they are not an admin.
         if (claims.isMainAdmin === undefined) {
              return NextResponse.json({ message: 'You are not registered as an admin.' }, { status: 403 });
         }
@@ -51,6 +49,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Invalid or expired session token. Please log in again.' }, { status: 401 });
         }
         
-        return NextResponse.json({ message: error.message || 'An unexpected server error occurred.' }, { status: 500 });
+        return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
     }
 }

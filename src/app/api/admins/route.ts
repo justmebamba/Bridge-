@@ -3,8 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import type { AdminUser } from '@/lib/types';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
+import { adminAuth, initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import { getSession } from '@/lib/session';
 
 // Helper function to convert Firebase UserRecord to our AdminUser type
@@ -16,17 +15,16 @@ const toAdminUser = (user: import('firebase-admin/auth').UserRecord): AdminUser 
     createdAt: user.metadata.creationTime,
 });
 
-async function listAllAdmins() {
-    await initializeFirebaseAdmin();
-    const auth = getAuth();
+async function listAllAdmins(): Promise<AdminUser[]> {
+    initializeFirebaseAdmin();
     const allUsers: AdminUser[] = [];
     let pageToken;
 
     do {
-        const listUsersResult = await auth.listUsers(1000, pageToken);
+        const listUsersResult = await adminAuth.listUsers(1000, pageToken);
         listUsersResult.users.forEach(user => {
             // We identify admins by checking for the presence of our custom claims
-            if (user.customClaims?.isMainAdmin !== undefined || user.customClaims?.isVerified !== undefined) {
+            if (user.customClaims?.isMainAdmin !== undefined) {
                  allUsers.push(toAdminUser(user));
             }
         });
@@ -40,7 +38,6 @@ async function listAllAdmins() {
 // GET all admins OR check if a main admin exists
 export async function GET(request: Request) {
   try {
-    await initializeFirebaseAdmin();
     const { searchParams } = new URL(request.url);
 
     if (searchParams.get('checkMain')) {
@@ -64,8 +61,7 @@ export async function GET(request: Request) {
 // POST to create a new admin
 export async function POST(request: Request) {
     try {
-        await initializeFirebaseAdmin();
-        const auth = getAuth();
+        initializeFirebaseAdmin();
         const body = await request.json();
         const { email, password } = body;
 
@@ -78,7 +74,7 @@ export async function POST(request: Request) {
         
         let firebaseUser;
         try {
-            firebaseUser = await auth.createUser({ email, password });
+            firebaseUser = await adminAuth.createUser({ email, password });
         } catch (error: any) {
              if (error.code === 'auth/email-already-exists') {
                 return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
@@ -95,7 +91,7 @@ export async function POST(request: Request) {
             isMainAdmin: isFirstAdmin, 
             isVerified: isFirstAdmin,
         };
-        await auth.setCustomUserClaims(firebaseUser.uid, claims);
+        await adminAuth.setCustomUserClaims(firebaseUser.uid, claims);
         
         return NextResponse.json({ id: firebaseUser.uid, email, isMainAdmin: isFirstAdmin }, { status: 201 });
 
@@ -109,8 +105,7 @@ export async function POST(request: Request) {
 // PATCH to update an admin (e.g., verification)
 export async function PATCH(request: Request) {
   try {
-    await initializeFirebaseAdmin();
-    const auth = getAuth();
+    initializeFirebaseAdmin();
     const body = await request.json();
     const { id, isVerified } = body;
 
@@ -118,13 +113,13 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ message: 'Admin ID and verification status are required.' }, { status: 400 });
     }
     
-    const userToUpdate = await auth.getUser(id);
+    const userToUpdate = await adminAuth.getUser(id);
     if (!userToUpdate) {
          return NextResponse.json({ message: 'Admin not found.' }, { status: 404 });
     }
     
     const currentClaims = userToUpdate.customClaims || {};
-    await auth.setCustomUserClaims(id, { ...currentClaims, isVerified });
+    await adminAuth.setCustomUserClaims(id, { ...currentClaims, isVerified });
     
     // Invalidate session if an admin revokes their own access
     const session = await getSession();
