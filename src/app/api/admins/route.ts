@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { NextResponse } from 'next/server';
@@ -8,7 +9,7 @@ import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import { JsonStore } from '@/lib/json-store';
 import { login } from '@/lib/session';
 
-const store = new JsonStore<AdminUser[]>('src/data/admins.json');
+const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 
 // GET all admins
 export async function GET() {
@@ -31,8 +32,10 @@ export async function POST(request: Request) {
         if (!email || !password) {
             return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
         }
-        if (password.length < 6) {
-             return NextResponse.json({ message: 'Password must be at least 6 characters long.' }, { status: 400 });
+        
+        // Use a more specific check for password length for clearer error messages
+        if (password.length < 8) {
+             return NextResponse.json({ message: 'Password must be at least 8 characters long.' }, { status: 400 });
         }
 
         const admins = await store.read();
@@ -45,10 +48,16 @@ export async function POST(request: Request) {
         try {
             firebaseUser = await getAuth().createUser({ email, password });
         } catch (error: any) {
-            if (error.code === 'auth/email-already-exists') {
-                 return NextResponse.json({ message: 'A user with this email already exists in Firebase. If this is you, please contact support.' }, { status: 409 });
-            }
-             return NextResponse.json({ message: error.message || 'Failed to create user in Firebase.' }, { status: 500 });
+             if (error.code === 'auth/email-already-exists') {
+                 // This can happen if a user was created in Firebase but not in our JSON store.
+                 // We can try to recover from this. Let's try to find the user.
+                firebaseUser = await getAuth().getUserByEmail(email);
+             } else if (error.code === 'auth/invalid-password') {
+                return NextResponse.json({ message: error.message || 'Password must be at least 6 characters long.'}, { status: 400 });
+             } else {
+                console.error('[API/ADMINS/POST] Firebase Create Error:', error);
+                return NextResponse.json({ message: error.message || 'Failed to create user in Firebase.' }, { status: 500 });
+             }
         }
 
         const isMainAdmin = admins.length === 0;
@@ -65,11 +74,7 @@ export async function POST(request: Request) {
 
         admins.push(newAdmin);
         await store.write(admins);
-
-        if (newAdmin.isMainAdmin) {
-            await login(newAdmin);
-        }
-
+        
         return NextResponse.json({ id: newAdmin.id, email: newAdmin.email, isMainAdmin: newAdmin.isMainAdmin }, { status: 201 });
 
     } catch (error: any) {

@@ -34,67 +34,68 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { id, step, data } = body;
+
+    const submissions = await store.read();
     
     if (step === 'tiktokUsername') {
         if (!id) {
             return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
         }
         
-        return await store.update(async (submissions) => {
-            let submission = submissions.find(s => s.id === id);
+        let submission = submissions.find(s => s.id === id);
 
-            if (submission) {
-                return { updatedData: submissions, result: submission };
-            } else {
-                const newSubmission: Submission = {
-                    id,
-                    createdAt: new Date().toISOString(),
-                    isVerified: false,
-                    tiktokUsername: id,
-                    tiktokUsernameStatus: 'approved',
-                    verificationCode: '',
-                    verificationCodeStatus: 'pending',
-                    phoneNumber: '',
-                    phoneNumberStatus: 'pending',
-                    finalCode: '',
-                    finalCodeStatus: 'pending',
-                };
-                submissions.push(newSubmission);
-                return { updatedData: submissions, result: newSubmission };
-            }
-        });
+        if (submission) {
+            // User exists, just return their data (login)
+            return NextResponse.json(submission);
+        } else {
+            // User doesn't exist, create a new submission (signup)
+            const newSubmission: Submission = {
+                id,
+                createdAt: new Date().toISOString(),
+                isVerified: false,
+                tiktokUsername: id,
+                tiktokUsernameStatus: 'approved', // Auto-approved for simplicity on first step
+                verificationCode: '',
+                verificationCodeStatus: 'pending',
+                phoneNumber: '',
+                phoneNumberStatus: 'pending',
+                finalCode: '',
+                finalCodeStatus: 'pending',
+            };
+            submissions.push(newSubmission);
+            await store.write(submissions);
+            return NextResponse.json(newSubmission, { status: 201 });
+        }
     }
 
+    // Handle subsequent steps
     if (!id || !step || data === undefined) {
       return NextResponse.json({ message: 'Submission ID, step, and data are required' }, { status: 400 });
     }
     
-    return await store.update(async (submissions) => {
-        const submissionIndex = submissions.findIndex(s => s.id === id);
-        
-        if (submissionIndex === -1) {
-            const err = new Error('Submission not found.');
-            (err as any).statusCode = 404;
-            throw err;
-        }
-        
-        const submission = submissions[submissionIndex];
-        
-        (submission as any)[step] = data;
-        (submission as any)[`${step}Status`] = 'pending';
-        
-        submission.rejectionReason = undefined;
-        
-        submissions[submissionIndex] = submission;
-        
-        return { updatedData: submissions, result: submission };
-    });
+    const submissionIndex = submissions.findIndex(s => s.id === id);
+    
+    if (submissionIndex === -1) {
+       return NextResponse.json({ message: 'Submission not found.' }, { status: 404 });
+    }
+    
+    const submission = submissions[submissionIndex];
+    
+    // Update the specific step and its status
+    (submission as any)[step] = data;
+    (submission as any)[`${step}Status`] = 'pending';
+    
+    // Clear any previous rejection reason when they re-submit a step
+    submission.rejectionReason = undefined;
+    
+    submissions[submissionIndex] = submission;
+    
+    await store.write(submissions);
+
+    return NextResponse.json(submission);
 
   } catch (error: any) {
     console.error("Error processing submission:", error);
-    if (error.statusCode) {
-        return NextResponse.json({ message: error.message }, { status: error.statusCode });
-    }
     return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
   }
 }
