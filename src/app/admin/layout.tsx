@@ -1,8 +1,8 @@
+
 import { getSession } from '@/lib/session';
-import { redirect, usePathname } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
-import { Loader } from '@/components/loader';
 import { headers } from 'next/headers';
 
 export default async function AdminLayout({
@@ -14,23 +14,24 @@ export default async function AdminLayout({
     const pathname = headers().get('next-url') || '';
 
     const isAuthPage = pathname === '/admin/login' || pathname === '/admin/signup';
+    const isLoggedInAndVerified = session.isLoggedIn && session.user?.isVerified;
 
-    // If on a protected page and not logged in or not verified, redirect to login
-    if (!isAuthPage && (!session.isLoggedIn || !session.user?.isVerified)) {
+    // If on a protected page and not logged in/verified, redirect to login.
+    if (!isAuthPage && !isLoggedInAndVerified) {
         redirect('/admin/login');
     }
     
-    // If on an auth page but already logged in and verified, redirect to dashboard
-    if (isAuthPage && session.isLoggedIn && session.user?.isVerified) {
+    // If on an auth page but already logged in and verified, redirect to dashboard.
+    if (isAuthPage && isLoggedInAndVerified) {
         redirect('/admin');
     }
 
-    // For login/signup pages, just render the children without the sidebar layout
+    // For login/signup pages, just render the children without the sidebar layout.
     if (isAuthPage) {
         return <>{children}</>;
     }
     
-    // For protected pages, render the full admin dashboard layout
+    // For protected pages, render the full admin dashboard layout.
     return (
         <SidebarProvider>
             <Sidebar>
