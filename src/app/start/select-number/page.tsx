@@ -14,10 +14,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const shuffle = (array: any[]) => {
+    if (!Array.isArray(array)) return [];
     let currentIndex = array.length,  randomIndex;
     while (currentIndex !== 0) {
         randomIndex = Math.floor(Math.random() * currentIndex);
@@ -47,7 +48,7 @@ export default function SelectNumberPage() {
     
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
-    const { formState, ...form } = useForm<FormValues>({
+    const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { usNumber: "" },
     });
@@ -114,7 +115,11 @@ export default function SelectNumberPage() {
        const sessionUser = sessionStorage.getItem('user-session');
        if (sessionUser) {
            const parsedUser: AuthUser = JSON.parse(sessionUser);
-           fetchSubmission(parsedUser.id);
+            if (parsedUser.id) {
+               fetchSubmission(parsedUser.id);
+            } else {
+                router.replace('/start');
+            }
        } else {
            router.replace('/start');
        }
@@ -159,7 +164,7 @@ export default function SelectNumberPage() {
         }
     };
     
-    const { isSubmitting } = formState;
+    const { isSubmitting } = form.formState;
 
     if (isLoading || !submission) {
          return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
@@ -184,7 +189,7 @@ export default function SelectNumberPage() {
                 </Button>
             </div>
 
-            <Form {...form} formState={formState}>
+            <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}

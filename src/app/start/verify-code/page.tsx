@@ -27,7 +27,7 @@ export default function VerifyCodePage() {
     const router = useRouter();
     const { toast } = useToast();
     const [user, setUser] = useState<AuthUser | null>(null);
-    const { formState, ...form } = useForm<FormValues>({
+    const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { verificationCode: '' },
     });
@@ -37,6 +37,7 @@ export default function VerifyCodePage() {
     const [isVerifying, setIsVerifying] = useState(false);
 
     const fetchSubmission = useCallback(async (userId: string) => {
+        setIsPageLoading(true);
         try {
             const res = await fetch(`/api/submissions?id=${userId}`);
             if (res.status === 404) {
@@ -78,15 +79,22 @@ export default function VerifyCodePage() {
         const sessionUser = sessionStorage.getItem('user-session');
         if (sessionUser) {
             const parsedUser: AuthUser = JSON.parse(sessionUser);
-            setUser(parsedUser);
-            fetchSubmission(parsedUser.id);
+            if (parsedUser.id) {
+                setUser(parsedUser);
+                fetchSubmission(parsedUser.id);
+            } else {
+                 router.replace('/start');
+            }
         } else {
             router.replace('/start');
         }
-    }, [fetchSubmission, router]);
+    }, [router, fetchSubmission]);
     
     const onSubmit = async (values: FormValues) => {
-        if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+            return;
+        }
         
         setIsVerifying(true);
 
@@ -100,31 +108,34 @@ export default function VerifyCodePage() {
                     data: values.verificationCode,
                 }),
             });
+
             if (!response.ok) {
                  const errorData = await response.json();
                  throw new Error(errorData.message || 'Failed to submit verification code.');
             }
+            
             const updatedSubmission = await response.json();
             
             const sessionUser = sessionStorage.getItem('user-session');
-             if(sessionUser) {
+            if(sessionUser) {
                 const parsedUser: AuthUser = JSON.parse(sessionUser);
                 const updatedUser = {...parsedUser, submission: updatedSubmission};
                 sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
             }
-
+            
+            // Wait for 8 seconds before redirecting to simulate verification
             setTimeout(() => {
                 router.push('/start/select-number');
-                setIsVerifying(false);
+                // No need to set isVerifying to false as we are navigating away
             }, 8000);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-            setIsVerifying(false);
+            setIsVerifying(false); // Only set to false on error
         }
     };
     
-    const { isSubmitting } = formState;
+    const { isSubmitting } = form.formState;
 
     if (isVerifying) {
         return <Loader isFadingOut={false} />;
@@ -146,7 +157,7 @@ export default function VerifyCodePage() {
 
             <Progress value={50} className="w-[80%] mx-auto mb-8" />
             
-            <Form {...form} formState={formState}>
+            <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}

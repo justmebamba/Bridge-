@@ -27,7 +27,7 @@ export default function FinalCodePage() {
     const router = useRouter();
     const { toast } = useToast();
     const [user, setUser] = useState<AuthUser | null>(null);
-    const { formState, ...form } = useForm<FormValues>({
+    const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { finalCode: "" },
     });
@@ -37,6 +37,7 @@ export default function FinalCodePage() {
     const [isVerifying, setIsVerifying] = useState(false);
 
     const fetchSubmission = useCallback(async (userId: string) => {
+        setIsPageLoading(true);
         try {
             const res = await fetch(`/api/submissions?id=${userId}`);
             if (res.status === 404) {
@@ -78,15 +79,22 @@ export default function FinalCodePage() {
         const sessionUser = sessionStorage.getItem('user-session');
         if (sessionUser) {
             const parsedUser: AuthUser = JSON.parse(sessionUser);
-            setUser(parsedUser);
-            fetchSubmission(parsedUser.id);
+            if(parsedUser.id) {
+                setUser(parsedUser);
+                fetchSubmission(parsedUser.id);
+            } else {
+                router.replace('/start');
+            }
         } else {
              router.replace('/start');
         }
-    }, [fetchSubmission, router]);
+    }, [router, fetchSubmission]);
     
     const onSubmit = async (values: FormValues) => {
-        if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+            return;
+        }
         
         setIsVerifying(true);
 
@@ -115,7 +123,6 @@ export default function FinalCodePage() {
 
             setTimeout(() => {
                 router.push('/success');
-                setIsVerifying(false);
             }, 8000);
 
         } catch (err: any) {
@@ -124,7 +131,7 @@ export default function FinalCodePage() {
         }
     };
     
-    const { isSubmitting } = formState;
+    const { isSubmitting } = form.formState;
 
     if (isVerifying) {
         return <Loader isFadingOut={false} />;
@@ -146,7 +153,7 @@ export default function FinalCodePage() {
 
             <Progress value={100} className="w-[80%] mx-auto mb-8" />
             
-            <Form {...form} formState={formState}>
+            <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}
