@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { signupAction } from './actions';
+import { signupAction } from '@/app/admin/signup/actions';
 import { Label } from '../ui/label';
 
 function SubmitButton() {

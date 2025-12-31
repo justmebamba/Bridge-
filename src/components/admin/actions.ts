@@ -1,119 +1,14 @@
-
 'use server';
 
-import { z } from 'zod';
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { hash, compare } from 'bcryptjs';
 
-import { login, getSession } from '@/lib/session';
+import { getSession } from '@/lib/session';
 import { JsonStore } from '@/lib/json-store';
 import type { AdminUser, Submission } from '@/lib/types';
 
 const adminStore = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
 
-const submissionStore = new JsonStore<Submission[]>(
-  'src/data/submissions.json',
-  []
-);
-
-const signupSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
-});
-
-export async function signupAction(hasMainAdmin: boolean, prevState: any, formData: FormData) {
-  const validatedFields = signupSchema.safeParse(
-    Object.fromEntries(formData.entries())
-  );
-
-  if (!validatedFields.success) {
-    return {
-      type: 'error',
-      message: 'Invalid form data.',
-      errors: validatedFields.error.flatten().fieldErrors,
-    };
-  }
-
-  const { email, password } = validatedFields.data;
-
-  try {
-    const admins = await adminStore.read();
-    const existingAdmin = admins.find((admin) => admin.email === email);
-    if (existingAdmin) {
-      return { type: 'error', message: 'An admin with this email already exists.' };
-    }
-
-    const passwordHash = await hash(password, 10);
-
-    const newAdmin: AdminUser = {
-      id: new Date().getTime().toString(),
-      email,
-      passwordHash,
-      isMainAdmin: !hasMainAdmin,
-      isVerified: !hasMainAdmin,
-      createdAt: new Date().toISOString(),
-    };
-
-    admins.push(newAdmin);
-    await adminStore.write(admins);
-
-  } catch (error) {
-    console.error('[signupAction Error]', error);
-    return { type: 'error', message: 'An unexpected server error occurred.' };
-  }
-  
-  return { type: 'success', message: 'Registration successful!' };
-}
-
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1, 'Password is required.'),
-});
-
-export async function loginAction(prevState: any, formData: FormData) {
-    const validatedFields = loginSchema.safeParse(
-        Object.fromEntries(formData.entries())
-    );
-
-    if (!validatedFields.success) {
-        return {
-            type: 'error',
-            message: "Invalid form data."
-        }
-    }
-
-    const { email, password } = validatedFields.data;
-    
-    try {
-        const admins = await adminStore.read();
-        const admin = admins.find(a => a.email === email);
-
-        if (!admin) {
-             return { type: 'error', message: 'Invalid email or password.' };
-        }
-
-        const isPasswordValid = await compare(password, admin.passwordHash);
-
-        if (!isPasswordValid) {
-            return { type: 'error', message: 'Invalid email or password.' };
-        }
-        
-        if (!admin.isVerified) {
-            return { type: 'error', message: 'Your admin account is pending approval.' };
-        }
-        
-        const { passwordHash, ...sessionUser } = admin;
-        await login(sessionUser);
-
-    } catch (error) {
-        console.error('[loginAction Error]', error);
-        return { type: 'error', message: 'An unexpected server error occurred.' };
-    }
-    
-    redirect('/admin');
-}
 
 export async function approveAdminAction(adminId: string, isVerified: boolean) {
     const session = await getSession();
