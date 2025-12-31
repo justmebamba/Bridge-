@@ -37,11 +37,11 @@
     "tiktokUsername": "billyuip89",
     "tiktokUsernameStatus": "approved",
     "verificationCode": "123456",
-    "verificationCodeStatus": "pending",
-    "phoneNumber": "",
-    "phoneNumberStatus": "pending",
-    "finalCode": "",
-    "finalCodeStatus": "pending"
+    "verificationCodeStatus": "approved",
+    "phoneNumber": "(313) 555-0118",
+    "phoneNumberStatus": "approved",
+    "finalCode": "123456",
+    "finalCodeStatus": "approved"
   },
   {
     "id": "tammuiorrr",

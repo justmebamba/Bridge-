@@ -16,19 +16,20 @@ export default async function AdminLayout({
     const isAuthPage = pathname === '/admin/login' || pathname === '/admin/signup';
     const isLoggedInAndVerified = session.isLoggedIn && session.user?.isVerified;
 
-    // If on a protected page and not logged in/verified, redirect to login.
-    if (!isAuthPage && !isLoggedInAndVerified) {
-        redirect('/admin/login');
-    }
-    
-    // If on an auth page but already logged in and verified, redirect to dashboard.
-    if (isAuthPage && isLoggedInAndVerified) {
-        redirect('/admin');
-    }
-
     // For login/signup pages, just render the children without the sidebar layout.
     if (isAuthPage) {
+        // If they are already logged in, redirect them away from the auth pages
+        if (isLoggedInAndVerified) {
+            redirect('/admin');
+        }
+        // Otherwise, show the login/signup page.
         return <>{children}</>;
+    }
+    
+    // At this point, we are on a protected page.
+    // If the user is not logged in and verified, redirect them to the login page.
+    if (!isLoggedInAndVerified) {
+        redirect('/admin/login');
     }
     
     // For protected pages, render the full admin dashboard layout.
