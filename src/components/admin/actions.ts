@@ -2,20 +2,20 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getSession } from '@/lib/session';
-import prisma from '@/lib/prisma';
+
+// This function is now client-invokable via a fetch call to the API route
+// but we'll prepare a server action wrapper for simplicity in components.
 
 export async function approveAdminAction(adminId: string, isVerified: boolean) {
-    const session = await getSession();
-    if (!session.user?.isMainAdmin) {
-        throw new Error("Unauthorized: Only main admins can perform this action.");
-    }
-    
-    await prisma.admin.update({
-        where: { id: adminId },
-        data: { isVerified }
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admins`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId, isVerified })
     });
-
+    if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update admin status.");
+    }
     revalidatePath('/admin');
 }
 
@@ -24,17 +24,15 @@ export async function updateSubmissionStatusAction(
   step: 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode',
   status: 'approved' | 'rejected'
 ) {
-  const session = await getSession();
-  if (!session.user?.isVerified) {
-      throw new Error("Unauthorized: Only verified admins can perform this action.");
-  }
-  
-  await prisma.submission.update({
-      where: { id },
-      data: {
-          [`${step}Status`]: status,
-      }
-  });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/submissions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId: id, step, status })
+    });
 
+    if (!res.ok) {
+         const error = await res.json();
+        throw new Error(error.message || "Failed to update submission status.");
+    }
   revalidatePath('/admin');
 }

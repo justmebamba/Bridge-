@@ -11,7 +11,6 @@ export interface Submission {
   finalCodeStatus: 'pending' | 'approved' | 'rejected';
   isVerified: boolean; // Final approval status
   createdAt: string | Date;
-  rejectionReason?: string | null; // Reason for the last rejection
 }
 
 export interface PhoneNumber {
@@ -28,7 +27,6 @@ export interface PhoneNumber {
 export interface AdminUser {
   id: string;
   email: string;
-  passwordHash: string; // Store hashed password instead of plain text
   isVerified: boolean;
   isMainAdmin: boolean;
   createdAt: string | Date;

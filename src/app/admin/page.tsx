@@ -1,42 +1,17 @@
 
 import type { AdminUser, Submission } from '@/lib/types';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
-import prisma from '@/lib/prisma';
+import { getAdmins, getSubmissions } from '@/lib/data-access';
 
-// Server-side data fetching functions
-async function getSubmissions(): Promise<Submission[]> {
-    const submissions = await prisma.submission.findMany({
-        orderBy: {
-            createdAt: 'desc',
-        },
-    });
-    // Ensure createdAt is a string for serialization
-    return submissions.map(s => ({...s, createdAt: s.createdAt.toISOString()}));
-}
-
-async function getAdmins(): Promise<Omit<AdminUser, 'passwordHash'>[]> {
-    const admins = await prisma.admin.findMany({
-        select: {
-            id: true,
-            email: true,
-            isMainAdmin: true,
-            isVerified: true,
-            createdAt: true,
-        }
-    });
-     // Ensure createdAt is a string for serialization
-    return admins.map(a => ({...a, createdAt: a.createdAt.toISOString()}));
-}
 
 export default async function AdminPage() {
-    // Fetch all data on the server
+    // Fetch all data on the server from JSON files
     const [submissions, admins] = await Promise.all([
         getSubmissions(),
         getAdmins()
     ]);
     
-    // For now, we'll mock a "current user" since there is no login.
-    // We'll assume the person accessing this is the main admin.
+    // Since there's no login, we'll find the main admin from the data
     const currentUser = admins.find(a => a.isMainAdmin) || admins[0] || null;
     const isMainAdmin = !!currentUser?.isMainAdmin;
 

@@ -2,10 +2,12 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { JsonStore } from '@/lib/json-store';
 import type { Submission } from '@/lib/types';
 
-// This GET handler is for client-side fetching of a single submission's status.
+const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
+
+// GET handler for client-side fetching of a single submission's status.
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
@@ -15,7 +17,8 @@ export async function GET(request: Request) {
     }
     
     try {
-        const submission = await prisma.submission.findUnique({ where: { id: userId } });
+        const submissions = await submissionStore.read();
+        const submission = submissions.find(s => s.id === userId);
         if (!submission) {
             return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
         }
@@ -31,57 +34,92 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { 
+        id,
         tiktokUsername, 
         verificationCode, 
         phoneNumber, 
         finalCode 
-    } = body as Partial<Submission> & { tiktokUsername?: string };
-
-    const id = body.id || (tiktokUsername ? (tiktokUsername.startsWith('@') ? tiktokUsername.substring(1) : tiktokUsername) : null);
+    } = body;
 
     if (!id) {
-        return NextResponse.json({ message: 'A TikTok username or existing submission ID is required.' }, { status: 400 });
-    }
-    
-    const data: Partial<Submission> = {};
-    
-    if(tiktokUsername) {
-        data.id = id;
-        data.tiktokUsername = id;
-        data.tiktokUsernameStatus = 'approved';
-    }
-    if(verificationCode) {
-        data.verificationCode = verificationCode;
-        data.verificationCodeStatus = 'approved';
-    }
-    if(phoneNumber) {
-        data.phoneNumber = phoneNumber;
-        data.phoneNumberStatus = 'approved';
-    }
-    if(finalCode) {
-        data.finalCode = finalCode;
-        data.finalCodeStatus = 'approved';
-        data.isVerified = true;
+        return NextResponse.json({ message: 'An ID (TikTok username) is required.' }, { status: 400 });
     }
 
-    const submission = await prisma.submission.upsert({
-        where: { id },
-        update: data,
-        create: {
+    const submissions = await submissionStore.read();
+    let submission = submissions.find(s => s.id === id);
+    let isNewSubmission = false;
+
+    if (!submission) {
+        isNewSubmission = true;
+        submission = {
             id,
             tiktokUsername: id,
-            tiktokUsernameStatus: data.tiktokUsername ? 'approved' : 'pending',
-            verificationCodeStatus: data.verificationCode ? 'approved' : 'pending',
-            phoneNumberStatus: data.phoneNumber ? 'approved' : 'pending',
-            finalCodeStatus: data.finalCode ? 'approved' : 'pending',
-            isVerified: !!data.finalCode,
-        }
-    });
+            tiktokUsernameStatus: 'pending',
+            verificationCodeStatus: 'pending',
+            phoneNumberStatus: 'pending',
+            finalCodeStatus: 'pending',
+            isVerified: false,
+            createdAt: new Date().toISOString()
+        };
+    }
+    
+    // Update data based on what's provided in the body
+    if(tiktokUsername) submission.tiktokUsernameStatus = 'approved';
+    if(verificationCode) submission.verificationCodeStatus = 'approved';
+    if(phoneNumber) submission.phoneNumberStatus = 'approved';
+    if(finalCode) {
+        submission.finalCodeStatus = 'approved';
+        submission.isVerified = true;
+    }
+    
+    // Add or update the submission in the array
+    if (isNewSubmission) {
+        submissions.push(submission);
+    } else {
+        const index = submissions.findIndex(s => s.id === id);
+        submissions[index] = submission;
+    }
+
+    await submissionStore.write(submissions);
 
     return NextResponse.json(submission, { status: 200 });
 
   } catch (error: any) {
     console.error("Error processing submission:", error);
+    return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
+  }
+}
+
+// PATCH handler for admin actions to approve/reject steps
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { submissionId, step, status } = body;
+
+    if (!submissionId || !step || !status) {
+      return NextResponse.json({ message: 'Submission ID, step, and status are required' }, { status: 400 });
+    }
+    
+    const submissions = await submissionStore.read();
+    const subIndex = submissions.findIndex(s => s.id === submissionId);
+
+    if (subIndex === -1) {
+      return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
+    }
+
+    const keyToUpdate = `${step}Status` as keyof Submission;
+    if (keyToUpdate in submissions[subIndex]) {
+        (submissions[subIndex] as any)[keyToUpdate] = status;
+    } else {
+        return NextResponse.json({ message: `Invalid step: ${step}` }, { status: 400 });
+    }
+    
+    await submissionStore.write(submissions);
+
+    return NextResponse.json(submissions[subIndex], { status: 200 });
+
+  } catch (error: any) {
+    console.error("Error updating submission status:", error);
     return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
   }
 }
