@@ -21,7 +21,6 @@ export default function AdminSignupPage() {
         setHasMainAdmin(data.hasMainAdmin);
       } catch (error) {
         console.error("Failed to check for main admin", error);
-        // Decide on a safe default, e.g., assume no main admin exists to allow creation
         setHasMainAdmin(false);
       } finally {
         setIsLoading(false);

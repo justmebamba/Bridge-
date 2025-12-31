@@ -1,89 +1,72 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { FormEvent, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { loginAction } from '@/app/admin/login/actions';
-
-const formSchema = z.object({
-  email: z.string().email('Please enter a valid email address.'),
-  password: z.string().min(1, 'Password is required.'),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-function SubmitButton() {
-    const { pending } = useFormStatus();
-    return (
-        <Button type="submit" disabled={pending} className="w-full">
-            {pending ? <Loader2 className="animate-spin" /> : 'Log In'}
-        </Button>
-    )
-}
+import { Label } from '@/components/ui/label';
 
 export function LoginForm() {
     const { toast } = useToast();
-    const [state, formAction] = useFormState(loginAction, { type: 'idle' });
+    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            email: '',
-            password: '',
-        },
-    });
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setIsLoading(true);
 
-    useEffect(() => {
-        if (state?.type === 'error') {
+        const formData = new FormData(event.currentTarget);
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Login failed.');
+            }
+
+            toast({
+                title: 'Login Successful',
+                description: 'Redirecting to dashboard...',
+            });
+            router.push('/admin');
+
+        } catch (error: any) {
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: state.message,
+                description: error.message || 'An unexpected error occurred.',
             });
+        } finally {
+            setIsLoading(false);
         }
-    }, [state, toast]);
+    }
 
     return (
-        <Form {...form}>
-            <form action={formAction} className="space-y-6">
-                <div className="grid gap-4">
-                    <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                            <Input placeholder="admin@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" placeholder="admin@example.com" required disabled={isLoading} />
                 </div>
-                <SubmitButton />
-            </form>
-        </Form>
-    )
+                <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" name="password" type="password" placeholder="••••••••" required disabled={isLoading} />
+                </div>
+            </div>
+            <Button type="submit" disabled={isLoading} className="w-full">
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Log In'}
+            </Button>
+        </form>
+    );
 }

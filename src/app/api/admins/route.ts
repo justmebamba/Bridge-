@@ -23,16 +23,14 @@ export async function GET(request: Request) {
             return NextResponse.json({ hasMainAdmin });
         }
 
-        // For the main admin list
         const session = await getSession();
         if (!session.isLoggedIn || !session.user?.isVerified) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
         
-        // Ensure password hashes are not returned to the client
         const safeAdmins = admins.map(({ passwordHash, ...rest }) => rest);
-        const currentUser = session.user; // User from the session is already "safe"
-        const isMainAdmin = !!currentUser.isMainAdmin;
+        const currentUser = session.user;
+        const isMainAdmin = !!currentUser?.isMainAdmin;
 
         return NextResponse.json({ admins: safeAdmins, currentUser, isMainAdmin });
 
@@ -75,7 +73,6 @@ export async function POST(request: Request) {
         admins.push(newAdmin);
         await store.write(admins);
         
-        // Return a success response, but not the full user object
         return NextResponse.json({ message: 'Admin account created successfully.' }, { status: 201 });
 
     } catch (error: any) {
