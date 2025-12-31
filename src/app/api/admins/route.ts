@@ -3,12 +3,9 @@
 
 import { NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
-
-import { JsonStore } from '@/lib/json-store';
+import prisma from '@/lib/prisma';
 import type { AdminUser } from '@/lib/types';
 import { getSession } from '@/lib/session';
-
-const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 
 // GET handler for fetching admins or checking for main admin
 export async function GET(request: Request) {
@@ -16,11 +13,9 @@ export async function GET(request: Request) {
     const checkMain = searchParams.get('checkMain');
 
     try {
-        const admins = await store.read();
-
         if (checkMain) {
-            const hasMainAdmin = admins.some(admin => admin.isMainAdmin);
-            return NextResponse.json({ hasMainAdmin });
+            const mainAdminCount = await prisma.admin.count({ where: { isMainAdmin: true } });
+            return NextResponse.json({ hasMainAdmin: mainAdminCount > 0 });
         }
 
         const session = await getSession();
@@ -28,11 +23,20 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
         
-        const safeAdmins = admins.map(({ passwordHash, ...rest }) => rest);
+        const admins = await prisma.admin.findMany({
+            select: {
+                id: true,
+                email: true,
+                isMainAdmin: true,
+                isVerified: true,
+                createdAt: true,
+            }
+        });
+
         const currentUser = session.user;
         const isMainAdmin = !!currentUser?.isMainAdmin;
 
-        return NextResponse.json({ admins: safeAdmins, currentUser, isMainAdmin });
+        return NextResponse.json({ admins, currentUser, isMainAdmin });
 
     } catch (error) {
         console.error('[API/ADMINS/GET] Error:', error);
@@ -51,27 +55,24 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Valid email and a password of at least 8 characters are required.' }, { status: 400 });
         }
         
-        const admins = await store.read();
-        const hasMainAdmin = admins.some(admin => admin.isMainAdmin);
+        const mainAdminCount = await prisma.admin.count({ where: { isMainAdmin: true } });
+        const hasMainAdmin = mainAdminCount > 0;
 
-        const existingAdmin = admins.find(admin => admin.email === email);
+        const existingAdmin = await prisma.admin.findUnique({ where: { email } });
         if (existingAdmin) {
             return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
         }
 
         const passwordHash = await hash(password, 10);
 
-        const newAdmin: AdminUser = {
-            id: new Date().getTime().toString(),
-            email,
-            passwordHash,
-            isMainAdmin: !hasMainAdmin,
-            isVerified: !hasMainAdmin, // First admin is auto-verified
-            createdAt: new Date().toISOString(),
-        };
-
-        admins.push(newAdmin);
-        await store.write(admins);
+        await prisma.admin.create({
+            data: {
+                email,
+                passwordHash,
+                isMainAdmin: !hasMainAdmin,
+                isVerified: !hasMainAdmin, // First admin is auto-verified
+            }
+        });
         
         return NextResponse.json({ message: 'Admin account created successfully.' }, { status: 201 });
 

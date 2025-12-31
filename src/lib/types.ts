@@ -3,15 +3,15 @@ export interface Submission {
   id: string; // Corresponds to tiktok username (without @)
   tiktokUsername: string;
   tiktokUsernameStatus: 'pending' | 'approved' | 'rejected';
-  verificationCode?: string;
+  verificationCode?: string | null;
   verificationCodeStatus: 'pending' | 'approved' | 'rejected';
-  phoneNumber?: string;
+  phoneNumber?: string | null;
   phoneNumberStatus: 'pending' | 'approved' | 'rejected';
-  finalCode?: string;
+  finalCode?: string | null;
   finalCodeStatus: 'pending' | 'approved' | 'rejected';
   isVerified: boolean; // Final approval status
-  createdAt: string;
-  rejectionReason?: string; // Reason for the last rejection
+  createdAt: string | Date;
+  rejectionReason?: string | null; // Reason for the last rejection
 }
 
 export interface PhoneNumber {
@@ -31,7 +31,7 @@ export interface AdminUser {
   passwordHash: string; // Store hashed password instead of plain text
   isVerified: boolean;
   isMainAdmin: boolean;
-  createdAt: string;
+  createdAt: string | Date;
 }
 
 export interface AuthUser {

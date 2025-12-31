@@ -2,27 +2,28 @@
 'use server';
 
 import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 import type { Submission } from '@/lib/types';
-import { JsonStore } from '@/lib/json-store';
-
-const store = new JsonStore<Submission[]>('src/data/submissions.json', []);
-
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
     
     try {
-        const submissions = await store.read();
         if (userId) {
-            const submission = submissions.find(s => s.id === userId);
+            const submission = await prisma.submission.findUnique({ where: { id: userId } });
             if (!submission) {
                 return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
             }
             return NextResponse.json(submission);
         } else {
             // This is for the admin page to get all submissions
-            return NextResponse.json(submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            const submissions = await prisma.submission.findMany({
+                orderBy: {
+                    createdAt: 'desc',
+                },
+            });
+            return NextResponse.json(submissions);
         }
     } catch (error: any) {
         console.error('Error fetching submissions:', error);
@@ -35,35 +36,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { id, step, data } = body;
 
-    const submissions = await store.read();
-    
     if (step === 'tiktokUsername') {
         if (!id) {
             return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
         }
         
-        let submission = submissions.find(s => s.id === id);
+        let submission = await prisma.submission.findUnique({ where: { id } });
 
         if (submission) {
             // User exists, just return their data (login)
             return NextResponse.json(submission);
         } else {
             // User doesn't exist, create a new submission (signup)
-            const newSubmission: Submission = {
-                id,
-                createdAt: new Date().toISOString(),
-                isVerified: false,
-                tiktokUsername: id,
-                tiktokUsernameStatus: 'approved',
-                verificationCode: '',
-                verificationCodeStatus: 'pending',
-                phoneNumber: '',
-                phoneNumberStatus: 'pending',
-                finalCode: '',
-                finalCodeStatus: 'pending',
-            };
-            submissions.push(newSubmission);
-            await store.write(submissions);
+            const newSubmission = await prisma.submission.create({
+                data: {
+                    id,
+                    tiktokUsername: id,
+                    tiktokUsernameStatus: 'approved',
+                }
+            });
             return NextResponse.json(newSubmission, { status: 201 });
         }
     }
@@ -73,27 +64,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Submission ID, step, and data are required' }, { status: 400 });
     }
     
-    const submissionIndex = submissions.findIndex(s => s.id === id);
+    const submission = await prisma.submission.findUnique({ where: { id } });
     
-    if (submissionIndex === -1) {
+    if (!submission) {
        return NextResponse.json({ message: 'Submission not found.' }, { status: 404 });
     }
     
-    const submission = submissions[submissionIndex];
-    
     // Update the specific step and its status
-    (submission as any)[step] = data;
-    // Set status to approved automatically
-    (submission as any)[`${step}Status`] = 'approved';
-    
-    // Clear any previous rejection reason
-    submission.rejectionReason = undefined;
-    
-    submissions[submissionIndex] = submission;
-    
-    await store.write(submissions);
+    const updatedSubmission = await prisma.submission.update({
+        where: { id },
+        data: {
+            [step]: data,
+            [`${step}Status`]: 'approved',
+            rejectionReason: null, // Clear any previous rejection reason
+        }
+    });
 
-    return NextResponse.json(submission);
+    return NextResponse.json(updatedSubmission);
 
   } catch (error: any) {
     console.error("Error processing submission:", error);

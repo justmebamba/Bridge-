@@ -3,11 +3,8 @@
 
 import { NextResponse } from 'next/server';
 import { login } from '@/lib/session';
-import type { AdminUser } from '@/lib/types';
-import { JsonStore } from '@/lib/json-store';
 import { compare } from 'bcryptjs';
-
-const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+import prisma from '@/lib/prisma';
 
 export async function POST(request: Request) {
     try {
@@ -18,8 +15,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
         }
         
-        const admins = await store.read();
-        const admin = admins.find(a => a.email === email);
+        const admin = await prisma.admin.findUnique({ where: { email } });
 
         if (!admin) {
             return NextResponse.json({ message: 'Invalid email or password.' }, { status: 401 });

@@ -31,7 +31,7 @@ import { SubmissionApprovalActions } from '@/components/admin/submission-approva
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Submission, AdminUser } from '@/lib/types';
 
-const getStatusBadge = (status: 'pending' | 'approved' | 'rejected') => {
+const getStatusBadge = (status: string) => {
   switch (status) {
     case 'approved':
       return (

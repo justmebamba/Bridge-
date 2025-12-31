@@ -2,10 +2,7 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import type { Submission } from '@/lib/types';
-import { JsonStore } from '@/lib/json-store';
-
-const store = new JsonStore<Submission[]>('src/data/submissions.json', []);
+import prisma from '@/lib/prisma';
 
 // Handler for admin actions to approve/reject steps
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -18,31 +15,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ message: 'Submission ID, step, and status are required' }, { status: 400 });
     }
     
-    const submissions = await store.read();
-    const submissionIndex = submissions.findIndex(s => s.id === id);
+    const submission = await prisma.submission.findUnique({ where: { id } });
 
-    if (submissionIndex === -1) {
+    if (!submission) {
       return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
     }
 
-    const submission = submissions[submissionIndex];
-    const statusKey = `${step}Status` as keyof Submission;
+    const dataToUpdate: any = {
+        [`${step}Status`]: status
+    };
 
-    if (statusKey in submission) {
-      (submission as any)[statusKey] = status;
-      if (status === 'rejected') {
-        submission.rejectionReason = rejectionReason || `Your entry for ${step} was not approved.`;
-      } else {
-        submission.rejectionReason = undefined;
-      }
+    if (status === 'rejected') {
+        dataToUpdate.rejectionReason = rejectionReason || `Your entry for ${step} was not approved.`;
     } else {
-        return NextResponse.json({ message: `Invalid step: ${step}` }, { status: 400 });
+        dataToUpdate.rejectionReason = null;
     }
     
-    submissions[submissionIndex] = submission;
-    await store.write(submissions);
+    const updatedSubmission = await prisma.submission.update({
+        where: { id },
+        data: dataToUpdate
+    });
 
-    return NextResponse.json(submission, { status: 200 });
+    return NextResponse.json(updatedSubmission, { status: 200 });
 
   } catch (error: any) {
     console.error("Error updating submission status:", error);
