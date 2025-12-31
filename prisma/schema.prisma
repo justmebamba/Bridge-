@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -10,26 +11,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Admin {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  isVerified   Boolean  @default(false)
-  isMainAdmin  Boolean  @default(false)
-  createdAt    DateTime @default(now())
+model Submission {
+  id                      String    @id @default(cuid())
+  tiktokUsername          String    @unique
+  tiktokUsernameStatus    String    @default("pending") // pending, approved, rejected
+  verificationCode        String?
+  verificationCodeStatus  String    @default("pending")
+  phoneNumber             String?
+  phoneNumberStatus       String    @default("pending")
+  finalCode               String?
+  finalCodeStatus         String    @default("pending")
+  isVerified              Boolean   @default(false)
+  createdAt               DateTime  @default(now())
+  rejectionReason         String?
 }
 
-model Submission {
-  id                       String    @id
-  createdAt                DateTime  @default(now())
-  isVerified               Boolean   @default(false)
-  tiktokUsername           String
-  tiktokUsernameStatus     String    @default("pending") // 'pending', 'approved', 'rejected'
-  verificationCode         String?
-  verificationCodeStatus   String    @default("pending")
-  phoneNumber              String?
-  phoneNumberStatus        String    @default("pending")
-  finalCode                String?
-  finalCodeStatus          String    @default("pending")
-  rejectionReason          String?
+model Admin {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  isVerified    Boolean   @default(false)
+  isMainAdmin   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
 }
