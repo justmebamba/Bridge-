@@ -5,29 +5,25 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import type { Submission } from '@/lib/types';
 
+// This GET handler is for client-side fetching of a single submission's status.
+// The admin dashboard will fetch data directly on the server.
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
     
+    if (!userId) {
+        return NextResponse.json({ message: 'Submission ID is required.' }, { status: 400 });
+    }
+    
     try {
-        if (userId) {
-            const submission = await prisma.submission.findUnique({ where: { id: userId } });
-            if (!submission) {
-                return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
-            }
-            return NextResponse.json(submission);
-        } else {
-            // This is for the admin page to get all submissions
-            const submissions = await prisma.submission.findMany({
-                orderBy: {
-                    createdAt: 'desc',
-                },
-            });
-            return NextResponse.json(submissions);
+        const submission = await prisma.submission.findUnique({ where: { id: userId } });
+        if (!submission) {
+            return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
         }
+        return NextResponse.json(submission);
     } catch (error: any) {
-        console.error('Error fetching submissions:', error);
-        return NextResponse.json({ message: error.message || "Could not fetch submissions." }, { status: 500 });
+        console.error('Error fetching submission:', error);
+        return NextResponse.json({ message: error.message || "Could not fetch submission." }, { status: 500 });
     }
 }
 

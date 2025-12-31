@@ -7,37 +7,18 @@ import prisma from '@/lib/prisma';
 import type { AdminUser } from '@/lib/types';
 import { getSession } from '@/lib/session';
 
-// GET handler for fetching admins or checking for main admin
+// GET handler for checking for main admin
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const checkMain = searchParams.get('checkMain');
 
+    if (!checkMain) {
+        return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
+    }
+
     try {
-        if (checkMain) {
-            const mainAdminCount = await prisma.admin.count({ where: { isMainAdmin: true } });
-            return NextResponse.json({ hasMainAdmin: mainAdminCount > 0 });
-        }
-
-        const session = await getSession();
-        if (!session.isLoggedIn || !session.user?.isVerified) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-        
-        const admins = await prisma.admin.findMany({
-            select: {
-                id: true,
-                email: true,
-                isMainAdmin: true,
-                isVerified: true,
-                createdAt: true,
-            }
-        });
-
-        const currentUser = session.user;
-        const isMainAdmin = !!currentUser?.isMainAdmin;
-
-        return NextResponse.json({ admins, currentUser, isMainAdmin });
-
+        const mainAdminCount = await prisma.admin.count({ where: { isMainAdmin: true } });
+        return NextResponse.json({ hasMainAdmin: mainAdminCount > 0 });
     } catch (error) {
         console.error('[API/ADMINS/GET] Error:', error);
         return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });

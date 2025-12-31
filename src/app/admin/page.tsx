@@ -1,78 +1,59 @@
 
-'use client';
-
 import type { AdminUser, Submission } from '@/lib/types';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
-import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { getSession } from '@/lib/session';
+import prisma from '@/lib/prisma';
+import { redirect } from 'next/navigation';
 
+// Server-side data fetching functions
+async function getSubmissions(): Promise<Submission[]> {
+    const submissions = await prisma.submission.findMany({
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+    // Ensure createdAt is a string for serialization
+    return submissions.map(s => ({...s, createdAt: s.createdAt.toISOString()}));
+}
 
-export default function AdminPage() {
-    const [data, setData] = useState<{ submissions: Submission[], admins: Omit<AdminUser, 'passwordHash'>[], currentUser: Omit<AdminUser, 'passwordHash'>, isMainAdmin: boolean } | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                // We can fetch submissions and admins in parallel
-                const [submissionsRes, adminsRes] = await Promise.all([
-                    fetch('/api/submissions'),
-                    fetch('/api/admins') 
-                ]);
-
-                if (!submissionsRes.ok || !adminsRes.ok) {
-                    throw new Error('Failed to fetch admin data');
-                }
-
-                const submissions = await submissionsRes.json();
-                const { admins, currentUser, isMainAdmin } = await adminsRes.json();
-                
-                setData({ submissions, admins, currentUser, isMainAdmin });
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
+async function getAdmins(): Promise<Omit<AdminUser, 'passwordHash'>[]> {
+    const admins = await prisma.admin.findMany({
+        select: {
+            id: true,
+            email: true,
+            isMainAdmin: true,
+            isVerified: true,
+            createdAt: true,
         }
+    });
+     // Ensure createdAt is a string for serialization
+    return admins.map(a => ({...a, createdAt: a.createdAt.toISOString()}));
+}
 
-        fetchData();
-    }, []);
-
-    if (loading) {
-        return (
-            <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 md:gap-8 md:p-6">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </main>
-        );
+export default async function AdminPage() {
+    const session = await getSession();
+    if (!session.isLoggedIn || !session.user) {
+        redirect('/admin/login');
     }
 
-    if (error) {
-        return (
-            <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 md:gap-8 md:p-6">
-                <div className="flex h-full items-center justify-center text-destructive">
-                    <p>Error: {error}</p>
-                </div>
-            </main>
-        );
-    }
+    // Fetch all data on the server
+    const [submissions, admins] = await Promise.all([
+        getSubmissions(),
+        getAdmins()
+    ]);
     
-    if (!data) {
-        return (
-             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 md:gap-8 md:p-6">
-                <p>No data found.</p>
-            </main>
-        );
-    }
+    const currentUser = session.user;
+    const isMainAdmin = !!currentUser?.isMainAdmin;
 
-  return (
-    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <AdminDashboard 
-            submissions={data.submissions}
-            admins={data.admins}
-            currentUser={data.currentUser}
-            isMainAdmin={data.isMainAdmin}
-        />
-    </main>
-  );
+    // Pass the fetched data as props to the client component
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+            <AdminDashboard 
+                initialSubmissions={submissions}
+                initialAdmins={admins}
+                currentUser={currentUser}
+                isMainAdmin={isMainAdmin}
+            />
+        </main>
+    );
 }

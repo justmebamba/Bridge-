@@ -30,6 +30,7 @@ import { AdminApprovalForm } from '@/components/admin/admin-approval-form';
 import { SubmissionApprovalActions } from '@/components/admin/submission-approval-actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Submission, AdminUser } from '@/lib/types';
+import { useState } from 'react';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -65,13 +66,16 @@ const getAdminRoleBadge = (isMainAdmin: boolean) => {
 };
 
 interface AdminDashboardProps {
-    submissions: Submission[];
-    admins: Omit<AdminUser, 'passwordHash'>[];
+    initialSubmissions: Submission[];
+    initialAdmins: Omit<AdminUser, 'passwordHash'>[];
     currentUser: Omit<AdminUser, 'passwordHash'>;
     isMainAdmin: boolean;
 }
 
-export function AdminDashboard({ submissions, admins, currentUser, isMainAdmin }: AdminDashboardProps) {
+export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser, isMainAdmin }: AdminDashboardProps) {
+  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [admins, setAdmins] = useState(initialAdmins);
+
   const totalSubmissions = submissions.length;
   const pendingSubmissions = submissions.filter(
     (s) =>
