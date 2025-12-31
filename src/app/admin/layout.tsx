@@ -15,7 +15,7 @@ export default async function AdminLayout({
 
     const isAuthPage = pathname === '/admin/login' || pathname === '/admin/signup';
 
-    if (isAuthPage) {
+    if (isAuth-page) {
         if (session.isLoggedIn && session.user?.isVerified) {
             redirect('/admin');
         }
