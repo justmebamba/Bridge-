@@ -3,18 +3,17 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Phone, Loader2, Check, X, RefreshCw } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import type { PhoneNumber, Submission, AuthUser } from '@/lib/types';
+import type { PhoneNumber, Submission } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const shuffle = (array: any[]) => {
@@ -29,23 +28,23 @@ const shuffle = (array: any[]) => {
     return array;
 };
 
-
 const formSchema = z.object({
   usNumber: z.string({ required_error: "Please select a number." }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function SelectNumberPage() {
-    const router = useRouter();
+interface SelectNumberStepProps {
+    onNext: (data: Partial<Submission>) => void;
+    onBack: () => void;
+}
+
+export function SelectNumberStep({ onNext, onBack }: SelectNumberStepProps) {
     const { toast } = useToast();
-    const [user, setUser] = useState<AuthUser | null>(null);
     
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
-    const [submission, setSubmission] = useState<Submission | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
     const form = useForm<FormValues>({
@@ -65,66 +64,14 @@ export default function SelectNumberPage() {
         } catch (err: any) {
             setError(err.message);
             toast({ variant: 'destructive', title: 'Error', description: err.message });
-        }
-    }, [toast]);
-
-     const fetchSubmission = useCallback(async (userId: string) => {
-        try {
-            const res = await fetch(`/api/submissions?id=${userId}`);
-            if (res.status === 404) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
-                sessionStorage.removeItem('user-session');
-                router.replace('/start');
-                return;
-            }
-            if (!res.ok) throw new Error('Failed to fetch submission data.');
-            
-            const data: Submission = await res.json();
-            
-            const sessionUser = sessionStorage.getItem('user-session');
-            if(sessionUser) {
-                const parsedUser: AuthUser = JSON.parse(sessionUser);
-                const updatedUser = {...parsedUser, submission: data};
-                sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
-                setUser(updatedUser);
-            }
-
-            setSubmission(data);
-            
-             if (data.verificationCodeStatus !== 'approved') {
-               router.replace('/start/verify-code');
-               return;
-           }
-           if (data.phoneNumberStatus === 'approved') {
-               router.push('/start/final-code');
-               return;
-           }
-           if (data.phoneNumber) {
-               form.setValue('usNumber', data.phoneNumber);
-           }
-        } catch (err: any) {
-            toast({ variant: 'destructive', title: 'Error', description: err.message });
         } finally {
             setIsLoading(false);
         }
-    }, [router, toast, form]);
-
+    }, [toast]);
 
     useEffect(() => {
        fetchData();
-       const sessionUser = sessionStorage.getItem('user-session');
-       if (sessionUser) {
-           const parsedUser: AuthUser = JSON.parse(sessionUser);
-            if (parsedUser.id) {
-               fetchSubmission(parsedUser.id);
-            } else {
-                router.replace('/start');
-            }
-       } else {
-           router.replace('/start');
-       }
-    }, [router, fetchData, fetchSubmission]);
-
+    }, [fetchData]);
 
     const handleRefresh = () => {
         if (phoneNumbers) {
@@ -133,45 +80,13 @@ export default function SelectNumberPage() {
     }
 
     const onSubmit = async (values: FormValues) => {
-         if (!user) return toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-        setIsLoading(true);
-        try {
-             const response = await fetch('/api/submissions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: user.id,
-                    step: 'phoneNumber',
-                    data: values.usNumber,
-                }),
-            });
-            if (!response.ok) {
-                 const errorData = await response.json();
-                 throw new Error(errorData.message || 'Failed to submit phone number.');
-            }
-            const updatedSubmission = await response.json();
-            
-            const updatedUser = { ...user, submission: updatedSubmission };
-            sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
-            
-            toast({ title: 'Number Submitted', description: 'Your selected number has been saved.' });
-            router.push('/start/final-code');
-        } catch (err: any)
-{
-            toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-        } finally {
-            setIsLoading(false);
-        }
+        onNext({ phoneNumber: values.usNumber });
     };
     
     const { isSubmitting } = form.formState;
 
-    if (isLoading || !submission) {
-         return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
-    }
-
     return (
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-lg mx-auto">
              <div className="text-center mb-8">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
                     <Phone className="h-8 w-8" />
@@ -263,7 +178,7 @@ export default function SelectNumberPage() {
                     />
                     
                     <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isLoading || isSubmitting}>
+                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={onBack} disabled={isLoading || isSubmitting}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>

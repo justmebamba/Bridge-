@@ -7,15 +7,13 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState, useCallback } from 'react';
-
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import type { Submission, AuthUser } from '@/lib/types';
+import type { Submission } from '@/lib/types';
 import { Loader } from '@/components/loader';
-
 
 const formSchema = z.object({
   finalCode: z.string().length(6, "Code must be 6 digits."),
@@ -23,104 +21,38 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function FinalCodePage() {
+interface FinalCodeStepProps {
+    submissionData: Partial<Submission>;
+    onBack: () => void;
+}
+
+export function FinalCodeStep({ submissionData, onBack }: FinalCodeStepProps) {
     const router = useRouter();
     const { toast } = useToast();
-    const [user, setUser] = useState<AuthUser | null>(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { finalCode: "" },
     });
 
-    const [submission, setSubmission] = useState<Submission | null>(null);
-    const [isPageLoading, setIsPageLoading] = useState(true);
-    const [isVerifying, setIsVerifying] = useState(false);
-
-    const fetchSubmission = useCallback(async (userId: string) => {
-        setIsPageLoading(true);
-        try {
-            const res = await fetch(`/api/submissions?id=${userId}`);
-            if (res.status === 404) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Submission not found. Redirecting...' });
-                sessionStorage.removeItem('user-session');
-                router.replace('/start');
-                return;
-            }
-            if (!res.ok) throw new Error('Failed to fetch submission data.');
-            
-            const data: Submission = await res.json();
-            
-            const sessionUser = sessionStorage.getItem('user-session');
-            if(sessionUser) {
-                const parsedUser: AuthUser = JSON.parse(sessionUser);
-                const updatedUser = {...parsedUser, submission: data};
-                sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
-                setUser(updatedUser);
-            }
-
-            setSubmission(data);
-            
-            if (data.phoneNumberStatus !== 'approved') {
-                router.replace('/start/select-number');
-                return;
-            }
-            if (data.finalCodeStatus === 'approved') {
-                router.push('/success');
-                return;
-            }
-        } catch (err: any) {
-            toast({ variant: 'destructive', title: 'Error', description: err.message });
-        } finally {
-            setIsPageLoading(false);
-        }
-    }, [router, toast]);
-
-    useEffect(() => {
-        const sessionUser = sessionStorage.getItem('user-session');
-        if (sessionUser) {
-            const parsedUser: AuthUser = JSON.parse(sessionUser);
-            if(parsedUser.id) {
-                setUser(parsedUser);
-                fetchSubmission(parsedUser.id);
-            } else {
-                router.replace('/start');
-            }
-        } else {
-             router.replace('/start');
-        }
-    }, [router, fetchSubmission]);
-    
     const onSubmit = async (values: FormValues) => {
-        if (!user) {
-            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-            return;
-        }
-        
+        const finalSubmissionData = { ...submissionData, ...values };
+
         setIsVerifying(true);
 
         try {
              const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: user.id,
-                    step: 'finalCode',
-                    data: values.finalCode,
-                }),
+                body: JSON.stringify(finalSubmissionData),
             });
              if (!response.ok) {
                  const errorData = await response.json();
                  throw new Error(errorData.message || 'Failed to submit final code.');
             }
-            const updatedSubmission = await response.json();
             
-            const sessionUser = sessionStorage.getItem('user-session');
-             if(sessionUser) {
-                const parsedUser: AuthUser = JSON.parse(sessionUser);
-                const updatedUser = {...parsedUser, submission: updatedSubmission};
-                sessionStorage.setItem('user-session', JSON.stringify(updatedUser));
-            }
-
+            // Simulate verification time
             setTimeout(() => {
                 router.push('/success');
             }, 8000);
@@ -137,12 +69,8 @@ export default function FinalCodePage() {
         return <Loader isFadingOut={false} />;
     }
 
-    if (isPageLoading || !submission) {
-        return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
-    }
-
     return (
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-lg mx-auto">
              <div className="text-center mb-8">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
                     <CheckCircle className="h-8 w-8" />
@@ -185,7 +113,7 @@ export default function FinalCodePage() {
                     />
                     
                     <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={() => router.back()} disabled={isSubmitting}>
+                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={onBack} disabled={isSubmitting}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>

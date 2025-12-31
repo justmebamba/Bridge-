@@ -6,7 +6,6 @@ import prisma from '@/lib/prisma';
 import type { Submission } from '@/lib/types';
 
 // This GET handler is for client-side fetching of a single submission's status.
-// The admin dashboard will fetch data directly on the server.
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
@@ -27,56 +26,56 @@ export async function GET(request: Request) {
     }
 }
 
+// POST handler for creating or updating a submission from the multi-step form.
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, step, data } = body;
+    const { 
+        tiktokUsername, 
+        verificationCode, 
+        phoneNumber, 
+        finalCode 
+    } = body as Partial<Submission> & { tiktokUsername: string };
 
-    if (step === 'tiktokUsername') {
-        if (!id) {
-            return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
-        }
-        
-        let submission = await prisma.submission.findUnique({ where: { id } });
-
-        if (submission) {
-            // User exists, just return their data (login)
-            return NextResponse.json(submission);
-        } else {
-            // User doesn't exist, create a new submission (signup)
-            const newSubmission = await prisma.submission.create({
-                data: {
-                    id,
-                    tiktokUsername: id,
-                    tiktokUsernameStatus: 'approved',
-                }
-            });
-            return NextResponse.json(newSubmission, { status: 201 });
-        }
-    }
-
-    // Handle subsequent steps
-    if (!id || !step || data === undefined) {
-      return NextResponse.json({ message: 'Submission ID, step, and data are required' }, { status: 400 });
+    if (!tiktokUsername) {
+        return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
     }
     
-    const submission = await prisma.submission.findUnique({ where: { id } });
+    const id = tiktokUsername.startsWith('@') ? tiktokUsername.substring(1) : tiktokUsername;
+
+    const data: Partial<Submission> = {
+        id,
+        tiktokUsername: id,
+        tiktokUsernameStatus: 'approved',
+    };
     
-    if (!submission) {
-       return NextResponse.json({ message: 'Submission not found.' }, { status: 404 });
+    if(verificationCode) {
+        data.verificationCode = verificationCode;
+        data.verificationCodeStatus = 'approved';
     }
-    
-    // Update the specific step and its status
-    const updatedSubmission = await prisma.submission.update({
+    if(phoneNumber) {
+        data.phoneNumber = phoneNumber;
+        data.phoneNumberStatus = 'approved';
+    }
+    if(finalCode) {
+        data.finalCode = finalCode;
+        data.finalCodeStatus = 'approved';
+    }
+
+    const submission = await prisma.submission.upsert({
         where: { id },
-        data: {
-            [step]: data,
-            [`${step}Status`]: 'approved',
-            rejectionReason: null, // Clear any previous rejection reason
-        }
+        update: data,
+        create: {
+            ...data,
+            // Set default statuses for create
+            verificationCodeStatus: data.verificationCode ? 'approved' : 'pending',
+            phoneNumberStatus: data.phoneNumber ? 'approved' : 'pending',
+            finalCodeStatus: data.finalCode ? 'approved' : 'pending',
+            isVerified: !!data.finalCode,
+        } as Submission
     });
 
-    return NextResponse.json(updatedSubmission);
+    return NextResponse.json(submission, { status: 200 });
 
   } catch (error: any) {
     console.error("Error processing submission:", error);

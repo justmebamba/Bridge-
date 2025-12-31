@@ -1,138 +1,124 @@
 
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus, ArrowRight, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
-import { Loader } from '@/components/loader';
-import type { AuthUser } from '@/lib/types';
-
-
-const formSchema = z.object({
-  tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.'),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { Loader2 } from 'lucide-react';
+import type { AuthUser, Submission } from '@/lib/types';
+import { TiktokUsernameStep } from '@/components/start/tiktok-username-step';
+import { VerifyCodeStep } from '@/components/start/verify-code-step';
+import { SelectNumberStep } from '@/components/start/select-number-step';
+import { FinalCodeStep } from '@/components/start/final-code-step';
 
 export default function StartPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      tiktokUsername: '',
-    },
-  });
   
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [submissionData, setSubmissionData] = useState<Partial<Submission>>({});
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
   useEffect(() => {
-    // If the user is already logged in from sessionStorage, route them to the correct step
     const storedUser = sessionStorage.getItem('user-session');
     if (storedUser) {
-        const parsedUser: AuthUser = JSON.parse(storedUser);
-        const submission = parsedUser.submission;
-
-        if (submission.finalCodeStatus === 'approved') {
-            router.replace('/success');
-        } else if (submission.phoneNumberStatus === 'approved' || (submission.finalCode && submission.finalCodeStatus !== 'rejected')) {
-            router.replace('/start/final-code');
-        } else if (submission.verificationCodeStatus === 'approved' || (submission.phoneNumber && submission.phoneNumberStatus !== 'rejected')) {
-            router.replace('/start/select-number');
-        } else if (submission.tiktokUsernameStatus === 'approved') {
-            router.replace('/start/verify-code');
-        } else {
-             setIsLoading(false);
+      const parsedUser: AuthUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      
+      const fetchSubmissionStatus = async () => {
+        try {
+          const res = await fetch(`/api/submissions?id=${parsedUser.id}`);
+          if (!res.ok) {
+            if (res.status === 404) {
+              // No submission found, start from the beginning.
+              setSubmissionData({ tiktokUsername: parsedUser.id });
+              setCurrentStep(1); // Start with username pre-filled
+            } else {
+              throw new Error('Failed to fetch submission status.');
+            }
+          } else {
+            const submission: Submission = await res.json();
+            setSubmissionData(submission);
+            // Determine which step to show based on submission status
+            if (submission.finalCodeStatus === 'approved') {
+              router.replace('/success');
+              return;
+            }
+            if (submission.phoneNumberStatus === 'approved') setCurrentStep(4);
+            else if (submission.verificationCodeStatus === 'approved') setCurrentStep(3);
+            else if (submission.tiktokUsernameStatus === 'approved') setCurrentStep(2);
+            else setCurrentStep(1);
+          }
+        } catch (error) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not retrieve your submission status.' });
+          setCurrentStep(1);
+        } finally {
+          setIsCheckingStatus(false);
         }
+      };
+
+      fetchSubmissionStatus();
+
     } else {
-        setIsLoading(false);
+      setCurrentStep(1);
+      setIsCheckingStatus(false);
     }
-  }, [router]);
+  }, [router, toast]);
 
-  const onSubmit = async (values: FormValues) => {
-    try {
-        const id = values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername;
-        
-        const res = await fetch('/api/submissions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, step: 'tiktokUsername' })
-        });
-        
-        const submissionData = await res.json();
+  const handleNextStep = (data: Partial<Submission>) => {
+    const updatedData = { ...submissionData, ...data };
+    setSubmissionData(updatedData);
 
-        if (!res.ok) {
-             throw new Error(submissionData.message || 'Could not log in.');
-        }
-
-        const newUser: AuthUser = { id, submission: submissionData };
+    if (!user && data.tiktokUsername) {
+        const newUser: AuthUser = { id: data.tiktokUsername };
         sessionStorage.setItem('user-session', JSON.stringify(newUser));
-        
-        router.push('/start/verify-code');
+        setUser(newUser);
+    }
+    
+    setCurrentStep(prev => prev + 1);
+  };
+  
+  const handlePrevStep = () => {
+    setCurrentStep(prev => prev - 1);
+  };
 
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'An Error Occurred',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
-      });
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return <TiktokUsernameStep onNext={handleNextStep} initialData={submissionData} />;
+      case 2:
+        return <VerifyCodeStep onNext={handleNextStep} onBack={handlePrevStep} />;
+      case 3:
+        return <SelectNumberStep onNext={handleNextStep} onBack={handlePrevStep} />;
+      case 4:
+        return <FinalCodeStep submissionData={submissionData} onBack={handlePrevStep} />;
+      default:
+        return (
+            <div className="flex flex-col items-center justify-center text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <h1 className="text-xl font-semibold">Checking your status...</h1>
+                <p className="text-muted-foreground">Please wait a moment.</p>
+            </div>
+        );
     }
   };
 
-  const { isSubmitting } = form.formState;
-
-  if (isLoading) {
-     return (
-         <div className="w-full max-w-lg text-center">
-            <Loader isFadingOut={false} />
-            <h1 className="text-xl font-semibold mt-4">Checking your status...</h1>
-            <p className="text-muted-foreground">Please wait a moment.</p>
-         </div>
-    )
+  if (isCheckingStatus) {
+    return (
+        <div className="w-full max-w-lg text-center">
+            <div className="flex flex-col items-center justify-center text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <h1 className="text-xl font-semibold">Checking your status...</h1>
+                <p className="text-muted-foreground">Please wait a moment.</p>
+            </div>
+        </div>
+    );
   }
 
-  // If not loading and not logged in, show the form
   return (
-    <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-            <UserPlus className="mx-auto h-10 w-10 text-primary" />
-            <h1 className="text-2xl mt-4 font-bold">Welcome!</h1>
-            <p className="text-muted-foreground">
-                Enter your TikTok username to get started.
-            </p>
-        </div>
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid gap-4">
-                    <FormField
-                        control={form.control}
-                        name="tiktokUsername"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>TikTok Username</FormLabel>
-                            <FormControl>
-                                <Input placeholder="@username" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                <div className="flex flex-col gap-4">
-                    <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? <Loader2 className="animate-spin" /> : 'Continue'}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </div>
-            </form>
-        </Form>
+    <div className="w-full max-w-lg transition-all duration-300">
+      {renderStep()}
     </div>
   );
 }

@@ -36,5 +36,4 @@ export interface AdminUser {
 
 export interface AuthUser {
     id: string; // This will be the tiktok username
-    submission: Submission;
 }

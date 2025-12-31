@@ -5,30 +5,47 @@ import { CheckCircle, PartyPopper, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { Submission, AuthUser } from '@/lib/types';
-import { useEffect, useState, useCallback } from 'react';
+import type { AuthUser, Submission } from '@/lib/types';
+import { useEffect, useState } from 'react';
 
 export default function SuccessPage() {
   const router = useRouter();
-  const [submission, setSubmission] = useState<Submission | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAllowed, setIsAllowed] = useState(false);
 
   useEffect(() => {
     const sessionUser = sessionStorage.getItem('user-session');
     if (sessionUser) {
-        const parsedUser: AuthUser = JSON.parse(sessionUser);
-        const sub = parsedUser.submission;
-        setSubmission(sub);
-        if (sub.finalCodeStatus !== 'approved') {
+      const parsedUser: AuthUser = JSON.parse(sessionUser);
+      
+      const checkStatus = async () => {
+        try {
+          const res = await fetch(`/api/submissions?id=${parsedUser.id}`);
+          if (res.ok) {
+            const submission: Submission = await res.json();
+            if (submission.finalCodeStatus === 'approved') {
+              setIsAllowed(true);
+            } else {
+              router.replace('/start');
+            }
+          } else {
+             router.replace('/start');
+          }
+        } catch (error) {
           router.replace('/start');
+        } finally {
+          setIsLoading(false);
         }
+      };
+
+      checkStatus();
+
     } else {
       router.replace('/start');
     }
-    setIsLoading(false);
   }, [router]);
   
-  if (isLoading || !submission || submission?.finalCodeStatus !== 'approved') {
+  if (isLoading || !isAllowed) {
       return (
           <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
