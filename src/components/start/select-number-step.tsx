@@ -87,7 +87,7 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
             const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: submissionId, ...values }),
+                body: JSON.stringify({ id: submissionId, phoneNumber: values.phoneNumber }),
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -96,11 +96,11 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
             // Artificial delay
             setTimeout(() => {
                 onNext({ phoneNumber: values.phoneNumber });
-                setIsSubmitting(false);
+                // We don't set isSubmitting to false here, to prevent user from going back
             }, 8000);
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Only stop loading on error
         }
     };
 

@@ -1,9 +1,7 @@
 
 import type { AdminUser, Submission } from '@/lib/types';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
-import { getSession } from '@/lib/session';
 import prisma from '@/lib/prisma';
-import { redirect } from 'next/navigation';
 
 // Server-side data fetching functions
 async function getSubmissions(): Promise<Submission[]> {
@@ -31,18 +29,15 @@ async function getAdmins(): Promise<Omit<AdminUser, 'passwordHash'>[]> {
 }
 
 export default async function AdminPage() {
-    const session = await getSession();
-    if (!session.isLoggedIn || !session.user) {
-        redirect('/admin/login');
-    }
-
     // Fetch all data on the server
     const [submissions, admins] = await Promise.all([
         getSubmissions(),
         getAdmins()
     ]);
     
-    const currentUser = session.user;
+    // For now, we'll mock a "current user" since there is no login.
+    // We'll assume the person accessing this is the main admin.
+    const currentUser = admins.find(a => a.isMainAdmin) || admins[0] || null;
     const isMainAdmin = !!currentUser?.isMainAdmin;
 
     // Pass the fetched data as props to the client component

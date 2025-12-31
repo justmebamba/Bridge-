@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import { Loader } from '@/components/loader';
 
 const formSchema = z.object({
   finalCode: z.string().length(6, "Code must be 6 digits."),
@@ -28,7 +27,7 @@ interface FinalCodeStepProps {
 export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
     const router = useRouter();
     const { toast } = useToast();
-    const [isVerifying, setIsVerifying] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -36,12 +35,12 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
     });
 
     const onSubmit = async (values: FormValues) => {
-        setIsVerifying(true);
+        setIsSubmitting(true);
         try {
              const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: submissionId, ...values }),
+                body: JSON.stringify({ id: submissionId, finalCode: values.finalCode }),
             });
 
             if (!response.ok) {
@@ -49,23 +48,17 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
                  throw new Error(errorData.message || 'Failed to submit final code.');
             }
             
-            // Simulate verification time
+            // Artificial delay to simulate verification
             setTimeout(() => {
                 router.push('/success');
             }, 8000);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-            setIsVerifying(false);
+            setIsSubmitting(false); // Only stop loading on error
         }
     };
     
-    const { isSubmitting } = form.formState;
-
-    if (isVerifying) {
-        return <Loader isFadingOut={false} />;
-    }
-
     return (
         <div className="w-full max-w-lg mx-auto">
              <div className="text-center mb-8">
@@ -116,7 +109,7 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
                         </Button>
                          <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             Submit Application
+                             {isSubmitting ? 'Verifying...' : 'Submit Application'}
                         </Button>
                     </div>
                 </form>

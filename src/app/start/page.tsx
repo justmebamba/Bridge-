@@ -31,6 +31,7 @@ export default function StartPage() {
           const res = await fetch(`/api/submissions?id=${parsedUser.id}`);
           if (!res.ok) {
             if (res.status === 404) {
+              // No submission found, start from step 1 with username pre-filled
               setSubmissionData({ tiktokUsername: parsedUser.id });
               setCurrentStep(1); 
             } else {
@@ -39,7 +40,8 @@ export default function StartPage() {
           } else {
             const submission: Submission = await res.json();
             setSubmissionData(submission);
-            if (submission.finalCodeStatus === 'approved') {
+            // Determine which step to show based on submission status
+            if (submission.finalCodeStatus === 'approved' || submission.isVerified) {
               router.replace('/success');
               return;
             }
@@ -50,13 +52,14 @@ export default function StartPage() {
           }
         } catch (error) {
           toast({ variant: 'destructive', title: 'Error', description: 'Could not retrieve your submission status.' });
-          setCurrentStep(1);
+          setCurrentStep(1); // Default to step 1 on error
         } finally {
           setIsCheckingStatus(false);
         }
       };
       fetchSubmissionStatus();
     } else {
+      // No user in session, start from the beginning
       setCurrentStep(1);
       setIsCheckingStatus(false);
     }
@@ -66,6 +69,7 @@ export default function StartPage() {
     const updatedData = { ...submissionData, ...data };
     setSubmissionData(updatedData);
 
+    // If this is the first step, create the user session
     if (!user && data.tiktokUsername) {
         const username = data.tiktokUsername.startsWith('@') ? data.tiktokUsername.substring(1) : data.tiktokUsername;
         const newUser: AuthUser = { id: username };

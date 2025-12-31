@@ -54,12 +54,12 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
         // Artificial delay
         setTimeout(() => {
             onNext({ tiktokUsername: username });
-            setIsSubmitting(false);
+            // We don't set isSubmitting to false, because we are moving to the next step
         }, 8000);
 
     } catch (err: any) {
         toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-        setIsSubmitting(false);
+        setIsSubmitting(false); // Only set to false on error, so user can retry
     }
   };
 

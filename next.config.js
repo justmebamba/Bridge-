@@ -29,6 +29,15 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/management-portal-a7b3c9d2e1f0',
+        destination: '/admin',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 module.exports = nextConfig;

@@ -40,7 +40,7 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
             const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: submissionId, ...values }),
+                body: JSON.stringify({ id: submissionId, verificationCode: values.verificationCode }),
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -50,11 +50,11 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
             // Artificial delay
             setTimeout(() => {
                 onNext({ verificationCode: values.verificationCode });
-                setIsSubmitting(false);
+                // We don't set isSubmitting to false, because we are moving to the next step
             }, 8000);
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Only stop loading on error
         }
     };
 
