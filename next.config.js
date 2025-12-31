@@ -34,7 +34,8 @@ const nextConfig = {
       allowedOrigins: [
         "localhost:3000",
         "*.firebaseapp.com",
-        "*.web.app"
+        "*.web.app",
+        "*.cloudworkstations.dev"
       ]
     }
   }
