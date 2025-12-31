@@ -10,6 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import type { Submission } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.'),
@@ -23,6 +25,9 @@ interface TiktokUsernameStepProps {
 }
 
 export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -30,12 +35,33 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
     },
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
     const username = values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername;
-    onNext({ tiktokUsername: username });
-  };
+    
+    try {
+        const response = await fetch('/api/submissions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tiktokUsername: username }),
+        });
 
-  const { isSubmitting } = form.formState;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to submit username.');
+        }
+
+        // Artificial delay
+        setTimeout(() => {
+            onNext({ tiktokUsername: username });
+            setIsSubmitting(false);
+        }, 8000);
+
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+        setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-sm mx-auto">
@@ -71,8 +97,8 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
                 <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={isSubmitting} size="lg" className="rounded-full">
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Continue
-                        <ArrowRight className="ml-2 h-5 w-5" />
+                        {isSubmitting ? 'Submitting...' : 'Continue'}
+                        {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
                     </Button>
                 </div>
             </form>

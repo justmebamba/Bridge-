@@ -34,6 +34,9 @@ export interface AdminUser {
   createdAt: string | Date;
 }
 
+// This is for client-side session tracking.
+// It simply stores the user's ID (their tiktok username)
+// to fetch their latest submission status from the server.
 export interface AuthUser {
-    id: string; // This will be the tiktok username
+    id: string;
 }

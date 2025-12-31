@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import type { Submission } from '@/lib/types';
 import { Loader } from '@/components/loader';
 
 const formSchema = z.object({
@@ -22,11 +21,11 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface FinalCodeStepProps {
-    submissionData: Partial<Submission>;
+    submissionId: string;
     onBack: () => void;
 }
 
-export function FinalCodeStep({ submissionData, onBack }: FinalCodeStepProps) {
+export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
     const router = useRouter();
     const { toast } = useToast();
     const [isVerifying, setIsVerifying] = useState(false);
@@ -37,17 +36,15 @@ export function FinalCodeStep({ submissionData, onBack }: FinalCodeStepProps) {
     });
 
     const onSubmit = async (values: FormValues) => {
-        const finalSubmissionData = { ...submissionData, ...values };
-
         setIsVerifying(true);
-
         try {
              const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(finalSubmissionData),
+                body: JSON.stringify({ id: submissionId, ...values }),
             });
-             if (!response.ok) {
+
+            if (!response.ok) {
                  const errorData = await response.json();
                  throw new Error(errorData.message || 'Failed to submit final code.');
             }
@@ -120,7 +117,6 @@ export function FinalCodeStep({ submissionData, onBack }: FinalCodeStepProps) {
                          <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              Submit Application
-                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
                     </div>
                 </form>

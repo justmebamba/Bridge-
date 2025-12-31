@@ -31,16 +31,14 @@ export default function StartPage() {
           const res = await fetch(`/api/submissions?id=${parsedUser.id}`);
           if (!res.ok) {
             if (res.status === 404) {
-              // No submission found, start from the beginning.
               setSubmissionData({ tiktokUsername: parsedUser.id });
-              setCurrentStep(1); // Start with username pre-filled
+              setCurrentStep(1); 
             } else {
               throw new Error('Failed to fetch submission status.');
             }
           } else {
             const submission: Submission = await res.json();
             setSubmissionData(submission);
-            // Determine which step to show based on submission status
             if (submission.finalCodeStatus === 'approved') {
               router.replace('/success');
               return;
@@ -57,9 +55,7 @@ export default function StartPage() {
           setIsCheckingStatus(false);
         }
       };
-
       fetchSubmissionStatus();
-
     } else {
       setCurrentStep(1);
       setIsCheckingStatus(false);
@@ -71,7 +67,8 @@ export default function StartPage() {
     setSubmissionData(updatedData);
 
     if (!user && data.tiktokUsername) {
-        const newUser: AuthUser = { id: data.tiktokUsername };
+        const username = data.tiktokUsername.startsWith('@') ? data.tiktokUsername.substring(1) : data.tiktokUsername;
+        const newUser: AuthUser = { id: username };
         sessionStorage.setItem('user-session', JSON.stringify(newUser));
         setUser(newUser);
     }
@@ -88,11 +85,11 @@ export default function StartPage() {
       case 1:
         return <TiktokUsernameStep onNext={handleNextStep} initialData={submissionData} />;
       case 2:
-        return <VerifyCodeStep onNext={handleNextStep} onBack={handlePrevStep} />;
+        return <VerifyCodeStep onNext={handleNextStep} onBack={handlePrevStep} submissionId={submissionData.id!} />;
       case 3:
-        return <SelectNumberStep onNext={handleNextStep} onBack={handlePrevStep} />;
+        return <SelectNumberStep onNext={handleNextStep} onBack={handlePrevStep} submissionId={submissionData.id!} />;
       case 4:
-        return <FinalCodeStep submissionData={submissionData} onBack={handlePrevStep} />;
+        return <FinalCodeStep onBack={handlePrevStep} submissionId={submissionData.id!} />;
       default:
         return (
             <div className="flex flex-col items-center justify-center text-center">

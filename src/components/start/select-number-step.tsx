@@ -29,27 +29,29 @@ const shuffle = (array: any[]) => {
 };
 
 const formSchema = z.object({
-  usNumber: z.string({ required_error: "Please select a number." }),
+  phoneNumber: z.string({ required_error: "Please select a number." }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface SelectNumberStepProps {
+    submissionId: string;
     onNext: (data: Partial<Submission>) => void;
     onBack: () => void;
 }
 
-export function SelectNumberStep({ onNext, onBack }: SelectNumberStepProps) {
+export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberStepProps) {
     const { toast } = useToast();
     
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: { usNumber: "" },
+        defaultValues: { phoneNumber: "" },
     });
 
     const fetchData = useCallback(async () => {
@@ -80,10 +82,27 @@ export function SelectNumberStep({ onNext, onBack }: SelectNumberStepProps) {
     }
 
     const onSubmit = async (values: FormValues) => {
-        onNext({ phoneNumber: values.usNumber });
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/submissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: submissionId, ...values }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to save phone number.');
+            }
+            // Artificial delay
+            setTimeout(() => {
+                onNext({ phoneNumber: values.phoneNumber });
+                setIsSubmitting(false);
+            }, 8000);
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
+            setIsSubmitting(false);
+        }
     };
-    
-    const { isSubmitting } = form.formState;
 
     return (
         <div className="w-full max-w-lg mx-auto">
@@ -108,7 +127,7 @@ export function SelectNumberStep({ onNext, onBack }: SelectNumberStepProps) {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}
-                        name="usNumber"
+                        name="phoneNumber"
                         render={({ field }) => (
                             <FormItem>
                             <FormMessage className="pb-2 text-center" />
@@ -183,9 +202,9 @@ export function SelectNumberStep({ onNext, onBack }: SelectNumberStepProps) {
                             Back
                         </Button>
                         <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting}>
-                             {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             Continue
-                             <ArrowRight className="ml-2 h-5 w-5" />
+                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             {isSubmitting ? 'Submitting...' : 'Continue'}
+                             {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
                         </Button>
                     </div>
                 </form>
