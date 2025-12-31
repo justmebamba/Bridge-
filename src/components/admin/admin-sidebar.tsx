@@ -19,7 +19,7 @@ async function handleLogout() {
     window.location.href = '/management-portal-a7b3c9d2e1f0/login';
 }
 
-export function AdminSidebar({ user }: { user?: AdminUser }) {
+export function AdminSidebar({ user }: { user?: Omit<AdminUser, 'passwordHash'> }) {
     const router = useRouter();
 
     return (

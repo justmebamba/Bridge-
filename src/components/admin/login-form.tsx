@@ -40,6 +40,7 @@ export function LoginForm() {
                 description: 'Redirecting to dashboard...',
             });
             router.push('/management-portal-a7b3c9d2e1f0');
+            router.refresh();
 
         } catch (error: any) {
             toast({
