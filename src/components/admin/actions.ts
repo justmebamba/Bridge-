@@ -6,11 +6,11 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { hash, compare } from 'bcryptjs';
 
-import { login } from '@/lib/session';
+import { login, getSession } from '@/lib/session';
 import { JsonStore } from '@/lib/json-store';
 import type { AdminUser, Submission } from '@/lib/types';
 
-const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+const adminStore = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 
 const submissionStore = new JsonStore<Submission[]>(
   'src/data/submissions.json',
@@ -22,7 +22,7 @@ const signupSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters.'),
 });
 
-export async function signupAction(prevState: any, formData: FormData) {
+export async function signupAction(hasMainAdmin: boolean, prevState: any, formData: FormData) {
   const validatedFields = signupSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
@@ -38,32 +38,32 @@ export async function signupAction(prevState: any, formData: FormData) {
   const { email, password } = validatedFields.data;
 
   try {
-    const admins = await store.read();
+    const admins = await adminStore.read();
     const existingAdmin = admins.find((admin) => admin.email === email);
     if (existingAdmin) {
       return { type: 'error', message: 'An admin with this email already exists.' };
     }
 
-    const isFirstAdmin = admins.length === 0;
     const passwordHash = await hash(password, 10);
 
     const newAdmin: AdminUser = {
       id: new Date().getTime().toString(),
       email,
       passwordHash,
-      isMainAdmin: isFirstAdmin,
-      isVerified: isFirstAdmin,
+      isMainAdmin: !hasMainAdmin,
+      isVerified: !hasMainAdmin,
       createdAt: new Date().toISOString(),
     };
 
     admins.push(newAdmin);
-    await store.write(admins);
+    await adminStore.write(admins);
 
   } catch (error) {
+    console.error('[signupAction Error]', error);
     return { type: 'error', message: 'An unexpected server error occurred.' };
   }
   
-  redirect('/admin/login');
+  return { type: 'success', message: 'Registration successful!' };
 }
 
 
@@ -87,7 +87,7 @@ export async function loginAction(prevState: any, formData: FormData) {
     const { email, password } = validatedFields.data;
     
     try {
-        const admins = await store.read();
+        const admins = await adminStore.read();
         const admin = admins.find(a => a.email === email);
 
         if (!admin) {
@@ -108,6 +108,7 @@ export async function loginAction(prevState: any, formData: FormData) {
         await login(sessionUser);
 
     } catch (error) {
+        console.error('[loginAction Error]', error);
         return { type: 'error', message: 'An unexpected server error occurred.' };
     }
     
@@ -115,14 +116,19 @@ export async function loginAction(prevState: any, formData: FormData) {
 }
 
 export async function approveAdminAction(adminId: string, isVerified: boolean) {
-    const admins = await store.read();
+    const session = await getSession();
+    if (!session.user?.isMainAdmin) {
+        throw new Error("Unauthorized: Only main admins can perform this action.");
+    }
+    
+    const admins = await adminStore.read();
     const adminIndex = admins.findIndex(admin => admin.id === adminId);
     if (adminIndex === -1) {
         throw new Error("Admin not found");
     }
 
     admins[adminIndex].isVerified = isVerified;
-    await store.write(admins);
+    await adminStore.write(admins);
     revalidatePath('/admin');
 }
 
@@ -131,6 +137,11 @@ export async function updateSubmissionStatusAction(
   step: 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode',
   status: 'approved' | 'rejected'
 ) {
+  const session = await getSession();
+  if (!session.user?.isVerified) {
+      throw new Error("Unauthorized: Only verified admins can perform this action.");
+  }
+  
   const submissions = await submissionStore.read();
   const submissionIndex = submissions.findIndex((s) => s.id === id);
 

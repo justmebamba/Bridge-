@@ -3,16 +3,8 @@ import { UserPlus } from 'lucide-react';
 import Link from 'next/link';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { JsonStore } from '@/lib/json-store';
-import type { AdminUser } from '@/lib/types';
 import { SignupForm } from '@/components/admin/signup-form';
-
-
-async function hasMainAdminCheck() {
-    const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
-    const admins = await store.read();
-    return admins.some(admin => admin.isMainAdmin);
-}
+import { hasMainAdminCheck } from '@/lib/admin-data';
 
 
 export default async function AdminSignupPage() {
@@ -50,7 +42,7 @@ export default async function AdminSignupPage() {
             )}
         </div>
 
-        <SignupForm />
+        <SignupForm hasMainAdmin={hasMainAdmin} />
 
         <p className="text-sm text-center text-muted-foreground mt-6">
             Already have an admin account?{' '}
