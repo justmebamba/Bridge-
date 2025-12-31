@@ -29,16 +29,6 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    serverActions: {
-      allowedOrigins: [
-        "localhost:3000",
-        "*.firebaseapp.com",
-        "*.web.app",
-        "*.cloudworkstations.dev"
-      ]
-    }
-  }
 };
 
 module.exports = nextConfig;

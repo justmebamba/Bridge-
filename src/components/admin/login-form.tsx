@@ -1,3 +1,4 @@
+
 'use client';
 
 import { FormEvent, useState } from 'react';
@@ -39,7 +40,7 @@ export function LoginForm() {
                 title: 'Login Successful',
                 description: 'Redirecting to dashboard...',
             });
-            router.push('/management-portal-a7b3c9d2e1f0');
+            router.push('/admin');
             router.refresh();
 
         } catch (error: any) {

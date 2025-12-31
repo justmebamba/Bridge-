@@ -16,7 +16,7 @@ export async function approveAdminAction(adminId: string, isVerified: boolean) {
         data: { isVerified }
     });
 
-    revalidatePath('/management-portal-a7b3c9d2e1f0');
+    revalidatePath('/admin');
 }
 
 export async function updateSubmissionStatusAction(
@@ -36,5 +36,5 @@ export async function updateSubmissionStatusAction(
       }
   });
 
-  revalidatePath('/management-portal-a7b3c9d2e1f0');
+  revalidatePath('/admin');
 }
