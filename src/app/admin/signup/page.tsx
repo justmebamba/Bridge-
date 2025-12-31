@@ -1,23 +1,42 @@
 
+'use client';
+
 import { UserPlus } from 'lucide-react';
 import Link from 'next/link';
-
+import { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SignupForm } from '@/components/admin/signup-form';
-import { JsonStore } from '@/lib/json-store';
-import type { AdminUser } from '@/lib/types';
+import { Loader2 } from 'lucide-react';
 
 
-// This function is now co-located with the Server Component
-async function hasMainAdminCheck() {
-    const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
-    const admins = await store.read();
-    return admins.some(admin => admin.isMainAdmin);
-}
+export default function AdminSignupPage() {
+  const [hasMainAdmin, setHasMainAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    async function checkMainAdmin() {
+      try {
+        const res = await fetch('/api/admins?checkMain=true');
+        const data = await res.json();
+        setHasMainAdmin(data.hasMainAdmin);
+      } catch (error) {
+        console.error("Failed to check for main admin", error);
+        // Decide on a safe default, e.g., assume no main admin exists to allow creation
+        setHasMainAdmin(false);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    checkMainAdmin();
+  }, []);
 
-export default async function AdminSignupPage() {
-  const hasMainAdmin = await hasMainAdminCheck();
+  if (isLoading) {
+    return (
+        <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
+             <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    )
+  }
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">

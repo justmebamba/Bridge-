@@ -1,65 +1,75 @@
 
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
 import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { signupAction } from '@/app/admin/signup/actions';
 import { Label } from '../ui/label';
-
-function SubmitButton() {
-    const { pending } = useFormStatus();
-    return (
-        <Button type="submit" disabled={pending} className="w-full">
-            {pending ? <Loader2 className="animate-spin" /> : 'Create Admin Account'}
-        </Button>
-    )
-}
+import { FormEvent, useState } from 'react';
 
 export function SignupForm({ hasMainAdmin }: { hasMainAdmin: boolean }) {
     const { toast } = useToast();
     const router = useRouter();
+    const [isLoading, setIsLoading] = useState(false);
     
-    // The `signupAction` needs to know if it's creating a main admin or not.
-    // We bind the `hasMainAdmin` value to the action.
-    const actionWithContext = signupAction.bind(null, hasMainAdmin);
-    const [state, formAction] = useFormState(actionWithContext, { type: 'idle' });
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setIsLoading(true);
 
-    useEffect(() => {
-        if (state?.type === 'error') {
-            toast({
-                variant: 'destructive',
-                title: 'Sign-up Failed',
-                description: state.message,
+        const formData = new FormData(event.currentTarget);
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
+
+        try {
+            const response = await fetch('/api/admins', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
             });
-        }
-        if (state?.type === 'success') {
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create account.');
+            }
+
             toast({
                 title: 'Registration Successful',
                 description: 'Please log in to continue.',
             });
             router.push('/admin/login');
+
+        } catch (error: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Sign-up Failed',
+                description: error.message || 'An unexpected error occurred.',
+            });
+        } finally {
+            setIsLoading(false);
         }
-    }, [state, toast, router]);
+    }
+
 
     return (
-        <form action={formAction} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" placeholder="admin@example.com" required />
+                    <Input id="email" name="email" type="email" placeholder="admin@example.com" required disabled={isLoading}/>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" name="password" type="password" placeholder="••••••••" required />
+                    <Input id="password" name="password" type="password" placeholder="••••••••" required minLength={8} disabled={isLoading}/>
                 </div>
             </div>
-            <SubmitButton />
+            <Button type="submit" disabled={isLoading} className="w-full">
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Create Admin Account'}
+            </Button>
         </form>
     );
 }
