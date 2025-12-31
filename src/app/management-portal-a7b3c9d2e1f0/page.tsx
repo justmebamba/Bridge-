@@ -41,22 +41,28 @@ export default function AdminPage() {
 
     if (loading) {
         return (
-            <div className="flex h-full items-center justify-center">
+            <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 md:gap-8 md:p-6">
                 <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
+            </main>
         );
     }
 
     if (error) {
         return (
-            <div className="flex h-full items-center justify-center text-destructive">
-                <p>Error: {error}</p>
-            </div>
+            <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 md:gap-8 md:p-6">
+                <div className="flex h-full items-center justify-center text-destructive">
+                    <p>Error: {error}</p>
+                </div>
+            </main>
         );
     }
     
     if (!data) {
-        return null;
+        return (
+             <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 md:gap-8 md:p-6">
+                <p>No data found.</p>
+            </main>
+        );
     }
 
   return (
