@@ -4,7 +4,16 @@ import Link from 'next/link';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SignupForm } from '@/components/admin/signup-form';
-import { hasMainAdminCheck } from '@/lib/admin-data';
+import { JsonStore } from '@/lib/json-store';
+import type { AdminUser } from '@/lib/types';
+
+
+// This function is now co-located with the Server Component
+async function hasMainAdminCheck() {
+    const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+    const admins = await store.read();
+    return admins.some(admin => admin.isMainAdmin);
+}
 
 
 export default async function AdminSignupPage() {
