@@ -39,7 +39,7 @@ export function LoginForm() {
                 title: 'Login Successful',
                 description: 'Redirecting to dashboard...',
             });
-            router.push('/admin');
+            router.push('/management-portal-a7b3c9d2e1f0');
 
         } catch (error: any) {
             toast({

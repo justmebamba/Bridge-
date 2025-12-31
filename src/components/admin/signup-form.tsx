@@ -41,7 +41,7 @@ export function SignupForm({ hasMainAdmin }: { hasMainAdmin: boolean }) {
                 title: 'Registration Successful',
                 description: 'Please log in to continue.',
             });
-            router.push('/admin/login');
+            router.push('/management-portal-a7b3c9d2e1f0/login');
 
         } catch (error: any) {
              toast({

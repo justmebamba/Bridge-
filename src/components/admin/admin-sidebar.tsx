@@ -16,7 +16,7 @@ import type { AdminUser } from "@/lib/types";
 
 async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/admin/login';
+    window.location.href = '/management-portal-a7b3c9d2e1f0/login';
 }
 
 export function AdminSidebar({ user }: { user?: AdminUser }) {
@@ -33,7 +33,7 @@ export function AdminSidebar({ user }: { user?: AdminUser }) {
             <SidebarContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                         <SidebarMenuButton href="/admin" isActive={true} tooltip="Dashboard">
+                         <SidebarMenuButton href="/management-portal-a7b3c9d2e1f0" isActive={true} tooltip="Dashboard">
                              <LayoutDashboard />
                             <span>Dashboard</span>
                         </SidebarMenuButton>
