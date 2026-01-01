@@ -2,10 +2,9 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { JsonStore } from '@/lib/json-store';
+import { db } from '@/lib/firebase';
 import type { Submission } from '@/lib/types';
-
-const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
+import { FieldValue } from 'firebase-admin/firestore';
 
 // GET handler for client-side fetching of a single submission's status.
 export async function GET(request: Request) {
@@ -17,11 +16,14 @@ export async function GET(request: Request) {
     }
     
     try {
-        const submissions = await submissionStore.read();
-        const submission = submissions.find(s => s.id === userId);
-        if (!submission) {
+        const submissionRef = db.collection('submissions').doc(userId);
+        const submissionDoc = await submissionRef.get();
+
+        if (!submissionDoc.exists) {
             return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
         }
+        
+        const submission = { id: submissionDoc.id, ...submissionDoc.data() } as Submission;
         return NextResponse.json(submission);
     } catch (error: any) {
         console.error('Error fetching submission:', error);
@@ -33,26 +35,20 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { 
-        tiktokUsername, 
-        verificationCode, 
-        phoneNumber, 
-        finalCode 
-    } = body;
-
     const id = body.id || body.tiktokUsername;
 
     if (!id) {
         return NextResponse.json({ message: 'An ID (TikTok username) is required.' }, { status: 400 });
     }
 
-    const submissions = await submissionStore.read();
-    let submission = submissions.find(s => s.id === id);
-    let isNewSubmission = false;
+    const submissionRef = db.collection('submissions').doc(id);
+    const submissionDoc = await submissionRef.get();
 
-    if (!submission) {
-        isNewSubmission = true;
-        submission = {
+    let dataToSet: Partial<Submission> = {};
+
+    if (!submissionDoc.exists) {
+        // This is a new submission
+        dataToSet = {
             id,
             tiktokUsername: id,
             tiktokUsernameStatus: 'pending',
@@ -60,37 +56,32 @@ export async function POST(request: Request) {
             phoneNumberStatus: 'pending',
             finalCodeStatus: 'pending',
             isVerified: false,
-            createdAt: new Date().toISOString()
+            createdAt: FieldValue.serverTimestamp() as any, // Firestore will set the timestamp
         };
     }
-    
+
     // Update data based on what's provided in the body
-    if(tiktokUsername) submission.tiktokUsernameStatus = 'approved';
-    if(verificationCode) {
-        submission.verificationCode = verificationCode;
-        submission.verificationCodeStatus = 'approved';
+    if(body.tiktokUsername) dataToSet.tiktokUsernameStatus = 'approved';
+    if(body.verificationCode) {
+        dataToSet.verificationCode = body.verificationCode;
+        dataToSet.verificationCodeStatus = 'approved';
     }
-    if(phoneNumber) {
-        submission.phoneNumber = phoneNumber;
-        submission.phoneNumberStatus = 'approved';
+    if(body.phoneNumber) {
+        dataToSet.phoneNumber = body.phoneNumber;
+        dataToSet.phoneNumberStatus = 'approved';
     }
-    if(finalCode) {
-        submission.finalCode = finalCode;
-        submission.finalCodeStatus = 'approved';
-        submission.isVerified = true;
-    }
-    
-    // Add or update the submission in the array
-    if (isNewSubmission) {
-        submissions.push(submission);
-    } else {
-        const index = submissions.findIndex(s => s.id === id);
-        submissions[index] = submission;
+    if(body.finalCode) {
+        dataToSet.finalCode = body.finalCode;
+        dataToSet.finalCodeStatus = 'approved';
+        dataToSet.isVerified = true;
     }
 
-    await submissionStore.write(submissions);
+    await submissionRef.set(dataToSet, { merge: true });
 
-    return NextResponse.json(submission, { status: 200 });
+    const updatedDoc = await submissionRef.get();
+    const updatedSubmission = { id: updatedDoc.id, ...updatedDoc.data() };
+
+    return NextResponse.json(updatedSubmission, { status: 200 });
 
   } catch (error: any) {
     console.error("Error processing submission:", error);
@@ -108,33 +99,27 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ message: 'Submission ID, step, and status are required' }, { status: 400 });
     }
     
-    const submissions = await submissionStore.read();
-    const subIndex = submissions.findIndex(s => s.id === submissionId);
+    const submissionRef = db.collection('submissions').doc(submissionId);
 
-    if (subIndex === -1) {
-      return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
-    }
-
-    const keyToUpdate = `${step}Status` as keyof Submission;
-    if (keyToUpdate in submissions[subIndex]) {
-        (submissions[subIndex] as any)[keyToUpdate] = status;
-    } else {
-        return NextResponse.json({ message: `Invalid step: ${step}` }, { status: 400 });
-    }
+    const keyToUpdate = `${step}Status`;
+    let updatePayload: { [key: string]: any } = { [keyToUpdate]: status };
     
     // If rejecting any step, set the final verification to false
     if (status === 'rejected') {
-        submissions[subIndex].isVerified = false;
+        updatePayload.isVerified = false;
     }
     
     // If approving the final step, set the final verification to true
     if (step === 'finalCode' && status === 'approved') {
-        submissions[subIndex].isVerified = true;
+        updatePayload.isVerified = true;
     }
 
-    await submissionStore.write(submissions);
+    await submissionRef.update(updatePayload);
 
-    return NextResponse.json(submissions[subIndex], { status: 200 });
+    const updatedDoc = await submissionRef.get();
+    const updatedData = { id: updatedDoc.id, ...updatedDoc.data() };
+
+    return NextResponse.json(updatedData, { status: 200 });
 
   } catch (error: any) {
     console.error("Error updating submission status:", error);
@@ -151,17 +136,9 @@ export async function DELETE(request: Request) {
     if (!submissionId) {
       return NextResponse.json({ message: 'Submission ID is required' }, { status: 400 });
     }
-
-    let submissions = await submissionStore.read();
-    const initialLength = submissions.length;
     
-    submissions = submissions.filter(s => s.id !== submissionId);
-
-    if (submissions.length === initialLength) {
-      return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
-    }
-
-    await submissionStore.write(submissions);
+    const submissionRef = db.collection('submissions').doc(submissionId);
+    await submissionRef.delete();
 
     return NextResponse.json({ message: 'Submission deleted successfully' }, { status: 200 });
   } catch (error: any) {

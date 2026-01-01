@@ -27,6 +27,7 @@ export interface PhoneNumber {
 export interface AdminUser {
   id: string;
   email: string;
+  passwordHash: string;
   isVerified: boolean;
   isMainAdmin: boolean;
   createdAt: string | Date;
@@ -37,4 +38,15 @@ export interface AdminUser {
 // to fetch their latest submission status from the server.
 export interface AuthUser {
     id: string;
+}
+
+// For iron-session
+declare module 'iron-session' {
+  interface IronSessionData {
+    admin?: {
+      id: string;
+      email: string;
+      isMainAdmin: boolean;
+    };
+  }
 }

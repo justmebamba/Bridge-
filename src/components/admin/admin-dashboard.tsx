@@ -2,13 +2,11 @@
 'use client';
 
 import {
-  CheckCircle,
   Users,
   Clock,
   UserCheck,
   Trash2,
   MoreVertical,
-  XCircle,
 } from 'lucide-react';
 import {
   Card,
@@ -29,7 +27,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';

@@ -1,33 +1,70 @@
 
 import type { Submission, AdminUser } from '@/lib/types';
-import { JsonStore } from '@/lib/json-store';
+import { db } from './firebase';
+import { FieldValue } from 'firebase-admin/firestore';
 
-const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
-const adminStore = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+function docToSubmission(doc: FirebaseFirestore.DocumentSnapshot): Submission {
+    const data = doc.data() as any; // Cast to any to handle server timestamps
+    return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+    } as Submission;
+}
+
+function docToAdmin(doc: FirebaseFirestore.DocumentSnapshot): AdminUser {
+     const data = doc.data() as any;
+    return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+    } as AdminUser;
+}
 
 export async function getSubmissions(): Promise<Submission[]> {
-  const submissions = await submissionStore.read();
-  return submissions.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const snapshot = await db.collection('submissions').orderBy('createdAt', 'desc').get();
+  if (snapshot.empty) {
+      return [];
+  }
+  return snapshot.docs.map(docToSubmission);
 }
 
 export async function getAdmins(): Promise<AdminUser[]> {
-    return await adminStore.read();
+    const snapshot = await db.collection('admins').orderBy('createdAt', 'asc').get();
+    if (snapshot.empty) {
+        return [];
+    }
+    return snapshot.docs.map(docToAdmin);
 }
 
-export async function addAdmin(email: string): Promise<AdminUser> {
-    const admins = await adminStore.read();
-    const hasMainAdmin = admins.some(a => a.isMainAdmin);
-    
-    const newAdmin = {
-        id: new Date().getTime().toString(), // simple unique ID
+export async function getAdminById(id: string): Promise<AdminUser | null> {
+    const doc = await db.collection('admins').doc(id).get();
+    if (!doc.exists) {
+        return null;
+    }
+    return docToAdmin(doc);
+}
+
+export async function getAdminByEmail(email: string): Promise<AdminUser | null> {
+    const snapshot = await db.collection('admins').where('email', '==', email).limit(1).get();
+    if (snapshot.empty) {
+        return null;
+    }
+    return docToAdmin(snapshot.docs[0]);
+}
+
+export async function addAdmin({ email, passwordHash, isMainAdmin }: { email: string; passwordHash: string; isMainAdmin: boolean }): Promise<AdminUser> {
+    const newAdminRef = db.collection('admins').doc();
+    const newAdmin: Omit<AdminUser, 'id'> = {
         email,
-        isMainAdmin: !hasMainAdmin,
-        isVerified: !hasMainAdmin,
-        createdAt: new Date().toISOString(),
+        passwordHash,
+        isMainAdmin,
+        isVerified: isMainAdmin, // First admin is auto-verified
+        createdAt: FieldValue.serverTimestamp() as any,
     };
-    admins.push(newAdmin);
-    await adminStore.write(admins);
-    return newAdmin;
+    await newAdminRef.set(newAdmin);
+    return {
+        id: newAdminRef.id,
+        ...newAdmin
+    } as AdminUser;
 }

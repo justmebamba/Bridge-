@@ -2,60 +2,20 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { JsonStore } from '@/lib/json-store';
+import { db } from '@/lib/firebase';
 import type { AdminUser } from '@/lib/types';
-import { v4 as uuidv4 } from 'uuid';
 
-const adminStore = new JsonStore<AdminUser[]>('src/data/admins.json', []);
-
-// GET handler for checking for main admin
+// GET handler for checking for main admin - used by signup page
 export async function GET() {
     try {
-        const admins = await adminStore.read();
-        const mainAdminCount = admins.filter(a => a.isMainAdmin).length;
-        return NextResponse.json({ hasMainAdmin: mainAdminCount > 0 });
+        const adminsSnapshot = await db.collection('admins').where('isMainAdmin', '==', true).limit(1).get();
+        return NextResponse.json({ hasMainAdmin: !adminsSnapshot.empty });
     } catch (error) {
         console.error('[API/ADMINS/GET] Error:', error);
         return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
     }
 }
 
-// POST handler for creating new admins
-export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const { email } = body;
-
-        if (!email) {
-            return NextResponse.json({ message: 'Email is required.' }, { status: 400 });
-        }
-        
-        const admins = await adminStore.read();
-        const hasMainAdmin = admins.some(a => a.isMainAdmin);
-
-        const existingAdmin = admins.find(a => a.email === email);
-        if (existingAdmin) {
-            return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
-        }
-        
-        const newAdmin: AdminUser = {
-            id: uuidv4(),
-            email,
-            isMainAdmin: !hasMainAdmin,
-            isVerified: !hasMainAdmin, // First admin is auto-verified
-            createdAt: new Date().toISOString(),
-        };
-
-        admins.push(newAdmin);
-        await adminStore.write(admins);
-        
-        return NextResponse.json({ message: 'Admin account created successfully.' }, { status: 201 });
-
-    } catch (error: any) {
-        console.error('[API/ADMINS/POST] Error:', error);
-        return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
-    }
-}
 
 // PATCH handler for updating admin verification
 export async function PATCH(request: Request) {
@@ -67,18 +27,18 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ message: 'adminId and isVerified status are required' }, { status: 400 });
         }
         
-        const admins = await adminStore.read();
-        const adminIndex = admins.findIndex(a => a.id === adminId);
+        const adminRef = db.collection('admins').doc(adminId);
+        const adminDoc = await adminRef.get();
 
-        if (adminIndex === -1) {
+        if (!adminDoc.exists) {
           return NextResponse.json({ message: 'Admin not found' }, { status: 404 });
         }
         
-        admins[adminIndex].isVerified = isVerified;
+        await adminRef.update({ isVerified });
 
-        await adminStore.write(admins);
+        const updatedAdmin = { ...adminDoc.data(), isVerified } as AdminUser;
 
-        return NextResponse.json(admins[adminIndex], { status: 200 });
+        return NextResponse.json(updatedAdmin, { status: 200 });
 
     } catch (error: any) {
         console.error("Error updating admin status:", error);

@@ -1,15 +1,36 @@
 
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
+import { getAdminById } from '@/lib/data-access';
+import { headers } from 'next/headers';
 
 export default async function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    // The session check has been removed as per the new requirements.
-    // The admin dashboard is now publicly accessible but at a non-obvious URL.
+    const session = await getSession();
+    const admin = session.admin;
+    const pathname = headers().get('x-next-pathname') || '';
+    
+    const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
+
+    if (!admin && !isAuthPage) {
+        redirect('/admin/login');
+    }
+
+    if (admin && isAuthPage) {
+        redirect('/admin');
+    }
+    
+    let currentUser = null;
+    if (admin) {
+        currentUser = await getAdminById(admin.id);
+    }
+    
     return (
-        <AdminLayoutClient>
+        <AdminLayoutClient currentUser={currentUser}>
             {children}
         </AdminLayoutClient>
     );

@@ -9,10 +9,20 @@ import {
     SidebarMenuButton, 
     SidebarFooter 
 } from "@/components/ui/sidebar";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, LogOut } from "lucide-react";
 import { TikTokLogo } from "../icons/tiktok-logo";
+import type { AdminUser } from "@/lib/types";
+import { Button } from "../ui/button";
+import { useRouter } from "next/navigation";
 
-export function AdminSidebar() {
+export function AdminSidebar({ currentUser }: { currentUser: Omit<AdminUser, 'passwordHash'> | null }) {
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        router.refresh();
+    };
+
     return (
         <>
             <SidebarHeader>
@@ -31,9 +41,17 @@ export function AdminSidebar() {
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarContent>
-            <SidebarFooter>
-                {/* Footer can be used for other links if needed */}
-            </SidebarFooter>
+            {currentUser && (
+                <SidebarFooter>
+                    <div className="text-sm text-muted-foreground p-2 space-y-2">
+                       <p className="font-semibold truncate">{currentUser.email}</p>
+                       <Button variant="outline" size="sm" className="w-full" onClick={handleLogout}>
+                           <LogOut className="mr-2 h-4 w-4" />
+                           Log Out
+                       </Button>
+                    </div>
+                </SidebarFooter>
+            )}
         </>
     );
 }

@@ -1,18 +1,24 @@
 
 import type { AdminUser, Submission } from '@/lib/types';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
-import { getAdmins, getSubmissions } from '@/lib/data-access';
+import { getAdmins, getSubmissions, getAdminById } from '@/lib/data-access';
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 
 
 export default async function AdminPage() {
-    // Fetch all data on the server from JSON files
-    const [submissions, admins] = await Promise.all([
+    const session = await getSession();
+    if (!session.admin) {
+        redirect('/admin/login');
+    }
+
+    // Fetch all data on the server
+    const [submissions, admins, currentUser] = await Promise.all([
         getSubmissions(),
-        getAdmins()
+        getAdmins(),
+        getAdminById(session.admin.id)
     ]);
     
-    // Since there's no login, we'll find the main admin from the data
-    const currentUser = admins.find(a => a.isMainAdmin) || admins[0] || null;
     const isMainAdmin = !!currentUser?.isMainAdmin;
 
     // Pass the fetched data as props to the client component
