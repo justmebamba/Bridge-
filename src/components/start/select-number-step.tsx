@@ -93,11 +93,13 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to save phone number.');
             }
+            
             // Artificial delay
-            setTimeout(() => {
-                onNext({ phoneNumber: values.phoneNumber });
-                // We don't set isSubmitting to false here, to prevent user from going back
-            }, 8000);
+            await new Promise(resolve => setTimeout(resolve, 8000));
+            
+            onNext({ phoneNumber: values.phoneNumber });
+            // We don't set isSubmitting to false here, to prevent user from going back
+
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             setIsSubmitting(false); // Only stop loading on error

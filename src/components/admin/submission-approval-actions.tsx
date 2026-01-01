@@ -16,15 +16,26 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { updateSubmissionStatusAction } from './actions';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+
 
 type Step = 'tiktokUsername' | 'verificationCode' | 'phoneNumber' | 'finalCode';
 
 export function SubmissionApprovalActions({ id, step }: { id: string; step: Step }) {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const { toast } = useToast();
 
   const handleAction = (status: 'approved' | 'rejected') => {
     startTransition(async () => {
-      await updateSubmissionStatusAction(id, step, status);
+      try {
+        await updateSubmissionStatusAction(id, step, status);
+        toast({ title: "Success", description: `Submission step has been ${status}.` });
+        router.refresh();
+      } catch (error: any) {
+        toast({ variant: "destructive", title: "Error", description: error.message });
+      }
     });
   };
 

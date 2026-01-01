@@ -6,10 +6,14 @@ import {
   Users,
   Clock,
   UserCheck,
+  Trash2,
+  MoreVertical,
+  XCircle,
 } from 'lucide-react';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -21,6 +25,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceToNow } from 'date-fns';
 import { AdminApprovalForm } from '@/components/admin/admin-approval-form';
@@ -28,6 +40,8 @@ import { SubmissionApprovalActions } from '@/components/admin/submission-approva
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Submission, AdminUser } from '@/lib/types';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -58,6 +72,8 @@ interface AdminDashboardProps {
 export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser, isMainAdmin }: AdminDashboardProps) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [admins, setAdmins] = useState(initialAdmins);
+  const { toast } = useToast();
+  const router = useRouter();
 
   const totalSubmissions = submissions.length;
   const pendingSubmissions = submissions.filter(
@@ -66,6 +82,30 @@ export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser,
   const totalAdmins = admins.length;
   const pendingAdmins = admins.filter((a) => !a.isVerified && !a.isMainAdmin).length;
   
+  const handleDeleteSubmission = async (submissionId: string) => {
+    if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/submissions?id=${submissionId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete submission.');
+      }
+      
+      setSubmissions(prev => prev.filter(s => s.id !== submissionId));
+      toast({ title: 'Success', description: 'Submission has been deleted.' });
+
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -118,6 +158,7 @@ export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser,
           <Card>
             <CardHeader className="px-7">
               <CardTitle>User Submissions</CardTitle>
+              <CardDescription>Review and manage all user submissions.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -126,9 +167,10 @@ export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser,
                     <TableHead>User</TableHead>
                     <TableHead>Username</TableHead>
                     <TableHead>Code 1</TableHead>
-                    <TableHead>Phone Number</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Code 2</TableHead>
                     <TableHead>Submitted</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -173,11 +215,26 @@ export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser,
                             {formatDistanceToNow(new Date(sub.createdAt), { addSuffix: true })}
                           </span>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => handleDeleteSubmission(sub.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         No submissions found.
                       </TableCell>
                     </TableRow>
@@ -191,6 +248,7 @@ export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser,
           <Card>
             <CardHeader className="px-7">
               <CardTitle>Administrator Management</CardTitle>
+              <CardDescription>Manage administrator accounts and permissions.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>

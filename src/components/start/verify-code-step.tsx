@@ -48,10 +48,10 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
             }
 
             // Artificial delay
-            setTimeout(() => {
-                onNext({ verificationCode: values.verificationCode });
-                // We don't set isSubmitting to false, because we are moving to the next step
-            }, 8000);
+            await new Promise(resolve => setTimeout(resolve, 8000));
+            
+            onNext({ verificationCode: values.verificationCode });
+            // We don't set isSubmitting to false, because we are moving to the next step
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             setIsSubmitting(false); // Only stop loading on error

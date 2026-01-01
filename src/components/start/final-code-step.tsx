@@ -49,9 +49,9 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
             }
             
             // Artificial delay to simulate verification
-            setTimeout(() => {
-                router.push('/success');
-            }, 8000);
+            await new Promise(resolve => setTimeout(resolve, 8000));
+            
+            router.push('/success');
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
