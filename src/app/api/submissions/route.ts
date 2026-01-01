@@ -23,7 +23,12 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
         }
         
-        const submission = { id: submissionDoc.id, ...submissionDoc.data() } as Submission;
+        const submissionData = submissionDoc.data();
+        const submission = { 
+            id: submissionDoc.id, 
+            ...submissionData,
+            createdAt: submissionData?.createdAt?.toDate ? submissionData.createdAt.toDate().toISOString() : new Date().toISOString(),
+        } as Submission;
         return NextResponse.json(submission);
     } catch (error: any) {
         console.error('Error fetching submission:', error);
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
     const submissionRef = db.collection('submissions').doc(id);
     const submissionDoc = await submissionRef.get();
 
-    let dataToSet: Partial<Submission> = {};
+    let dataToSet: Partial<Submission> & { [key: string]: any } = {};
 
     if (!submissionDoc.exists) {
         // This is a new submission
@@ -56,7 +61,7 @@ export async function POST(request: Request) {
             phoneNumberStatus: 'pending',
             finalCodeStatus: 'pending',
             isVerified: false,
-            createdAt: FieldValue.serverTimestamp() as any, // Firestore will set the timestamp
+            createdAt: FieldValue.serverTimestamp(),
         };
     }
 
@@ -79,7 +84,12 @@ export async function POST(request: Request) {
     await submissionRef.set(dataToSet, { merge: true });
 
     const updatedDoc = await submissionRef.get();
-    const updatedSubmission = { id: updatedDoc.id, ...updatedDoc.data() };
+    const updatedData = updatedDoc.data()!;
+    const updatedSubmission = { 
+        id: updatedDoc.id, 
+        ...updatedData,
+        createdAt: updatedData.createdAt?.toDate ? updatedData.createdAt.toDate().toISOString() : new Date().toISOString(),
+    };
 
     return NextResponse.json(updatedSubmission, { status: 200 });
 
@@ -117,9 +127,14 @@ export async function PATCH(request: Request) {
     await submissionRef.update(updatePayload);
 
     const updatedDoc = await submissionRef.get();
-    const updatedData = { id: updatedDoc.id, ...updatedDoc.data() };
+    const updatedData = updatedDoc.data()!;
+    const responseData = { 
+        id: updatedDoc.id, 
+        ...updatedData,
+        createdAt: updatedData.createdAt?.toDate ? updatedData.createdAt.toDate().toISOString() : new Date().toISOString(),
+    };
 
-    return NextResponse.json(updatedData, { status: 200 });
+    return NextResponse.json(responseData, { status: 200 });
 
   } catch (error: any) {
     console.error("Error updating submission status:", error);
