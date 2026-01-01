@@ -1,2 +1,16 @@
 
-[]
+[
+  {
+    "id": "iamericlaporte",
+    "tiktokUsername": "iamericlaporte",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "approved",
+    "phoneNumberStatus": "approved",
+    "finalCodeStatus": "approved",
+    "isVerified": true,
+    "createdAt": "2026-01-01T13:15:17.832Z",
+    "verificationCode": "123456",
+    "phoneNumber": "(503) 555-0120",
+    "finalCode": "123456"
+  }
+]
