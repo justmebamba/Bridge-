@@ -30,16 +30,20 @@ export default function RootLayout({
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   useEffect(() => {
-    // Use a simple timeout to ensure the loader is always removed.
-    const timer = setTimeout(() => {
+    // This timer is just for the initial aesthetic loading effect.
+    // It will reliably remove the loader.
+    const fadeTimer = setTimeout(() => {
       setIsFadingOut(true);
-      // This second timeout should match the fade-out animation duration
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500); 
-    }, 200); // A short delay to allow initial rendering
+    }, 150); // Start fading out quickly
 
-    return () => clearTimeout(timer);
+    const loadTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 650); // Remove loader after fade-out animation (0.5s)
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(loadTimer);
+    };
   }, []);
 
   return (
