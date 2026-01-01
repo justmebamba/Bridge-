@@ -1,70 +1,46 @@
 
 import type { Submission, AdminUser } from '@/lib/types';
-import { db } from './firebase';
-import { FieldValue } from 'firebase-admin/firestore';
+import { JsonStore } from './json-store';
+import { v4 as uuidv4 } from 'uuid';
 
-function docToSubmission(doc: FirebaseFirestore.DocumentSnapshot): Submission {
-    const data = doc.data() as any; // Cast to any to handle server timestamps
-    return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-    } as Submission;
-}
-
-function docToAdmin(doc: FirebaseFirestore.DocumentSnapshot): AdminUser {
-     const data = doc.data() as any;
-    return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-    } as AdminUser;
-}
+const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
+const adminStore = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 
 export async function getSubmissions(): Promise<Submission[]> {
-  const snapshot = await db.collection('submissions').orderBy('createdAt', 'desc').get();
-  if (snapshot.empty) {
-      return [];
-  }
-  return snapshot.docs.map(docToSubmission);
+  const submissions = await submissionStore.read();
+  return submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-export async function getAdmins(): Promise<AdminUser[]> {
-    const snapshot = await db.collection('admins').orderBy('createdAt', 'asc').get();
-    if (snapshot.empty) {
-        return [];
-    }
-    return snapshot.docs.map(docToAdmin);
+export async function getAdmins(): Promise<Omit<AdminUser, 'passwordHash'>[]> {
+    const admins = await adminStore.read();
+    return admins.map(({ passwordHash, ...rest }) => rest).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
-export async function getAdminById(id: string): Promise<AdminUser | null> {
-    const doc = await db.collection('admins').doc(id).get();
-    if (!doc.exists) {
-        return null;
-    }
-    return docToAdmin(doc);
+export async function getAdminById(id: string): Promise<Omit<AdminUser, 'passwordHash'> | null> {
+    const admins = await adminStore.read();
+    const admin = admins.find(a => a.id === id);
+    if (!admin) return null;
+    const { passwordHash, ...rest } = admin;
+    return rest;
 }
+
 
 export async function getAdminByEmail(email: string): Promise<AdminUser | null> {
-    const snapshot = await db.collection('admins').where('email', '==', email).limit(1).get();
-    if (snapshot.empty) {
-        return null;
-    }
-    return docToAdmin(snapshot.docs[0]);
+    const admins = await adminStore.read();
+    return admins.find(a => a.email === email) || null;
 }
 
 export async function addAdmin({ email, passwordHash, isMainAdmin }: { email: string; passwordHash: string; isMainAdmin: boolean }): Promise<AdminUser> {
-    const newAdminRef = db.collection('admins').doc();
-    const newAdmin: Omit<AdminUser, 'id'> = {
+    const admins = await adminStore.read();
+    const newAdmin: AdminUser = {
+        id: uuidv4(),
         email,
         passwordHash,
         isMainAdmin,
         isVerified: isMainAdmin, // First admin is auto-verified
-        createdAt: FieldValue.serverTimestamp() as any,
+        createdAt: new Date().toISOString(),
     };
-    await newAdminRef.set(newAdmin);
-    return {
-        id: newAdminRef.id,
-        ...newAdmin
-    } as AdminUser;
+    admins.push(newAdmin);
+    await adminStore.write(admins);
+    return newAdmin;
 }

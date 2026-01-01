@@ -2,10 +2,8 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import type { AdminUser } from '@/lib/types';
+import { getAdmins, addAdmin, getAdminByEmail } from '@/lib/data-access';
 import bcrypt from 'bcryptjs';
-import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
     try {
@@ -20,27 +18,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Password must be at least 8 characters long.' }, { status: 400 });
         }
         
-        // Check if admin with this email already exists
-        const existingAdminSnapshot = await db.collection('admins').where('email', '==', email).limit(1).get();
-        if (!existingAdminSnapshot.empty) {
+        const existingAdmin = await getAdminByEmail(email);
+        if (existingAdmin) {
             return NextResponse.json({ message: 'An admin with this email already exists.' }, { status: 409 });
         }
 
-        // Check if a main admin already exists
-        const mainAdminSnapshot = await db.collection('admins').where('isMainAdmin', '==', true).limit(1).get();
-        const hasMainAdmin = !mainAdminSnapshot.empty;
+        const admins = await getAdmins();
+        const hasMainAdmin = admins.some(admin => admin.isMainAdmin);
         
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const newAdmin: Omit<AdminUser, 'id'> = {
+        await addAdmin({
             email,
             passwordHash,
             isMainAdmin: !hasMainAdmin,
-            isVerified: !hasMainAdmin, // First admin is auto-verified
-            createdAt: FieldValue.serverTimestamp() as any,
-        };
-
-        await db.collection('admins').add(newAdmin);
+        });
         
         return NextResponse.json({ message: 'Admin account created successfully. Please log in.' }, { status: 201 });
 
