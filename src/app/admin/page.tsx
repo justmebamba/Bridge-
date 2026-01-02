@@ -9,6 +9,8 @@ import { redirect } from 'next/navigation';
 export default async function AdminPage() {
     const session = await getSession();
     if (!session.admin) {
+        // This is a critical safety check. If for any reason the session is gone,
+        // redirect to login instead of trying to fetch data with an invalid ID.
         redirect('/admin/login');
     }
 
@@ -18,6 +20,12 @@ export default async function AdminPage() {
         getAdmins(),
         getAdminById(session.admin.id)
     ]);
+    
+    // This check is important. If the user was deleted from the db but the session remains,
+    // we should not proceed.
+    if (!currentUser) {
+        redirect('/admin/login');
+    }
     
     const isMainAdmin = !!currentUser?.isMainAdmin;
 

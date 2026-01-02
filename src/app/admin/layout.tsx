@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
 import { getAdminById } from '@/lib/data-access';
 import { headers } from 'next/headers';
+import type { AdminUser } from '@/lib/types';
 
 export default async function AdminLayout({
     children,
@@ -24,8 +25,9 @@ export default async function AdminLayout({
         redirect('/admin');
     }
     
-    let currentUser = null;
+    let currentUser: Omit<AdminUser, 'passwordHash'> | null = null;
     if (admin) {
+        // This check prevents the crash. We only fetch the user if the admin session exists.
         currentUser = await getAdminById(admin.id);
     }
     
