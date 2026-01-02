@@ -7,6 +7,7 @@ import type { AdminUser } from '@/lib/types';
 import { LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../ui/button';
+import { usePathname } from 'next/navigation';
 
 export function AdminLayoutClient({
     children,
@@ -15,6 +16,9 @@ export function AdminLayoutClient({
     children: React.ReactNode;
     currentUser: Omit<AdminUser, 'passwordHash'> | null;
 }) {
+    const pathname = usePathname();
+    const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
+
     return (
         <SidebarProvider>
             <Sidebar>
@@ -25,7 +29,7 @@ export function AdminLayoutClient({
                      <div className="flex-1">
                         <h1 className="text-lg font-semibold">Admin Dashboard</h1>
                     </div>
-                     {!currentUser && (
+                     {isAuthPage && !currentUser && (
                         <Button asChild variant="outline" size="sm">
                             <Link href="/admin/login">
                                 <LogIn className="mr-2 h-4 w-4" />
