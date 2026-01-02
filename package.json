@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p ${PORT:=3000}",
     "build": "NODE_ENV=production next build",
     "start": "next start -p ${PORT:=3000}",
     "lint": "next lint",
