@@ -36,7 +36,7 @@ import { AdminApprovalForm } from '@/components/admin/admin-approval-form';
 import { SubmissionApprovalActions } from '@/components/admin/submission-approval-actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Submission, AdminUser } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -72,6 +72,31 @@ export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser,
   const { toast } = useToast();
   const router = useRouter();
 
+  // Real-time data fetching
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const subRes = await fetch('/api/submissions');
+        const adminRes = await fetch('/api/admins');
+        
+        if (subRes.ok && adminRes.ok) {
+          const newSubmissions: Submission[] = await subRes.json();
+           const newAdmins: Omit<AdminUser, 'passwordHash'>[] = await adminRes.json();
+           
+           // Sort by date descending
+          newSubmissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          
+          setSubmissions(newSubmissions);
+          setAdmins(newAdmins);
+        }
+      } catch (error) {
+        console.error("Failed to fetch real-time data:", error);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   const totalSubmissions = submissions.length;
   const pendingSubmissions = submissions.filter(
     (s) => !s.isVerified && s.finalCodeStatus !== 'rejected'
@@ -94,6 +119,7 @@ export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser,
         throw new Error(error.message || 'Failed to delete submission.');
       }
       
+      // Optimistically update the UI
       setSubmissions(prev => prev.filter(s => s.id !== submissionId));
       toast({ title: 'Success', description: 'Submission has been deleted.' });
 

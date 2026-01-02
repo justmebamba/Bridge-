@@ -3,34 +3,37 @@
 
 import { NextResponse } from 'next/server';
 import { 
+    getSubmissions,
     getSubmissionById, 
     createOrUpdateSubmission,
     updateSubmissionStepStatus,
     deleteSubmission,
 } from '@/lib/data-access';
 
-// GET handler for client-side fetching of a single submission's status.
+// GET handler for client-side fetching of submissions
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
     
-    if (!userId) {
-        return NextResponse.json({ message: 'Submission ID is required.' }, { status: 400 });
-    }
-    
     try {
-        const submission = await getSubmissionById(userId);
-
-        if (!submission) {
-            return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
+        if (userId) {
+            // Get a single submission if ID is provided
+            const submission = await getSubmissionById(userId);
+            if (!submission) {
+                return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
+            }
+            return NextResponse.json(submission);
+        } else {
+            // Get all submissions if no ID is provided
+            const submissions = await getSubmissions();
+            return NextResponse.json(submissions);
         }
-        
-        return NextResponse.json(submission);
     } catch (error: any) {
         console.error('[API/SUBMISSIONS/GET] Error:', error);
         return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
     }
 }
+
 
 // POST handler for creating or updating a submission from the multi-step form.
 export async function POST(request: Request) {
