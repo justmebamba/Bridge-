@@ -1,6 +1,12 @@
 {
   "placeholderImages": [
     {
+      "id": "hero-image",
+      "description": "Creator painting a glass",
+      "imageUrl": "https://images.unsplash.com/photo-1581462704144-9818a2f757ce?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjcmVhdG9yJTIwcGFpbnRpbmd8ZW58MHx8fHwxNzY3MzgwNjExfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "creator painting"
+    },
+    {
       "id": "success-1",
       "description": "A man surfing a wave in a tropical location.",
       "imageUrl": "https://images.unsplash.com/photo-1531948334400-33a8c5a248a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtYW4lMjBzdXJmaW5nfGVufDB8fHx8MTc2NTU5ODU4N3ww&ixlib=rb-4.1.0&q=80&w=1080",

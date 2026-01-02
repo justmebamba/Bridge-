@@ -4,8 +4,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "./ui/button";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export function TikTokBridgeHero() {
+  const heroImage = PlaceHolderImages.find(p => p.id === 'hero-image');
 
   return (
     <>
@@ -28,13 +30,16 @@ export function TikTokBridgeHero() {
         {/* Image container, positioned to overlap */}
         <div className="container px-4">
             <div className="relative h-64 md:h-96 w-full -mt-32 md:-mt-48">
-                <Image 
-                    src="https://picsum.photos/seed/creator/1200/600" 
-                    alt="Creator painting a glass" 
-                    data-ai-hint="creator painting"
-                    fill
-                    className="rounded-xl object-cover shadow-lg"
-                />
+                {heroImage && (
+                  <Image 
+                      src={heroImage.imageUrl} 
+                      alt={heroImage.description} 
+                      data-ai-hint={heroImage.imageHint}
+                      fill
+                      priority
+                      className="rounded-xl object-cover shadow-lg"
+                  />
+                )}
             </div>
         </div>
         
