@@ -42,7 +42,6 @@ export function AdminLayoutClient({
     }, [currentUser, isAuthPage, router, pathname]);
 
     // Render a loading state while we determine the user's status and correct route.
-    // This prevents the redirect loop.
     if (isLoading) {
         return (
             <div className="flex h-screen w-full items-center justify-center">

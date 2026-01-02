@@ -3,7 +3,7 @@ import { LoginForm } from "@/components/admin/login-form";
 
 export default function LoginPage() {
     return (
-        <main className="flex flex-1 items-center justify-center p-6">
+        <main className="flex min-h-screen flex-col items-center justify-center">
             <LoginForm />
         </main>
     );
