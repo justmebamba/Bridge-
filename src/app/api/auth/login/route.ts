@@ -1,6 +1,4 @@
 
-'use server';
-
 import { NextResponse } from 'next/server';
 import { getAdminByEmail } from '@/lib/data-access';
 import { getSession } from '@/lib/session';

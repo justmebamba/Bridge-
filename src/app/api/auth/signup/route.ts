@@ -1,6 +1,4 @@
 
-'use server';
-
 import { NextResponse } from 'next/server';
 import { getAdmins, addAdmin, getAdminByEmail } from '@/lib/data-access';
 import bcrypt from 'bcryptjs';

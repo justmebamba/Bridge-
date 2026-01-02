@@ -1,6 +1,4 @@
 
-'use server';
-
 import { NextResponse } from 'next/server';
 import { getAdmins, updateAdminVerification } from '@/lib/data-access';
 
