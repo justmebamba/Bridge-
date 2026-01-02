@@ -50,8 +50,8 @@ export function LoginForm() {
       }
       
       toast({ title: 'Success', description: data.message });
-      router.push('/admin');
-      router.refresh(); // This is important to re-fetch server-side props in the layout
+      router.push('/admin'); // Explicitly redirect to the dashboard
+      router.refresh(); // This is still important to re-fetch server-side props
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
