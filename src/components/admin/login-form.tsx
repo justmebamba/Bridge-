@@ -49,7 +49,7 @@ export function LoginForm() {
       
       toast({ title: 'Success', description: data.message });
       // Force a full page reload to the dashboard to ensure the session is picked up.
-      window.location.href = '/admin';
+      window.location.href = '/management-portal-a7b3c9d2e1f0';
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Login Failed', description: error.message });

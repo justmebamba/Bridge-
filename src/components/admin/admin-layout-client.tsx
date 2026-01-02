@@ -22,7 +22,7 @@ export function AdminLayoutClient({
     useEffect(() => {
         // If user is logged in BUT is on an auth page, redirect them to the dashboard.
         if (currentUser && isAuthPage) {
-            router.replace('/admin');
+            router.replace('/management-portal-a7b3c9d2e1f0');
             return;
         }
 
