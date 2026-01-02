@@ -50,12 +50,11 @@ export function LoginForm() {
       }
       
       toast({ title: 'Success', description: data.message });
-      // We only refresh. The layout component will handle the redirect.
-      router.refresh();
+      // Force a full page reload to the dashboard to ensure the session is picked up.
+      window.location.href = '/admin';
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Login Failed', description: error.message });
-    } finally {
       setIsSubmitting(false);
     }
   };

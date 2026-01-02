@@ -21,19 +21,19 @@ export function AdminLayoutClient({
     const pathname = usePathname();
     const router = useRouter();
     const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
-    const isVerifying = currentUser === undefined;
+    const isVerifying = currentUser === undefined; // Check if the prop is literally undefined, meaning server is still deciding
 
     useEffect(() => {
-        // If we are still verifying the session, don't do anything yet.
+        // If we are still verifying the session, don't do anything yet. This state is brief.
         if (isVerifying) return;
-
-        // If user is logged in and trying to access an auth page, redirect to dashboard.
+        
+        // If user is logged in BUT is on an auth page, redirect them to the dashboard.
         if (currentUser && isAuthPage) {
             router.replace('/admin');
             return;
         }
 
-        // If user is not logged in and not on an auth page, redirect to login.
+        // If user is NOT logged in and is NOT on an auth page, send them to login.
         if (!currentUser && !isAuthPage) {
             router.replace('/admin/login');
             return;
@@ -42,6 +42,7 @@ export function AdminLayoutClient({
     }, [currentUser, isAuthPage, router, isVerifying]);
 
     // Render a loading state while redirecting or verifying to prevent flash of wrong content
+    // This covers all redirect scenarios from the useEffect hook.
     if (isVerifying || (currentUser && isAuthPage) || (!currentUser && !isAuthPage)) {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -50,7 +51,7 @@ export function AdminLayoutClient({
         );
     }
     
-    // If we're on an authentication page, we don't need the full sidebar layout.
+    // If we're on an authentication page (and the user is logged out), show children without the full layout.
     if (isAuthPage) {
         return (
              <main className="flex min-h-screen flex-col items-center justify-center">
@@ -59,7 +60,7 @@ export function AdminLayoutClient({
         );
     }
 
-    // Otherwise, show the full admin dashboard layout.
+    // Otherwise, show the full admin dashboard layout for a logged-in user.
     return (
         <SidebarProvider>
             <Sidebar>
