@@ -49,11 +49,6 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
     const [error, setError] = useState<string | null>(null);
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { phoneNumber: "" },
-    });
-
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -94,11 +89,12 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
                 throw new Error(errorData.message || 'Failed to save phone number.');
             }
             
-            // Artificial delay
-            await new Promise(resolve => setTimeout(resolve, 8000));
+            toast({
+                title: 'Number Selected!',
+                description: 'Your chosen number has been submitted for approval.',
+            });
             
             onNext({ phoneNumber: values.phoneNumber });
-            // We don't set isSubmitting to false here, to prevent user from going back
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });

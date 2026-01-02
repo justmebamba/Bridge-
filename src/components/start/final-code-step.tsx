@@ -48,10 +48,17 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
                  throw new Error(errorData.message || 'Failed to submit final code.');
             }
             
-            // Artificial delay to simulate verification
-            await new Promise(resolve => setTimeout(resolve, 8000));
-            
-            router.push('/success');
+            toast({
+                title: 'Application Submitted!',
+                description: 'Your final code has been sent for review. You will be redirected shortly.',
+            });
+
+            // No artificial delay needed here, the success page will handle polling/waiting
+            // Wait for toast to be visible before redirecting
+            setTimeout(() => {
+                router.push('/success');
+            }, 2000);
+
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
@@ -109,7 +116,7 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
                         </Button>
                          <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             {isSubmitting ? 'Verifying...' : 'Submit Application'}
+                             {isSubmitting ? 'Submitting...' : 'Submit Application'}
                         </Button>
                     </div>
                 </form>

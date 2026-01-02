@@ -27,8 +27,8 @@ export async function GET(request: Request) {
         
         return NextResponse.json(submission);
     } catch (error: any) {
-        console.error('Error fetching submission:', error);
-        return NextResponse.json({ message: error.message || "Could not fetch submission." }, { status: 500 });
+        console.error('[API/SUBMISSIONS/GET] Error:', error);
+        return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
     }
 }
 
@@ -47,8 +47,8 @@ export async function POST(request: Request) {
     return NextResponse.json(submission, { status: 200 });
 
   } catch (error: any) {
-    console.error("Error processing submission:", error);
-    return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
+    console.error("[API/SUBMISSIONS/POST] Error:", error);
+    return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
 
@@ -66,9 +66,13 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json(submission, { status: 200 });
 
-  } catch (error: any) {
-    console.error("Error updating submission status:", error);
-    return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
+  } catch (error: any)
+   {
+    console.error("[API/SUBMISSIONS/PATCH] Error:", error);
+    if (error.message.includes('not found')) {
+        return NextResponse.json({ message: error.message }, { status: 404 });
+    }
+    return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
 
@@ -86,7 +90,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ message: 'Submission deleted successfully' }, { status: 200 });
   } catch (error: any) {
-    console.error("Error deleting submission:", error);
-    return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
+    console.error("[API/SUBMISSIONS/DELETE] Error:", error);
+    return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }

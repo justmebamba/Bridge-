@@ -47,11 +47,13 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
                 throw new Error(errorData.message || 'Failed to submit verification code.');
             }
 
-            // Artificial delay
-            await new Promise(resolve => setTimeout(resolve, 8000));
+            toast({
+              title: 'Code Submitted!',
+              description: "Your verification code has been sent for approval.",
+            });
             
             onNext({ verificationCode: values.verificationCode });
-            // We don't set isSubmitting to false, because we are moving to the next step
+
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             setIsSubmitting(false); // Only stop loading on error

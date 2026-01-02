@@ -31,6 +31,7 @@ export async function createOrUpdateSubmission(id: string, data: Partial<Submiss
     let submissionData: Submission;
 
     if (!doc.exists) {
+        // This is a new submission
         submissionData = {
             id,
             tiktokUsername: id,
@@ -42,20 +43,18 @@ export async function createOrUpdateSubmission(id: string, data: Partial<Submiss
             createdAt: new Date().toISOString(),
         };
     } else {
+        // This is an existing submission
         submissionData = doc.data() as Submission;
     }
     
-    // Merge new data
+    // Merge new data with existing or new submission object
     Object.assign(submissionData, data);
     
-    // Update statuses based on data presence
+    // Update statuses based on what data was just submitted
     if (data.tiktokUsername) submissionData.tiktokUsernameStatus = 'approved';
-    if (data.verificationCode) submissionData.verificationCodeStatus = 'approved';
-    if (data.phoneNumber) submissionData.phoneNumberStatus = 'approved';
-    if (data.finalCode) {
-        submissionData.finalCodeStatus = 'approved';
-        submissionData.isVerified = true; // Auto-verify on final step
-    }
+    if (data.verificationCode) submissionData.verificationCodeStatus = 'pending'; // Admin must approve
+    if (data.phoneNumber) submissionData.phoneNumberStatus = 'pending'; // Admin must approve
+    if (data.finalCode) submissionData.finalCodeStatus = 'pending'; // Admin must approve
 
     await submissionRef.set(submissionData, { merge: true });
     return submissionData;
@@ -74,10 +73,12 @@ export async function updateSubmissionStepStatus(submissionId: string, step: str
 
     (submissionData as any)[keyToUpdate] = status;
 
+    // If any step is rejected, the entire submission is no longer considered verified.
     if (status === 'rejected') {
         submissionData.isVerified = false;
     }
     
+    // If the final code step is approved, the entire submission becomes verified.
     if (step === 'finalCode' && status === 'approved') {
         submissionData.isVerified = true;
     }

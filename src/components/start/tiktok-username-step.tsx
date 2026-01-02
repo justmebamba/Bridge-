@@ -14,7 +14,9 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.'),
+  tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.').refine(val => !val.startsWith('@'), {
+    message: 'Username should not start with @',
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -37,7 +39,7 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-    const username = values.tiktokUsername.startsWith('@') ? values.tiktokUsername.substring(1) : values.tiktokUsername;
+    const username = values.tiktokUsername;
     
     try {
         const response = await fetch('/api/submissions', {
@@ -51,11 +53,12 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
             throw new Error(errorData.message || 'Failed to submit username.');
         }
 
-        // Artificial delay
-        await new Promise(resolve => setTimeout(resolve, 8000));
-        
+        toast({
+          title: 'Username Submitted!',
+          description: "Your username has been submitted for approval.",
+        });
+
         onNext({ tiktokUsername: username, id: username });
-        // We don't set isSubmitting to false, because we are moving to the next step
 
     } catch (err: any) {
         toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
@@ -87,7 +90,10 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
                             <FormItem>
                             <FormLabel>TikTok Username</FormLabel>
                             <FormControl>
-                                <Input placeholder="@username" {...field} disabled={isSubmitting}/>
+                                <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">@</span>
+                                    <Input placeholder="username" {...field} disabled={isSubmitting} className="pl-7" />
+                                </div>
                             </FormControl>
                             <FormMessage />
                             </FormItem>
