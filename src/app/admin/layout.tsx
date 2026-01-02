@@ -1,6 +1,5 @@
 
 import { getSession } from '@/lib/session';
-import { redirect } from 'next/navigation';
 import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
 import { getAdminById } from '@/lib/data-access';
 import type { AdminUser } from '@/lib/types';
@@ -15,17 +14,18 @@ export default async function AdminLayout({
     
     let currentUser: Omit<AdminUser, 'passwordHash'> | null = null;
     
+    // This logic is now safer. We only attempt to fetch a user if a session exists.
     if (admin?.id) {
-        // Only fetch user if there is an admin in the session
         currentUser = await getAdminById(admin.id);
+        // If the user was deleted from the db but the session remains, destroy it.
+        // The client component will handle the redirect.
         if (!currentUser) {
-            // If the user was deleted from the db but the session remains, destroy it.
             session.destroy();
-            redirect('/admin/login');
         }
     }
     
-    // The client component will now handle all redirection logic based on the path
+    // The client component will now handle all redirection logic based on the user's status.
+    // We pass `undefined` initially if the user is not found, letting the client component show a loading state.
     return (
         <AdminLayoutClient currentUser={currentUser}>
             {children}

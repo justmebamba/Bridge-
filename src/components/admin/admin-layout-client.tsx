@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Button } from '../ui/button';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export function AdminLayoutClient({
     children,
@@ -20,44 +21,55 @@ export function AdminLayoutClient({
     const pathname = usePathname();
     const router = useRouter();
     const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
+    const isVerifying = currentUser === undefined;
 
     useEffect(() => {
+        // If we are still verifying the session, don't do anything yet.
+        if (isVerifying) return;
+
+        // If user is logged in and trying to access an auth page, redirect to dashboard.
+        if (currentUser && isAuthPage) {
+            router.replace('/admin');
+            return;
+        }
+
         // If user is not logged in and not on an auth page, redirect to login.
         if (!currentUser && !isAuthPage) {
             router.replace('/admin/login');
+            return;
         }
 
-        // If user is logged in and tries to access an auth page, redirect to dashboard.
-        if (currentUser && isAuthPage) {
-            router.replace('/admin');
-        }
-    }, [currentUser, isAuthPage, router, pathname]);
+    }, [currentUser, isAuthPage, router, isVerifying]);
 
-    // Render a loading state or null while redirecting to prevent flash of wrong content
-    if ((!currentUser && !isAuthPage) || (currentUser && isAuthPage)) {
-        return null; // Or a loading spinner
+    // Render a loading state while redirecting or verifying to prevent flash of wrong content
+    if (isVerifying || (currentUser && isAuthPage) || (!currentUser && !isAuthPage)) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+    
+    // If we're on an authentication page, we don't need the full sidebar layout.
+    if (isAuthPage) {
+        return (
+             <main className="flex min-h-screen flex-col items-center justify-center">
+                 {children}
+            </main>
+        );
     }
 
+    // Otherwise, show the full admin dashboard layout.
     return (
         <SidebarProvider>
-            {!isAuthPage && (
-              <Sidebar>
-                  <AdminSidebar currentUser={currentUser} />
-              </Sidebar>
-            )}
+            <Sidebar>
+                <AdminSidebar currentUser={currentUser} />
+            </Sidebar>
             <SidebarInset>
                  <header className="flex h-14 items-center justify-between gap-4 border-b bg-muted/40 px-6">
                      <div className="flex-1">
                         <h1 className="text-lg font-semibold">Admin Dashboard</h1>
                     </div>
-                     {isAuthPage && !currentUser && (
-                        <Button asChild variant="outline" size="sm">
-                            <Link href="/admin/login">
-                                <LogIn className="mr-2 h-4 w-4" />
-                                Login
-                            </Link>
-                        </Button>
-                    )}
                 </header>
                 {children}
             </SidebarInset>
