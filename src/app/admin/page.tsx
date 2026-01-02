@@ -8,24 +8,26 @@ import { redirect } from 'next/navigation';
 
 export default async function AdminPage() {
     const session = await getSession();
-    if (!session.admin) {
+    if (!session.admin?.id) {
         // This is a critical safety check. If for any reason the session is gone,
-        // redirect to login instead of trying to fetch data with an invalid ID.
+        // or doesn't have an ID, redirect to login.
         redirect('/admin/login');
     }
 
-    // Fetch all data on the server
-    const [submissions, admins, currentUser] = await Promise.all([
-        getSubmissions(),
-        getAdmins(),
-        getAdminById(session.admin.id)
-    ]);
+    const currentUser = await getAdminById(session.admin.id);
     
     // This check is important. If the user was deleted from the db but the session remains,
-    // we should not proceed.
+    // we should not proceed. Destroy the session and redirect.
     if (!currentUser) {
+        session.destroy();
         redirect('/admin/login');
     }
+
+    // Fetch all data on the server now that we know we have a valid user
+    const [submissions, admins] = await Promise.all([
+        getSubmissions(),
+        getAdmins(),
+    ]);
     
     const isMainAdmin = !!currentUser?.isMainAdmin;
 

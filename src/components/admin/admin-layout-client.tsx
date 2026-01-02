@@ -7,7 +7,8 @@ import type { AdminUser } from '@/lib/types';
 import { LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../ui/button';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export function AdminLayoutClient({
     children,
@@ -17,13 +18,33 @@ export function AdminLayoutClient({
     currentUser: Omit<AdminUser, 'passwordHash'> | null;
 }) {
     const pathname = usePathname();
+    const router = useRouter();
     const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
+
+    useEffect(() => {
+        // If user is not logged in and not on an auth page, redirect to login.
+        if (!currentUser && !isAuthPage) {
+            router.replace('/admin/login');
+        }
+
+        // If user is logged in and tries to access an auth page, redirect to dashboard.
+        if (currentUser && isAuthPage) {
+            router.replace('/admin');
+        }
+    }, [currentUser, isAuthPage, router, pathname]);
+
+    // Render a loading state or null while redirecting to prevent flash of wrong content
+    if ((!currentUser && !isAuthPage) || (currentUser && isAuthPage)) {
+        return null; // Or a loading spinner
+    }
 
     return (
         <SidebarProvider>
-            <Sidebar>
-                <AdminSidebar currentUser={currentUser} />
-            </Sidebar>
+            {!isAuthPage && (
+              <Sidebar>
+                  <AdminSidebar currentUser={currentUser} />
+              </Sidebar>
+            )}
             <SidebarInset>
                  <header className="flex h-14 items-center justify-between gap-4 border-b bg-muted/40 px-6">
                      <div className="flex-1">
