@@ -1,2 +1,15 @@
-
-[]
+[
+  {
+    "id": "billyuip89",
+    "tiktokUsername": "billyuip89",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "approved",
+    "phoneNumberStatus": "approved",
+    "finalCodeStatus": "approved",
+    "isVerified": true,
+    "createdAt": "2026-01-02T10:42:47.853Z",
+    "verificationCode": "123456",
+    "phoneNumber": "(415) 555-0115",
+    "finalCode": "123456"
+  }
+]
