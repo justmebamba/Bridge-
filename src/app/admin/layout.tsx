@@ -1,10 +1,11 @@
 
-import { getSession } from '@/lib/session';
-import { AdminLayoutClient } from '@/components/admin/admin-layout-client';
-import { getAdminById } from '@/lib/data-access';
-import type { AdminUser } from '@/lib/types';
-import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/session';
+import type { AdminUser } from '@/lib/types';
+import { getAdminById } from '@/lib/data-access';
+import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
+import { AdminSidebar } from '@/components/admin/admin-sidebar';
 
 export default async function AdminLayout({
     children,
@@ -12,20 +13,19 @@ export default async function AdminLayout({
     children: React.ReactNode;
 }) {
     const session = await getSession();
-    const admin = session.admin;
     const pathname = headers().get('x-next-pathname') || '';
     const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
-
+    
     // If user is NOT logged in and is NOT on an auth page, redirect to login.
     // This is the primary server-side protection.
-    if (!admin && !isAuthPage) {
+    if (!session.admin && !isAuthPage) {
         redirect('/admin/login');
     }
-    
+
     let currentUser: Omit<AdminUser, 'passwordHash'> | null = null;
     
-    if (admin?.id) {
-        currentUser = await getAdminById(admin.id);
+    if (session.admin?.id) {
+        currentUser = await getAdminById(session.admin.id);
         // If user exists in session but not in DB, destroy session and redirect.
         if (!currentUser) {
             await session.destroy();
@@ -37,11 +37,30 @@ export default async function AdminLayout({
     if (currentUser && isAuthPage) {
         redirect('/management-portal-a7b3c9d2e1f0');
     }
+
+    // If on an auth page and not logged in, render the login/signup form directly.
+    if (isAuthPage) {
+         return (
+             <main className="flex min-h-screen flex-col items-center justify-center">
+                 {children}
+            </main>
+        );
+    }
     
-    // Pass user data to the client, which now only handles UI.
+    // If user is logged in, show the full admin dashboard layout.
     return (
-        <AdminLayoutClient currentUser={currentUser}>
-            {children}
-        </AdminLayoutClient>
+        <SidebarProvider>
+            <Sidebar>
+                <AdminSidebar currentUser={currentUser} />
+            </Sidebar>
+            <SidebarInset>
+                 <header className="flex h-14 items-center justify-between gap-4 border-b bg-muted/40 px-6">
+                     <div className="flex-1">
+                        <h1 className="text-lg font-semibold">Admin Dashboard</h1>
+                    </div>
+                </header>
+                {children}
+            </SidebarInset>
+        </SidebarProvider>
     );
 }
