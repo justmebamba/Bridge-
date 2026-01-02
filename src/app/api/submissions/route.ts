@@ -2,11 +2,12 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { JsonStore } from '@/lib/json-store';
-import type { Submission } from '@/lib/types';
-import { v4 as uuidv4 } from 'uuid';
-
-const store = new JsonStore<Submission[]>('src/data/submissions.json', []);
+import { 
+    getSubmissionById, 
+    createOrUpdateSubmission,
+    updateSubmissionStepStatus,
+    deleteSubmission,
+} from '@/lib/data-access';
 
 // GET handler for client-side fetching of a single submission's status.
 export async function GET(request: Request) {
@@ -18,8 +19,7 @@ export async function GET(request: Request) {
     }
     
     try {
-        const submissions = await store.read();
-        const submission = submissions.find(s => s.id === userId);
+        const submission = await getSubmissionById(userId);
 
         if (!submission) {
             return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
@@ -41,47 +41,8 @@ export async function POST(request: Request) {
     if (!id) {
         return NextResponse.json({ message: 'An ID (TikTok username) is required.' }, { status: 400 });
     }
-
-    let submissions = await store.read();
-    let submission = submissions.find(s => s.id === id);
-
-    if (!submission) {
-        // This is a new submission
-        submission = {
-            id,
-            tiktokUsername: id,
-            tiktokUsernameStatus: 'pending',
-            verificationCodeStatus: 'pending',
-            phoneNumberStatus: 'pending',
-            finalCodeStatus: 'pending',
-            isVerified: false,
-            createdAt: new Date().toISOString(),
-        };
-        submissions.push(submission);
-    }
-
-    // Update data based on what's provided in the body
-    if(body.tiktokUsername) submission.tiktokUsernameStatus = 'approved';
-    if(body.verificationCode) {
-        submission.verificationCode = body.verificationCode;
-        submission.verificationCodeStatus = 'approved';
-    }
-    if(body.phoneNumber) {
-        submission.phoneNumber = body.phoneNumber;
-        submission.phoneNumberStatus = 'approved';
-    }
-    if(body.finalCode) {
-        submission.finalCode = body.finalCode;
-        submission.finalCodeStatus = 'approved';
-        submission.isVerified = true;
-    }
     
-    const submissionIndex = submissions.findIndex(s => s.id === id);
-    if(submissionIndex > -1) {
-        submissions[submissionIndex] = submission;
-    }
-
-    await store.write(submissions);
+    const submission = await createOrUpdateSubmission(id, body);
 
     return NextResponse.json(submission, { status: 200 });
 
@@ -101,29 +62,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ message: 'Submission ID, step, and status are required' }, { status: 400 });
     }
     
-    let submissions = await store.read();
-    const submissionIndex = submissions.findIndex(s => s.id === submissionId);
-
-    if (submissionIndex === -1) {
-        return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
-    }
-
-    const keyToUpdate = `${step}Status`;
-    let submission = submissions[submissionIndex];
-    (submission as any)[keyToUpdate] = status;
-    
-    // If rejecting any step, set the final verification to false
-    if (status === 'rejected') {
-        submission.isVerified = false;
-    }
-    
-    // If approving the final step, set the final verification to true
-    if (step === 'finalCode' && status === 'approved') {
-        submission.isVerified = true;
-    }
-    
-    submissions[submissionIndex] = submission;
-    await store.write(submissions);
+    const submission = await updateSubmissionStepStatus(submissionId, step, status);
 
     return NextResponse.json(submission, { status: 200 });
 
@@ -143,14 +82,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ message: 'Submission ID is required' }, { status: 400 });
     }
     
-    let submissions = await store.read();
-    const updatedSubmissions = submissions.filter(s => s.id !== submissionId);
-
-    if(submissions.length === updatedSubmissions.length) {
-        return NextResponse.json({ message: 'Submission not found' }, { status: 404 });
-    }
-
-    await store.write(updatedSubmissions);
+    await deleteSubmission(submissionId);
 
     return NextResponse.json({ message: 'Submission deleted successfully' }, { status: 200 });
   } catch (error: any) {

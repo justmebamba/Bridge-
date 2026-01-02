@@ -2,11 +2,7 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { JsonStore } from '@/lib/json-store';
-import type { AdminUser } from '@/lib/types';
-import { getAdminByEmail, getAdmins, addAdmin } from '@/lib/data-access';
-
-const store = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+import { getAdmins, updateAdminVerification } from '@/lib/data-access';
 
 // GET handler for checking for main admin - used by signup page
 export async function GET() {
@@ -31,20 +27,15 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ message: 'adminId and isVerified status are required' }, { status: 400 });
         }
         
-        let admins = await store.read();
-        const adminIndex = admins.findIndex(a => a.id === adminId);
+        const updatedAdmin = await updateAdminVerification(adminId, isVerified);
 
-        if (adminIndex === -1) {
-          return NextResponse.json({ message: 'Admin not found' }, { status: 404 });
-        }
-        
-        admins[adminIndex].isVerified = isVerified;
-        await store.write(admins);
-
-        return NextResponse.json(admins[adminIndex], { status: 200 });
+        return NextResponse.json(updatedAdmin, { status: 200 });
 
     } catch (error: any) {
         console.error("Error updating admin status:", error);
+         if (error.message.includes('not found')) {
+            return NextResponse.json({ message: error.message }, { status: 404 });
+        }
         return NextResponse.json({ message: error.message || 'Error processing request' }, { status: 500 });
     }
 }

