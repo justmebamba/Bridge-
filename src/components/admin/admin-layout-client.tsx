@@ -4,9 +4,6 @@
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
 import type { AdminUser } from '@/lib/types';
-import { LogIn } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '../ui/button';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -21,12 +18,8 @@ export function AdminLayoutClient({
     const pathname = usePathname();
     const router = useRouter();
     const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
-    const isVerifying = currentUser === undefined; // Check if the prop is literally undefined, meaning server is still deciding
-
+    
     useEffect(() => {
-        // If we are still verifying the session, don't do anything yet. This state is brief.
-        if (isVerifying) return;
-        
         // If user is logged in BUT is on an auth page, redirect them to the dashboard.
         if (currentUser && isAuthPage) {
             router.replace('/admin');
@@ -39,11 +32,10 @@ export function AdminLayoutClient({
             return;
         }
 
-    }, [currentUser, isAuthPage, router, isVerifying]);
+    }, [currentUser, isAuthPage, router]);
 
-    // Render a loading state while redirecting or verifying to prevent flash of wrong content
-    // This covers all redirect scenarios from the useEffect hook.
-    if (isVerifying || (currentUser && isAuthPage) || (!currentUser && !isAuthPage)) {
+    // Render a loading state while redirecting to prevent flash of wrong content
+    if ((currentUser && isAuthPage) || (!currentUser && !isAuthPage)) {
         return (
             <div className="flex h-screen w-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />

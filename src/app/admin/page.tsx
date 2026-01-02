@@ -19,7 +19,7 @@ export default async function AdminPage() {
     // This check is important. If the user was deleted from the db but the session remains,
     // we should not proceed. Destroy the session and redirect.
     if (!currentUser) {
-        session.destroy();
+        await session.destroy();
         redirect('/admin/login');
     }
 

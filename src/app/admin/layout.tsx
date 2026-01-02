@@ -25,7 +25,7 @@ export default async function AdminLayout({
     }
     
     // The client component will now handle all redirection logic based on the user's status.
-    // We pass `undefined` initially if the user is not found, letting the client component show a loading state.
+    // We pass `null` if the user is not found, letting the client component handle it.
     return (
         <AdminLayoutClient currentUser={currentUser}>
             {children}
