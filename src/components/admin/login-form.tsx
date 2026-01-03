@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   email: z.string().email('Invalid email address.'),
@@ -22,6 +23,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function LoginForm() {
   const { toast } = useToast();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
@@ -48,8 +50,10 @@ export function LoginForm() {
       }
       
       toast({ title: 'Success', description: data.message });
-      // Force a full page reload to the dashboard to ensure the session is picked up.
-      window.location.href = '/management-portal-a7b3c9d2e1f0';
+      // Use router.push for a smoother, client-side navigation
+      router.push('/admin');
+      // We also call router.refresh() to ensure the server-side state (and session) is up to date.
+      router.refresh();
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Login Failed', description: error.message });

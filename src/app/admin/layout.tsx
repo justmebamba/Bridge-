@@ -2,11 +2,9 @@
 'use client';
 
 import type { AdminUser } from '@/lib/types';
-import { getAdminById } from '@/lib/data-access';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
-import { useRouter, usePathname } from 'next/navigation';
-import { headers } from 'next/headers';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
@@ -19,7 +17,6 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
-    const router = useRouter();
     const [user, setUser] = useState<Omit<AdminUser, 'passwordHash'> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -38,16 +35,16 @@ export default function AdminLayout({
                 const res = await fetch('/api/auth/session');
                 
                 if (!res.ok) {
-                    // If session is invalid/expired, redirect to login
-                    router.replace('/admin/login');
+                    // Middleware will handle the redirect. We just stop loading.
+                    setIsLoading(false);
                     return;
                 }
                 
                 const data = await res.json();
                 
                 if (!data.admin) {
-                     // No admin in session, redirect
-                     router.replace('/admin/login');
+                     // Middleware will handle redirect.
+                     setIsLoading(false);
                      return;
                 }
                 
@@ -55,7 +52,7 @@ export default function AdminLayout({
 
             } catch (error) {
                 console.error("Session check failed", error);
-                router.replace('/admin/login');
+                // Middleware will handle redirect.
             } finally {
                 setIsLoading(false);
             }
@@ -63,7 +60,7 @@ export default function AdminLayout({
 
         checkSessionAndFetchUser();
 
-    }, [pathname, router, isAuthPage]);
+    }, [pathname, isAuthPage]);
 
 
     if (isAuthPage) {
@@ -83,7 +80,7 @@ export default function AdminLayout({
     }
 
     if (!user) {
-        // This is a fallback while redirecting
+        // This is a fallback while the middleware redirects the user.
         return (
              <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
