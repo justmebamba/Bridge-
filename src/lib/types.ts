@@ -40,7 +40,7 @@ export interface AuthUser {
     id: string;
 }
 
-// For iron-session
+// For iron-session - This is no longer used but kept for reference
 declare module 'iron-session' {
   interface IronSessionData {
     admin?: {

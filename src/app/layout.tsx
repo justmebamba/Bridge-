@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  const isAdminPage = pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/signup');
+  const isDashboardPage = pathname.startsWith('/dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
 
@@ -45,7 +45,7 @@ export default function RootLayout({
     };
   }, []);
 
-  if (isAdminPage) {
+  if (isDashboardPage) {
     return (
        <html lang="en" suppressHydrationWarning>
         <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>

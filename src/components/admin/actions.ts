@@ -7,16 +7,8 @@ import { revalidatePath } from 'next/cache';
 // but we'll prepare a server action wrapper for simplicity in components.
 
 export async function approveAdminAction(adminId: string, isVerified: boolean) {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admins`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminId, isVerified })
-    });
-    if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to update admin status.");
-    }
-    revalidatePath('/dashboard');
+    // This functionality is disabled as the admin system has been removed.
+    console.warn("approveAdminAction is disabled.");
 }
 
 export async function updateSubmissionStatusAction(

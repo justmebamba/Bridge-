@@ -4,7 +4,6 @@ import { JsonStore } from './json-store';
 import { v4 as uuidv4 } from 'uuid';
 
 const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
-const adminStore = new JsonStore<AdminUser[]>('src/data/admins.json', []);
 
 
 // Submissions
@@ -92,54 +91,25 @@ export async function deleteSubmission(submissionId: string): Promise<void> {
 }
 
 
-// Admins
+// Admins - These functions are now unused but kept for potential future use.
+// To re-enable auth, you would need an admin data store.
 
 export async function getAdmins(): Promise<Omit<AdminUser, 'passwordHash'>[]> {
-    const admins = await adminStore.read();
-    // sort by creation date ascending
-    admins.sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    return admins.map(({ passwordHash, ...admin }) => admin);
+    return [];
 }
 
 export async function getAdminById(id: string): Promise<Omit<AdminUser, 'passwordHash'> | null> {
-    const admins = await adminStore.read();
-    const admin = admins.find(a => a.id === id);
-    if (!admin) return null;
-    const { passwordHash, ...adminData } = admin;
-    return adminData;
+    return null;
 }
 
 export async function getAdminByEmail(email: string): Promise<AdminUser | null> {
-    const admins = await adminStore.read();
-    return admins.find(a => a.email === email) || null;
+    return null;
 }
 
 export async function addAdmin({ email, passwordHash, isMainAdmin }: { email: string; passwordHash: string; isMainAdmin: boolean }): Promise<AdminUser> {
-    const admins = await adminStore.read();
-    const newAdmin: AdminUser = {
-        id: uuidv4(),
-        email,
-        passwordHash,
-        isMainAdmin,
-        isVerified: isMainAdmin, // First admin is auto-verified
-        createdAt: new Date().toISOString(),
-    };
-    admins.push(newAdmin);
-    await adminStore.write(admins);
-    return newAdmin;
+    throw new Error("Admin creation is disabled.");
 }
 
 export async function updateAdminVerification(adminId: string, isVerified: boolean): Promise<Omit<AdminUser, 'passwordHash'>> {
-    const admins = await adminStore.read();
-    const adminIndex = admins.findIndex(a => a.id === adminId);
-
-    if (adminIndex === -1) {
-        throw new Error("Admin not found");
-    }
-
-    admins[adminIndex].isVerified = isVerified;
-    await adminStore.write(admins);
-
-    const { passwordHash, ...adminData } = admins[adminIndex];
-    return adminData;
+     throw new Error("Admin verification is disabled.");
 }

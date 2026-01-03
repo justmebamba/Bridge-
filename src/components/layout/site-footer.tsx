@@ -29,9 +29,6 @@ export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {
                    <Link href="/#contact" className="hover:text-primary transition-colors">
                     Contact Us
                   </Link>
-                   <Link href="/management-portal-a7b3c9d2e1f0" className="hover:text-primary transition-colors">
-                    Admin
-                  </Link>
                 </div>
 
                 <div className="flex space-x-2">
