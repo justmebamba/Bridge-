@@ -29,12 +29,12 @@ export function SubmissionApprovalActions({ id, step }: { id: string; step: Step
 
   const handleAction = (status: 'approved' | 'rejected') => {
     startTransition(async () => {
-      try {
-        await updateSubmissionStatusAction(id, step, status);
+      const result = await updateSubmissionStatusAction(id, step, status);
+      if (result.success) {
         toast({ title: "Success", description: `Submission step has been ${status}.` });
         router.refresh();
-      } catch (error: any) {
-        toast({ variant: "destructive", title: "Error", description: error.message });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.message });
       }
     });
   };

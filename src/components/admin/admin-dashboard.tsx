@@ -35,6 +35,7 @@ import { SubmissionApprovalActions } from '@/components/admin/submission-approva
 import type { Submission } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { deleteSubmissionAction } from './actions';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -88,22 +89,13 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
       return;
     }
     
-    try {
-      const response = await fetch(`/api/submissions?id=${submissionId}`, {
-        method: 'DELETE',
-      });
+    const result = await deleteSubmissionAction(submissionId);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete submission.');
-      }
-      
-      // Optimistically update the UI
+    if (result.success) {
       setSubmissions(prev => prev.filter(s => s.id !== submissionId));
       toast({ title: 'Success', description: 'Submission has been deleted.' });
-
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
   };
 
