@@ -1,22 +1,71 @@
 
+'use client';
+
 import type { AdminUser } from '@/lib/types';
 import { getAdminById } from '@/lib/data-access';
-import { getSession } from '@/lib/session';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
-import { redirect } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { headers } from 'next/headers';
+import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
-export default async function AdminLayout({
+// This is a client component, so we fetch the user session on the client.
+// The middleware has already protected the route.
+
+export default function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const pathname = headers().get('x-next-pathname') || '';
+    const pathname = usePathname();
+    const router = useRouter();
+    const [user, setUser] = useState<Omit<AdminUser, 'passwordHash'> | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
     const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
 
-    // If on an auth page, render the form directly without the dashboard shell.
-    // The middleware has already ensured that a logged-in user can't see this.
+    useEffect(() => {
+        // This function runs only on the client
+        async function checkSessionAndFetchUser() {
+            if (isAuthPage) {
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                // We fetch the session from a client-side API route.
+                const res = await fetch('/api/auth/session');
+                
+                if (!res.ok) {
+                    // If session is invalid/expired, redirect to login
+                    router.replace('/admin/login');
+                    return;
+                }
+                
+                const data = await res.json();
+                
+                if (!data.admin) {
+                     // No admin in session, redirect
+                     router.replace('/admin/login');
+                     return;
+                }
+                
+                setUser(data.admin);
+
+            } catch (error) {
+                console.error("Session check failed", error);
+                router.replace('/admin/login');
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        checkSessionAndFetchUser();
+
+    }, [pathname, router, isAuthPage]);
+
+
     if (isAuthPage) {
          return (
              <main className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
@@ -25,29 +74,28 @@ export default async function AdminLayout({
         );
     }
     
-    // For all other admin pages, we can assume the user is logged in
-    // because the middleware has already protected this route.
-    const session = await getSession();
-
-    // As a safety net, if the session is somehow missing, redirect.
-    // This should theoretically not be reached due to middleware.
-    if (!session.admin?.id) {
-        redirect('/admin/login');
+    if (isLoading) {
+        return (
+            <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+        );
     }
 
-    const currentUser = await getAdminById(session.admin.id);
-    
-    // If user was deleted from DB but session persists, destroy session & redirect.
-    if (!currentUser) {
-        await session.destroy();
-        redirect('/admin/login');
+    if (!user) {
+        // This is a fallback while redirecting
+        return (
+             <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+             </div>
+        );
     }
 
     // Render the full admin dashboard layout.
     return (
         <SidebarProvider>
             <Sidebar>
-                <AdminSidebar currentUser={currentUser} />
+                <AdminSidebar currentUser={user} />
             </Sidebar>
             <SidebarInset>
                  <header className="flex h-14 items-center justify-between gap-4 border-b bg-muted/40 px-6">

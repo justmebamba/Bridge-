@@ -8,7 +8,8 @@ import { redirect } from 'next/navigation';
 
 export default async function AdminPage() {
     const session = await getSession();
-    // Middleware should protect this, but we add a server-side check as a fallback.
+    // Middleware protects this route, but we still need to fetch server-side data.
+    // A server-side check adds another layer of security.
     if (!session.admin?.id) {
         redirect('/admin/login');
     }
@@ -16,9 +17,9 @@ export default async function AdminPage() {
     const currentUser = await getAdminById(session.admin.id);
     
     // If the user was deleted from the db but the session remains,
-    // destroy the session and redirect.
+    // the middleware/layout will handle the client-side redirect.
+    // We check here again to prevent rendering with a stale user.
     if (!currentUser) {
-        await session.destroy();
         redirect('/admin/login');
     }
 

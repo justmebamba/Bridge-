@@ -15,21 +15,19 @@ const sessionOptions = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Pass through x-next-pathname for other components that might need it
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-next-pathname', pathname);
 
   // --- Start Authentication Logic ---
 
   // Define public and authentication routes
-  const publicPaths = ['/start', '/success', '/api', '/'];
   const authPaths = ['/admin/login', '/admin/signup'];
   const adminBase = '/admin';
 
   // Check if the current path is for the admin area
   if (pathname.startsWith(adminBase)) {
     const session = await getIronSession<IronSessionData>(request.cookies, sessionOptions);
-    const isAdminLoggedIn = session.admin && session.admin.id;
+    const isAdminLoggedIn = !!session.admin?.id;
     const isAuthPage = authPaths.some(p => pathname.startsWith(p));
 
     // 1. If user is logged in...
@@ -62,6 +60,6 @@ export const config = {
   // Matcher to specify which routes the middleware should run on.
   // This avoids running it on static files and other internal Next.js paths.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
