@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
+import { WaitingForApproval } from './waiting-for-approval';
 
 const formSchema = z.object({
   finalCode: z.string().length(6, "Code must be 6 digits."),
@@ -28,6 +29,7 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
     const router = useRouter();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -50,15 +52,10 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
             
             toast({
                 title: 'Application Submitted!',
-                description: 'Your final code has been sent for review. You will be redirected shortly.',
+                description: 'Your final code is being reviewed. This is the last step!',
             });
-
-            // No artificial delay needed here, the success page will handle polling/waiting
-            // Wait for toast to be visible before redirecting
-            setTimeout(() => {
-                router.push('/success');
-            }, 2000);
-
+            
+            setIsWaitingForApproval(true);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
@@ -66,6 +63,37 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
         }
     };
     
+    if (isWaitingForApproval) {
+        return (
+            <WaitingForApproval
+                submissionId={submissionId}
+                stepToWatch="finalCode"
+                promptText="Finalizing your application. Please wait for the final confirmation from our team."
+                onApproval={() => {
+                     toast({
+                        title: 'Application Approved!',
+                        description: 'Your account is now fully bridged. You will be redirected shortly.',
+                    });
+                    // Wait for toast to be visible before redirecting
+                    setTimeout(() => {
+                        router.push('/success');
+                    }, 2000);
+                }}
+                onRejection={() => {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Final Step Rejected',
+                        description: 'An admin has rejected your final code. Please try again.',
+                    });
+                    setIsWaitingForApproval(false);
+                    setIsSubmitting(false);
+                    form.reset();
+                }}
+            />
+        );
+    }
+
+
     return (
         <div className="w-full max-w-lg mx-auto">
              <div className="text-center mb-8">

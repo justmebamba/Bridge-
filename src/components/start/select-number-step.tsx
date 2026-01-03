@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { WaitingForApproval } from './waiting-for-approval';
 
 const shuffle = (array: any[]) => {
     if (!Array.isArray(array)) return [];
@@ -48,14 +49,15 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
-    
+    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
+
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             phoneNumber: '',
         },
     });
-
+    
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -98,16 +100,40 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
             
             toast({
                 title: 'Number Selected!',
-                description: 'Your chosen number has been submitted for approval.',
+                description: 'Your chosen number is being reviewed for approval.',
             });
             
-            onNext({ phoneNumber: values.phoneNumber });
+            setIsWaitingForApproval(true);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             setIsSubmitting(false); // Only stop loading on error
         }
     };
+
+    if (isWaitingForApproval) {
+        return (
+            <WaitingForApproval
+                submissionId={submissionId}
+                stepToWatch="phoneNumber"
+                promptText="We are now linking the selected number to your account. Please wait for confirmation."
+                onApproval={() => onNext({ phoneNumber: form.getValues('phoneNumber') })}
+                onRejection={() => {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Number Rejected',
+                        description: 'There was an issue with the selected number. Please choose another one.',
+                    });
+                    setIsWaitingForApproval(false);
+                    setIsSubmitting(false);
+                    form.reset();
+                    // Optional: refetch numbers in case availability changed
+                    fetchData();
+                }}
+            />
+        );
+    }
+
 
     return (
         <div className="w-full max-w-lg mx-auto">

