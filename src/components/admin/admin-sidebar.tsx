@@ -20,6 +20,7 @@ export function AdminSidebar({ currentUser }: { currentUser: Omit<AdminUser, 'pa
 
     const handleLogout = async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
+        router.push('/login');
         router.refresh();
     };
 
@@ -34,7 +35,7 @@ export function AdminSidebar({ currentUser }: { currentUser: Omit<AdminUser, 'pa
             <SidebarContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                         <SidebarMenuButton href="/admin" isActive={true} tooltip="Dashboard">
+                         <SidebarMenuButton href="/dashboard" isActive={true} tooltip="Dashboard">
                              <LayoutDashboard />
                             <span>Dashboard</span>
                         </SidebarMenuButton>

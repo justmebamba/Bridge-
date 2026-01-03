@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  const isAdminPage = pathname.startsWith('/admin');
+  const isAdminPage = pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/signup');
   const [isLoading, setIsLoading] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
 
@@ -45,21 +45,30 @@ export default function RootLayout({
     };
   }, []);
 
+  if (isAdminPage) {
+    return (
+       <html lang="en" suppressHydrationWarning>
+        <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
+          {children}
+          <Toaster />
+        </body>
+      </html>
+    )
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
         {isLoading && <Loader isFadingOut={isFadingOut} />}
           <div className="relative flex min-h-dvh flex-col bg-background">
-            {!isAdminPage && <SiteHeader />}
+            <SiteHeader />
             {isHomePage && <TikTokBridgeHero />}
             <main className="flex-1">
               {children}
             </main>
-            {!isAdminPage && (
-              <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
-                  <SiteFooter />
-              </div>
-            )}
+            <div className="bg-background rounded-t-2xl md:rounded-t-3xl -mt-4 md:-mt-6 relative z-10">
+                <SiteFooter />
+            </div>
           </div>
           <CookieConsentBanner />
         <Toaster />

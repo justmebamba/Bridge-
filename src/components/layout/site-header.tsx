@@ -6,10 +6,8 @@ import { TikTokLogo } from "../icons/tiktok-logo"
 import { Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
-import { usePathname } from 'next/navigation';
 
 export function SiteHeader() {
-  const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -30,15 +28,9 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-            {pathname.startsWith('/admin') ? (
-                 <Button asChild>
-                    <Link href="/">Homepage</Link>
-                 </Button>
-            ) : (
-                <Button asChild>
-                    <Link href="/start">Get Started</Link>
-                </Button>
-            )}
+          <Button asChild>
+              <Link href="/start">Get Started</Link>
+          </Button>
         </div>
 
         <div className="md:hidden">

@@ -69,7 +69,7 @@ export function SignupForm() {
       }
       
       toast({ title: 'Success', description: data.message });
-      router.push('/admin/login');
+      router.push('/login');
 
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Signup Failed', description: error.message });
@@ -146,7 +146,7 @@ export function SignupForm() {
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{' '}
-              <Link href="/admin/login" className="font-medium text-primary hover:underline">
+              <Link href="/login" className="font-medium text-primary hover:underline">
                 Log in
               </Link>
             </p>

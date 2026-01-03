@@ -21,29 +21,28 @@ export async function middleware(request: NextRequest) {
   // --- Start Authentication Logic ---
 
   // Define public and authentication routes
-  const authPaths = ['/admin/login', '/admin/signup'];
-  const adminBase = '/admin';
+  const authPaths = ['/login', '/signup'];
+  const protectedPath = '/dashboard';
 
-  // Check if the current path is for the admin area
-  if (pathname.startsWith(adminBase)) {
+  // Check if the current path is for the dashboard
+  if (pathname.startsWith(protectedPath)) {
     const session = await getIronSession<IronSessionData>(request.cookies, sessionOptions);
     const isAdminLoggedIn = !!session.admin?.id;
-    const isAuthPage = authPaths.some(p => pathname.startsWith(p));
 
-    // 1. If user is logged in...
-    if (isAdminLoggedIn) {
-      // And they try to access an auth page (login/signup), redirect to dashboard
-      if (isAuthPage) {
-        return NextResponse.redirect(new URL('/admin', request.url));
-      }
-    } 
-    // 2. If user is NOT logged in...
-    else {
-      // And they try to access a protected admin page, redirect to login
-      if (!isAuthPage) {
-        return NextResponse.redirect(new URL('/admin/login', request.url));
-      }
+    // If user is NOT logged in and tries to access a protected page, redirect to login
+    if (!isAdminLoggedIn) {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
+  }
+
+  // Handle auth pages (login/signup)
+  if (authPaths.some(p => pathname.startsWith(p))) {
+      const session = await getIronSession<IronSessionData>(request.cookies, sessionOptions);
+      const isAdminLoggedIn = !!session.admin?.id;
+      // If user is logged in, redirect them away from auth pages to the dashboard
+      if (isAdminLoggedIn) {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
   }
   
   // --- End Authentication Logic ---

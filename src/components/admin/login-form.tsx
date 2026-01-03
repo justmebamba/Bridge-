@@ -50,9 +50,7 @@ export function LoginForm() {
       }
       
       toast({ title: 'Success', description: data.message });
-      // Use router.push for a smoother, client-side navigation
-      router.push('/admin');
-      // We also call router.refresh() to ensure the server-side state (and session) is up to date.
+      router.push('/dashboard');
       router.refresh();
 
     } catch (error: any) {
@@ -104,7 +102,7 @@ export function LoginForm() {
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Don't have an account?{' '}
-              <Link href="/admin/signup" className="font-medium text-primary hover:underline">
+              <Link href="/signup" className="font-medium text-primary hover:underline">
                 Sign up
               </Link>
             </p>

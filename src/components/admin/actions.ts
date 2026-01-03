@@ -16,7 +16,7 @@ export async function approveAdminAction(adminId: string, isVerified: boolean) {
         const error = await res.json();
         throw new Error(error.message || "Failed to update admin status.");
     }
-    revalidatePath('/management-portal-a7b3c9d2e1f0');
+    revalidatePath('/dashboard');
 }
 
 export async function updateSubmissionStatusAction(
@@ -34,5 +34,5 @@ export async function updateSubmissionStatusAction(
          const error = await res.json();
         throw new Error(error.message || "Failed to update submission status.");
     }
-  revalidatePath('/management-portal-a7b3c9d2e1f0');
+  revalidatePath('/dashboard');
 }

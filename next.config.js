@@ -33,9 +33,24 @@ const nextConfig = {
     return [
       {
         source: '/management-portal-a7b3c9d2e1f0',
-        destination: '/admin',
+        destination: '/dashboard',
         permanent: true,
       },
+      {
+        source: '/admin',
+        destination: '/dashboard',
+        permanent: true,
+      },
+       {
+        source: '/admin/login',
+        destination: '/login',
+        permanent: true,
+      },
+       {
+        source: '/admin/signup',
+        destination: '/signup',
+        permanent: true,
+      }
     ]
   },
 };
