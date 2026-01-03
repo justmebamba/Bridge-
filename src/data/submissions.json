@@ -35,5 +35,16 @@
     "verificationCode": "123456",
     "phoneNumber": "(206) 555-0107",
     "finalCode": "123456"
+  },
+  {
+    "id": "Timmy ",
+    "tiktokUsername": "Timmy ",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "pending",
+    "phoneNumberStatus": "pending",
+    "finalCodeStatus": "pending",
+    "isVerified": false,
+    "createdAt": "2026-01-03T16:31:15.331Z",
+    "verificationCode": "123456"
   }
 ]
