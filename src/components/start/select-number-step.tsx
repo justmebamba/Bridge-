@@ -48,6 +48,13 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
+    
+    const form = useForm<FormValues>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            phoneNumber: '',
+        },
+    });
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);

@@ -22,5 +22,16 @@
     "isVerified": false,
     "createdAt": "2026-01-02T12:11:54.879Z",
     "verificationCode": "123456"
+  },
+  {
+    "id": "yvone",
+    "tiktokUsername": "yvone",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "pending",
+    "phoneNumberStatus": "pending",
+    "finalCodeStatus": "pending",
+    "isVerified": false,
+    "createdAt": "2026-01-03T14:42:19.172Z",
+    "verificationCode": "123456"
   }
 ]
