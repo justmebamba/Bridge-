@@ -1,29 +1,18 @@
 
-import type { Submission } from '@/lib/types';
+import type { Submission, AdminUser } from '@/lib/types';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
-import { getAdmins, getSubmissions, getAdminById } from '@/lib/data-access';
-import { getSession } from '@/lib/session';
-import { redirect } from 'next/navigation';
+import { getAdmins, getSubmissions } from '@/lib/data-access';
 
+// The currentUser is now passed as a prop from the layout
+interface DashboardPageProps {
+    currentUser: Omit<AdminUser, 'passwordHash'>;
+}
 
-export default async function DashboardPage() {
-    const session = await getSession();
-    // Middleware protects this route, but we still need to fetch server-side data.
-    // A server-side check adds another layer of security.
-    if (!session.admin?.id) {
-        redirect('/login');
-    }
-
-    const currentUser = await getAdminById(session.admin.id);
+export default async function DashboardPage({ currentUser }: DashboardPageProps) {
+    // We no longer need to fetch the user here, it's provided by the layout
+    // This removes the redundant fetch and potential race conditions.
     
-    // If the user was deleted from the db but the session remains,
-    // the middleware/layout will handle the client-side redirect.
-    // We check here again to prevent rendering with a stale user.
-    if (!currentUser) {
-        redirect('/login');
-    }
-
-    // Fetch all data on the server now that we know we have a valid user
+    // Fetch other data needed for the dashboard
     const [submissions, admins] = await Promise.all([
         getSubmissions(),
         getAdmins(),

@@ -32,6 +32,8 @@
     "finalCodeStatus": "pending",
     "isVerified": false,
     "createdAt": "2026-01-03T14:42:19.172Z",
-    "verificationCode": "123456"
+    "verificationCode": "123456",
+    "phoneNumber": "(206) 555-0107",
+    "finalCode": "123456"
   }
 ]

@@ -26,6 +26,15 @@ export default async function DashboardLayout({
         redirect('/login');
     }
 
+    // Pass the user to children that need it
+    const childrenWithProps = React.Children.map(children, child => {
+        if (React.isValidElement(child)) {
+            // @ts-ignore
+            return React.cloneElement(child, { currentUser: user });
+        }
+        return child;
+    });
+
     return (
         <SidebarProvider>
             <Sidebar>
@@ -37,7 +46,7 @@ export default async function DashboardLayout({
                         <h1 className="text-lg font-semibold">Admin Dashboard</h1>
                     </div>
                 </header>
-                <main className="flex-1 p-4 md:p-6">{children}</main>
+                <main className="flex-1 p-4 md:p-6">{childrenWithProps}</main>
             </SidebarInset>
         </SidebarProvider>
     );
