@@ -27,13 +27,22 @@ export async function createOrUpdateSubmission(id: string, data: Partial<Submiss
     let submissionData: Submission;
 
     if (existingIndex > -1) {
+        // Merge new data with existing submission
         submissionData = { ...submissions[existingIndex], ...data };
+
+        // Ensure statuses are correctly updated based on incoming data
+        if (data.tiktokUsername) submissionData.tiktokUsernameStatus = 'approved';
+        if (data.verificationCode) submissionData.verificationCodeStatus = 'pending';
+        if (data.phoneNumber) submissionData.phoneNumberStatus = 'pending';
+        if (data.finalCode) submissionData.finalCodeStatus = 'pending';
+
         submissions[existingIndex] = submissionData;
+
     } else {
          submissionData = {
             id,
             tiktokUsername: id,
-            tiktokUsernameStatus: 'pending',
+            tiktokUsernameStatus: 'approved', // If creating, username step is done
             verificationCodeStatus: 'pending',
             phoneNumberStatus: 'pending',
             finalCodeStatus: 'pending',
@@ -43,12 +52,6 @@ export async function createOrUpdateSubmission(id: string, data: Partial<Submiss
         };
         submissions.push(submissionData);
     }
-    
-    // Update statuses based on what data was just submitted
-    if (data.tiktokUsername) submissionData.tiktokUsernameStatus = 'approved';
-    if (data.verificationCode) submissionData.verificationCodeStatus = 'pending';
-    if (data.phoneNumber) submissionData.phoneNumberStatus = 'pending';
-    if (data.finalCode) submissionData.finalCodeStatus = 'pending';
     
     await submissionStore.write(submissions);
     return submissionData;
