@@ -1,53 +1,49 @@
 
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/session';
 import type { AdminUser } from '@/lib/types';
 import { getAdminById } from '@/lib/data-access';
+import { getSession } from '@/lib/session';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 
 export default async function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const session = await getSession();
     const pathname = headers().get('x-next-pathname') || '';
     const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
-    
-    // If user is NOT logged in and is NOT on an auth page, redirect to login.
-    // This is the primary server-side protection.
-    if (!session.admin && !isAuthPage) {
-        redirect('/admin/login');
-    }
 
-    let currentUser: Omit<AdminUser, 'passwordHash'> | null = null;
-    
-    if (session.admin?.id) {
-        currentUser = await getAdminById(session.admin.id);
-        // If user exists in session but not in DB, destroy session and redirect.
-        if (!currentUser) {
-            await session.destroy();
-            redirect('/admin/login');
-        }
-    }
-
-    // If user IS logged in and tries to access an auth page, redirect to the dashboard.
-    if (currentUser && isAuthPage) {
-        redirect('/management-portal-a7b3c9d2e1f0');
-    }
-
-    // If on an auth page and not logged in, render the login/signup form directly.
+    // If on an auth page, render the form directly without the dashboard shell.
+    // The middleware has already ensured that a logged-in user can't see this.
     if (isAuthPage) {
          return (
-             <main className="flex min-h-screen flex-col items-center justify-center">
+             <main className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
                  {children}
             </main>
         );
     }
     
-    // If user is logged in, show the full admin dashboard layout.
+    // For all other admin pages, we can assume the user is logged in
+    // because the middleware has already protected this route.
+    const session = await getSession();
+
+    // As a safety net, if the session is somehow missing, redirect.
+    // This should theoretically not be reached due to middleware.
+    if (!session.admin?.id) {
+        redirect('/admin/login');
+    }
+
+    const currentUser = await getAdminById(session.admin.id);
+    
+    // If user was deleted from DB but session persists, destroy session & redirect.
+    if (!currentUser) {
+        await session.destroy();
+        redirect('/admin/login');
+    }
+
+    // Render the full admin dashboard layout.
     return (
         <SidebarProvider>
             <Sidebar>
@@ -59,7 +55,7 @@ export default async function AdminLayout({
                         <h1 className="text-lg font-semibold">Admin Dashboard</h1>
                     </div>
                 </header>
-                {children}
+                <main className="flex-1 p-4 md:p-6">{children}</main>
             </SidebarInset>
         </SidebarProvider>
     );
