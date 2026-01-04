@@ -23,7 +23,7 @@ export function AdminSidebar() {
             <SidebarContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                         <SidebarMenuButton href="/dashboard" isActive={true} tooltip="Dashboard">
+                         <SidebarMenuButton href="/admin" isActive={true} tooltip="Dashboard">
                              <LayoutDashboard />
                             <span>Dashboard</span>
                         </SidebarMenuButton>
