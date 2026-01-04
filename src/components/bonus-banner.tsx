@@ -1,66 +1,75 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Gift, X } from 'lucide-react';
 import Link from 'next/link';
+import { Card, CardContent } from './ui/card';
 import { cn } from '@/lib/utils';
 
 export function BonusBanner() {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
-  if (!isVisible) {
-    return null;
-  }
+  // Use useEffect to trigger the animation on mount
+  useEffect(() => {
+    // This code only runs on the client
+    const hasBeenDismissed = sessionStorage.getItem('bonus_banner_dismissed');
+    if (hasBeenDismissed !== 'true') {
+      const timer = setTimeout(() => setIsVisible(true), 500); // Delay for effect
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    sessionStorage.setItem('bonus_banner_dismissed', 'true');
+  };
 
   return (
-    <div className="relative isolate flex items-center gap-x-6 overflow-hidden bg-gradient-to-r from-[#4A00E0] to-[#8E2DE2] px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
-      <div
-        className="absolute left-[max(-7rem,calc(50%-52rem))] top-1/2 -z-10 -translate-y-1/2 transform-gpu blur-2xl"
-        aria-hidden="true"
-      >
+    <div
+      className={cn(
+        'fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6 transition-transform duration-500 ease-out',
+        isVisible ? 'translate-y-0' : 'translate-y-full'
+      )}
+    >
+      <Card className="max-w-4xl mx-auto shadow-2xl bg-gradient-to-br from-[#1a0033] to-[#4A00E0] text-white border-purple-400/30 overflow-hidden">
         <div
-          className="aspect-[577/310] w-[36.0625rem] bg-gradient-to-r from-[#ff80b5] to-[#9089fc] opacity-30"
+          className="absolute inset-0 opacity-10 bg-grid-pattern"
           style={{
-            clipPath:
-              'polygon(74.8% 41.9%, 97.2% 73.2%, 100% 34.9%, 92.5% 0.4%, 87.5% 0%, 75% 28.6%, 58.5% 54.6%, 50.1% 56.8%, 46.9% 44%, 48.3% 17.4%, 24.7% 53.9%, 0% 27.9%, 11.9% 74.2%, 24.9% 54.1%, 68.6% 100%, 74.8% 41.9%)',
+            backgroundSize: '30px 30px',
+            backgroundImage:
+              'linear-gradient(to right, hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--primary) / 0.3) 1px, transparent 1px)',
           }}
         />
-      </div>
-      <div
-        className="absolute left-[max(45rem,calc(50%+8rem))] top-1/2 -z-10 -translate-y-1/2 transform-gpu blur-2xl"
-        aria-hidden="true"
-      >
-        <div
-          className="aspect-[577/310] w-[36.0625rem] bg-gradient-to-r from-tiktok-cyan to-tiktok-pink opacity-30"
-          style={{
-            clipPath:
-              'polygon(74.8% 41.9%, 97.2% 73.2%, 100% 34.9%, 92.5% 0.4%, 87.5% 0%, 75% 28.6%, 58.5% 54.6%, 50.1% 56.8%, 46.9% 44%, 48.3% 17.4%, 24.7% 53.9%, 0% 27.9%, 11.9% 74.2%, 24.9% 54.1%, 68.6% 100%, 74.8% 41.9%)',
-          }}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <p className="text-sm leading-6 text-white">
-          <strong className="font-semibold text-yellow-300">Limited Time Offer</strong>
-          <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
-            <circle cx={1} cy={1} r={1} />
-          </svg>
-          Get a <span className="font-bold">$300 bonus</span> when you bridge your account. Unlock US monetization features today!
-        </p>
-        <Button asChild variant="outline" className="flex-none rounded-full bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white px-4 py-1 text-sm font-semibold shadow-sm focus-visible:outline-white">
-            <Link href="/start">
-              <Gift className="mr-2 h-4 w-4" />
-              Claim Bonus
-            </Link>
-        </Button>
-      </div>
-      <div className="flex flex-1 justify-end">
-        <button type="button" className="-m-3 p-3 focus-visible:outline-offset-[-4px]" onClick={() => setIsVisible(false)}>
-          <span className="sr-only">Dismiss</span>
-          <X className="h-5 w-5 text-white" aria-hidden="true" />
-        </button>
-      </div>
+        <div className="absolute top-0 right-0 p-2">
+            <button
+                type="button"
+                className="p-2 text-white/50 hover:text-white focus:outline-none focus:ring-2 focus:ring-white rounded-full"
+                onClick={handleDismiss}
+                >
+                <span className="sr-only">Dismiss</span>
+                <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+        </div>
+        <CardContent className="relative flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
+          <div className="flex items-center gap-4">
+             <div className="hidden sm:flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-tiktok-pink to-tiktok-cyan flex-shrink-0">
+                <Gift className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-yellow-300">Limited Time: $300 Bridging Bonus!</h3>
+              <p className="text-sm text-white/80 mt-1">
+                Bridge your account today to unlock US monetization features like the Creator Fund and TikTok Shop, and claim your bonus.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="w-full sm:w-auto flex-shrink-0 bg-gradient-to-r from-tiktok-pink to-tiktok-cyan text-white font-bold border-0 hover:opacity-90 transition-opacity rounded-full px-6 py-3">
+              <Link href="/start">
+                Claim Your Bonus
+              </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
