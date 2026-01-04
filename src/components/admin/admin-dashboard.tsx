@@ -51,12 +51,9 @@ const getStatusBadge = (status: string) => {
 
 interface AdminDashboardProps {
     initialSubmissions: Submission[];
-    initialAdmins?: Omit<AdminUser, "passwordHash">[];
-    currentUser?: Omit<AdminUser, "passwordHash">;
-    isMainAdmin?: boolean;
 }
 
-export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser, isMainAdmin }: AdminDashboardProps) {
+export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();

@@ -1,78 +1,13 @@
 
 
-'use client';
-
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import type { AdminUser } from '@/lib/types';
-
 
 export default function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const pathname = usePathname();
-    const [user, setUser] = useState<Omit<AdminUser, 'passwordHash'> | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const isAuthPage = pathname.startsWith('/admin/login') || pathname.startsWith('/admin/signup');
-
-    useEffect(() => {
-        async function checkSessionAndFetchUser() {
-            if (isAuthPage) {
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/auth/session');
-                
-                if (!res.ok) {
-                    setIsLoading(false);
-                    return;
-                }
-                
-                const data = await res.json();
-                
-                if (!data.admin) {
-                     setIsLoading(false);
-                     return;
-                }
-                
-                setUser(data.admin);
-
-            } catch (error) {
-                console.error("Session check failed", error);
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        checkSessionAndFetchUser();
-
-    }, [pathname, isAuthPage]);
-
-
-    if (isAuthPage) {
-         return (
-             <main className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
-                 {children}
-            </main>
-        );
-    }
-    
-    if (isLoading) {
-        return (
-            <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            </div>
-        );
-    }
-    
     return (
         <SidebarProvider>
             <Sidebar>
