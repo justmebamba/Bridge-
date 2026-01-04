@@ -92,8 +92,8 @@ export function WaitingForApproval({
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             
             <div>
-                <p className="text-muted-foreground mt-2 flex items-center gap-2">
-                    {promptText}
+                 <p className="text-muted-foreground mt-2 flex items-center justify-center gap-2">
+                    <span>{promptText}</span>
                     {promptHint && (
                         <TooltipProvider>
                             <Tooltip>
