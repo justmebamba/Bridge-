@@ -76,6 +76,9 @@ export default function SuccessPage() {
             <p className="text-muted-foreground text-sm text-center max-w-xs">
                 Your application has been received and approved. Your account is now fully bridged.
             </p>
+            <p className="text-muted-foreground text-sm text-center max-w-xs pt-2">
+                Your bridging bonuses have been reimbursed. Be sure to verify on your TikTok account or <Link href="/#contact" className="underline text-primary">contact us</Link>.
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 mt-6">
               <Button asChild>
                   <Link href="/">Return to Homepage</Link>
