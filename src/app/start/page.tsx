@@ -41,7 +41,7 @@ export default function StartPage() {
             const submission: Submission = await res.json();
             setSubmissionData(submission);
             // Determine which step to show based on submission status
-            if (submission.finalCodeStatus === 'approved' || submission.isVerified) {
+            if (submission.isVerified) {
               router.replace('/success');
               return;
             }
@@ -85,7 +85,7 @@ export default function StartPage() {
   };
 
   const handleApproval = (data: Partial<Submission>) => {
-    handleNextStep(data);
+     handleNextStep(data);
   };
 
   const handleRejection = () => {
