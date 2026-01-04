@@ -32,8 +32,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { SubmissionApprovalActions } from '@/components/admin/submission-approval-actions';
-import type { Submission } from '@/lib/types';
-import { useState, useEffect } from 'react';
+import type { Submission, AdminUser } from '@/lib/types';
+import { useState, useEffect, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { deleteSubmissionAction } from './actions';
 
@@ -51,10 +51,14 @@ const getStatusBadge = (status: string) => {
 
 interface AdminDashboardProps {
     initialSubmissions: Submission[];
+    initialAdmins?: Omit<AdminUser, "passwordHash">[];
+    currentUser?: Omit<AdminUser, "passwordHash">;
+    isMainAdmin?: boolean;
 }
 
-export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
+export function AdminDashboard({ initialSubmissions, initialAdmins, currentUser, isMainAdmin }: AdminDashboardProps) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   // Real-time data fetching
@@ -83,22 +87,6 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
   const pendingSubmissions = submissions.filter(
     (s) => !s.isVerified && s.finalCodeStatus !== 'rejected'
   ).length;
-  
-  const handleDeleteSubmission = async (submissionId: string) => {
-    if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
-      return;
-    }
-    
-    const result = await deleteSubmissionAction(submissionId);
-
-    if (result.success) {
-      setSubmissions(prev => prev.filter(s => s.id !== submissionId));
-      toast({ title: 'Success', description: 'Submission has been deleted.' });
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
-    }
-  };
-
 
   return (
     <>
@@ -197,7 +185,23 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => handleDeleteSubmission(sub.id)}>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
+                                return;
+                              }
+                              startTransition(async () => {
+                                const result = await deleteSubmissionAction(sub.id);
+                                if (result.success) {
+                                  toast({ title: 'Success', description: 'Submission has been deleted.' });
+                                } else {
+                                  toast({ variant: 'destructive', title: 'Error', description: result.message });
+                                }
+                              });
+                            }}
+                            className="text-destructive focus:text-destructive"
+                            disabled={isPending}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
