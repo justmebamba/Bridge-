@@ -1,3 +1,4 @@
+
 'use client';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -24,7 +25,7 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  const isDashboardPage = pathname.startsWith('/dashboard');
+  const isDashboardPage = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
   const [isLoading, setIsLoading] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
 
