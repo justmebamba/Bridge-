@@ -1,7 +1,7 @@
 
 'use client';
 
-import { CheckCircle, PartyPopper, Loader2 } from 'lucide-react';
+import { CheckCircle, PartyPopper, Loader2, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,18 +12,20 @@ export default function SuccessPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isAllowed, setIsAllowed] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     const sessionUser = sessionStorage.getItem('user-session');
     if (sessionUser) {
       const parsedUser: AuthUser = JSON.parse(sessionUser);
+      setUsername(parsedUser.id);
       
       const checkStatus = async () => {
         try {
           const res = await fetch(`/api/submissions?id=${parsedUser.id}`);
           if (res.ok) {
             const submission: Submission = await res.json();
-            if (submission.finalCodeStatus === 'approved') {
+            if (submission.finalCodeStatus === 'approved' || submission.isVerified) {
               setIsAllowed(true);
             } else {
               router.replace('/start');
@@ -45,6 +47,11 @@ export default function SuccessPage() {
     }
   }, [router]);
   
+  const handleNewSession = () => {
+    sessionStorage.removeItem('user-session');
+    router.push('/start');
+  };
+
   if (isLoading || !isAllowed) {
       return (
           <div className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 p-4">
@@ -61,7 +68,7 @@ export default function SuccessPage() {
           </div>
           <h1 className="text-3xl font-bold">Submission Complete!</h1>
           <p className="text-muted-foreground mt-2">
-            Thank you for submitting your information.
+            Thank you for submitting your information{username ? `, @${username}` : ''}.
           </p>
         
         <div className="flex flex-col items-center justify-center space-y-4 py-12">
@@ -69,9 +76,15 @@ export default function SuccessPage() {
             <p className="text-muted-foreground text-sm text-center max-w-xs">
                 Your application has been received and approved. Your account is now fully bridged.
             </p>
-            <Button asChild className="mt-6">
-                <Link href="/">Return to Homepage</Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+              <Button asChild>
+                  <Link href="/">Return to Homepage</Link>
+              </Button>
+               <Button variant="outline" onClick={handleNewSession}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Start New Session
+              </Button>
+            </div>
         </div>
       </div>
     </main>
