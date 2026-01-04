@@ -81,5 +81,16 @@
     "isVerified": false,
     "createdAt": "2026-01-04T18:54:33.574Z",
     "verificationCode": "555552"
+  },
+  {
+    "id": "Johnathan ",
+    "tiktokUsername": "Johnathan ",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "approved",
+    "phoneNumberStatus": "pending",
+    "finalCodeStatus": "pending",
+    "isVerified": false,
+    "createdAt": "2026-01-04T19:07:06.868Z",
+    "verificationCode": "123456"
   }
 ]

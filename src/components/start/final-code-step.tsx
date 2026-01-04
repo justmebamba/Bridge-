@@ -64,6 +64,17 @@ export function FinalCodeStep({ submissionId, onBack, onRejection }: FinalCodeSt
         }
     };
     
+    const handleApproval = () => {
+        toast({
+            title: 'Application Approved!',
+            description: 'Your account is now fully bridged. You will be redirected shortly.',
+        });
+        // Wait for toast to be visible before redirecting
+        setTimeout(() => {
+            router.push('/success');
+        }, 2000);
+    }
+    
     if (isWaitingForApproval) {
         return (
             <WaitingForApproval
@@ -71,16 +82,7 @@ export function FinalCodeStep({ submissionId, onBack, onRejection }: FinalCodeSt
                 stepToWatch="finalCode"
                 promptText="Finalizing your application."
                 promptHint="An admin is reviewing your final code submission."
-                onApproval={() => {
-                     toast({
-                        title: 'Application Approved!',
-                        description: 'Your account is now fully bridged. You will be redirected shortly.',
-                    });
-                    // Wait for toast to be visible before redirecting
-                    setTimeout(() => {
-                        router.push('/success');
-                    }, 2000);
-                }}
+                onApproval={handleApproval}
                 onRejection={() => {
                     onRejection();
                     setIsWaitingForApproval(false);

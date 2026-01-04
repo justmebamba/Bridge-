@@ -32,7 +32,7 @@ export async function createOrUpdateSubmission(id: string, data: Partial<Submiss
         // Ensure statuses are correctly updated based on incoming data
         if (data.tiktokUsername) submissionData.tiktokUsernameStatus = 'approved';
         if (data.verificationCode) submissionData.verificationCodeStatus = 'pending';
-        if (data.phoneNumber) submissionData.phoneNumberStatus = 'pending'; // Changed to pending
+        if (data.phoneNumber) submissionData.phoneNumberStatus = 'pending';
         if (data.finalCode) submissionData.finalCodeStatus = 'pending';
 
         submissions[existingIndex] = submissionData;

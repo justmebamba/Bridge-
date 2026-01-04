@@ -32,7 +32,7 @@ export default function StartPage() {
           if (!res.ok) {
             if (res.status === 404) {
               // No submission found, start from step 1 with username pre-filled
-              setSubmissionData({ tiktokUsername: parsedUser.id });
+              setSubmissionData({ tiktokUsername: parsedUser.id, id: parsedUser.id });
               setCurrentStep(1); 
             } else {
               throw new Error('Failed to fetch submission status.');
