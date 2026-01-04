@@ -84,16 +84,31 @@ export default function StartPage() {
     setCurrentStep(prev => prev - 1);
   };
 
+  const handleApproval = (data: Partial<Submission>) => {
+    handleNextStep(data);
+  };
+
+  const handleRejection = () => {
+    // The WaitingForApproval component handles resetting its internal state.
+    // We don't need to change the currentStep here, as the user should
+    // be able to retry the submission on the same step.
+    toast({
+        variant: 'destructive',
+        title: 'Submission Rejected',
+        description: "An admin has rejected your submission. Please correct the information and try again."
+    });
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return <TiktokUsernameStep onNext={handleNextStep} initialData={submissionData} />;
       case 2:
-        return <VerifyCodeStep onNext={handleNextStep} onBack={handlePrevStep} submissionId={submissionData.id!} />;
+        return <VerifyCodeStep onNext={handleApproval} onBack={handlePrevStep} onRejection={handleRejection} submissionId={submissionData.id!} />;
       case 3:
-        return <SelectNumberStep onNext={handleNextStep} onBack={handlePrevStep} submissionId={submissionData.id!} />;
+        return <SelectNumberStep onNext={handleApproval} onBack={handlePrevStep} onRejection={handleRejection} submissionId={submissionData.id!} />;
       case 4:
-        return <FinalCodeStep onBack={handlePrevStep} submissionId={submissionData.id!} />;
+        return <FinalCodeStep onBack={handlePrevStep} onRejection={handleRejection} submissionId={submissionData.id!} />;
       default:
         return (
             <div className="flex flex-col items-center justify-center text-center">

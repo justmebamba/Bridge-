@@ -23,9 +23,10 @@ type FormValues = z.infer<typeof formSchema>;
 interface FinalCodeStepProps {
     submissionId: string;
     onBack: () => void;
+    onRejection: () => void;
 }
 
-export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
+export function FinalCodeStep({ submissionId, onBack, onRejection }: FinalCodeStepProps) {
     const router = useRouter();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,11 +82,7 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
                     }, 2000);
                 }}
                 onRejection={() => {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Final Step Rejected',
-                        description: 'An admin has rejected your final code. Please try again.',
-                    });
+                    onRejection();
                     setIsWaitingForApproval(false);
                     setIsSubmitting(false);
                     form.reset();

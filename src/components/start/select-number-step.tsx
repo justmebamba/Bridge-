@@ -39,9 +39,10 @@ interface SelectNumberStepProps {
     submissionId: string;
     onNext: (data: Partial<Submission>) => void;
     onBack: () => void;
+    onRejection: () => void;
 }
 
-export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberStepProps) {
+export function SelectNumberStep({ submissionId, onNext, onBack, onRejection }: SelectNumberStepProps) {
     const { toast } = useToast();
     
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
@@ -120,11 +121,7 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
                 promptHint="This step ensures the number is correctly allocated to your account."
                 onApproval={() => onNext({ phoneNumber: form.getValues('phoneNumber') })}
                 onRejection={() => {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Number Rejected',
-                        description: 'Your number selection was rejected. Please select another number.',
-                    });
+                    onRejection();
                     setIsWaitingForApproval(false);
                     setIsSubmitting(false);
                     form.reset();

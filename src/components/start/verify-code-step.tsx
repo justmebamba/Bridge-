@@ -24,9 +24,10 @@ interface VerifyCodeStepProps {
     submissionId: string;
     onNext: (data: Partial<Submission>) => void;
     onBack: () => void;
+    onRejection: () => void;
 }
 
-export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepProps) {
+export function VerifyCodeStep({ submissionId, onNext, onBack, onRejection }: VerifyCodeStepProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
@@ -72,11 +73,7 @@ export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepP
                 promptHint="You should receive a code via the email linked to your TikTok account."
                 onApproval={() => onNext({ verificationCode: form.getValues('verificationCode') })}
                 onRejection={() => {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Verification Rejected',
-                        description: 'Please check your code and try again.',
-                    });
+                    onRejection();
                     setIsWaitingForApproval(false);
                     setIsSubmitting(false);
                     form.reset();
