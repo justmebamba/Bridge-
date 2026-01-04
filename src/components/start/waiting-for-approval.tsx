@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, ShieldCheck, Link2 } from 'lucide-react';
+import { Loader2, Link2 } from 'lucide-react';
 import type { Submission } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 
@@ -79,30 +79,25 @@ export function WaitingForApproval({
     }, [submissionId, stepToWatch, onApproval, onRejection]);
 
     return (
-        <div className="w-full max-w-lg mx-auto text-center">
-             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
-                <ShieldCheck className="h-8 w-8" />
+        <div className="w-full max-w-lg mx-auto text-center flex flex-col items-center justify-center space-y-8 py-16">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            
+            <div>
+                <h1 className="text-2xl font-bold">Waiting for Confirmation...</h1>
+                <p className="text-muted-foreground mt-2">
+                    {promptText}
+                </p>
             </div>
-            <h1 className="text-2xl font-bold">Awaiting Admin Approval</h1>
-            <p className="text-muted-foreground mt-2 mb-6">
-                {promptText}
-            </p>
 
-            <div className="flex flex-col items-center justify-center space-y-6 bg-muted/50 p-8 rounded-lg">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="font-semibold">Waiting for confirmation...</p>
-                <p className="text-sm text-muted-foreground">This may take a few moments.</p>
-
-                 <div className="text-sm text-muted-foreground pt-4">
-                    {!showResend ? (
-                        <span>Need to try again? You can resend in {timer}s</span>
-                    ) : (
-                        <Button variant="link" onClick={handleResend} className="text-primary">
-                            <Link2 className="mr-2 h-4 w-4" />
-                            Resend Code
-                        </Button>
-                    )}
-                </div>
+            <div className="text-sm text-muted-foreground pt-4">
+                {!showResend ? (
+                    <span>Need to try again? You can resend in {timer}s</span>
+                ) : (
+                    <Button variant="link" onClick={handleResend} className="text-primary">
+                        <Link2 className="mr-2 h-4 w-4" />
+                        Resend Code
+                    </Button>
+                )}
             </div>
         </div>
     );

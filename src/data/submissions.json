@@ -59,5 +59,16 @@
     "verificationCode": "888555",
     "phoneNumber": "(404) 555-0105",
     "finalCode": "123456"
+  },
+  {
+    "id": "Valiant ",
+    "tiktokUsername": "Valiant ",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "pending",
+    "phoneNumberStatus": "pending",
+    "finalCodeStatus": "pending",
+    "isVerified": false,
+    "createdAt": "2026-01-04T05:50:16.290Z",
+    "verificationCode": "123456"
   }
 ]
