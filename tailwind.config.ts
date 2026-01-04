@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 import { fontFamily } from "tailwindcss/defaultTheme"
 
@@ -77,6 +78,9 @@ export default {
         },
         cyan: {
           400: '#22d3ee',
+        },
+        gold: {
+          DEFAULT: '#FFD700'
         }
       },
       borderRadius: {

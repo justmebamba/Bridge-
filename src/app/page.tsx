@@ -6,12 +6,14 @@ import { AboutBridgingSection } from "@/components/about-bridging-section";
 import { FeaturesSection } from "@/components/features-section";
 import { ContactUsSection } from "@/components/contact-us-section";
 import { useRouter } from "next/navigation";
+import { BonusBanner } from "@/components/bonus-banner";
 
 export default function Home() {
   const router = useRouter();
 
   return (
     <>
+      <BonusBanner />
       <section id="features">
         <FeaturesSection />
       </section>
