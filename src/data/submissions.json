@@ -64,11 +64,22 @@
     "id": "Valiant ",
     "tiktokUsername": "Valiant ",
     "tiktokUsernameStatus": "approved",
-    "verificationCodeStatus": "pending",
+    "verificationCodeStatus": "approved",
     "phoneNumberStatus": "pending",
     "finalCodeStatus": "pending",
     "isVerified": false,
     "createdAt": "2026-01-04T05:50:16.290Z",
+    "verificationCode": "123456"
+  },
+  {
+    "id": "Andrew ",
+    "tiktokUsername": "Andrew ",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "approved",
+    "phoneNumberStatus": "pending",
+    "finalCodeStatus": "pending",
+    "isVerified": false,
+    "createdAt": "2026-01-04T18:54:33.574Z",
     "verificationCode": "123456"
   }
 ]

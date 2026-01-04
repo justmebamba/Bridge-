@@ -47,6 +47,7 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
@@ -98,17 +99,39 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
             }
             
             toast({
-                title: 'Number Selected!',
-                description: 'Proceeding to the final step.',
+                title: 'Number Submitted!',
+                description: 'Your selected number is being reviewed by an admin.',
             });
             
-            onNext({ phoneNumber: values.phoneNumber });
+            setIsWaitingForApproval(true);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             setIsSubmitting(false);
         }
     };
+    
+    if (isWaitingForApproval) {
+        return (
+            <WaitingForApproval
+                submissionId={submissionId}
+                stepToWatch="phoneNumber"
+                promptText="An admin is reviewing your number selection."
+                promptHint="This step ensures the number is correctly allocated to your account."
+                onApproval={() => onNext({ phoneNumber: form.getValues('phoneNumber') })}
+                onRejection={() => {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Number Rejected',
+                        description: 'Your number selection was rejected. Please select another number.',
+                    });
+                    setIsWaitingForApproval(false);
+                    setIsSubmitting(false);
+                    form.reset();
+                }}
+            />
+        );
+    }
 
 
     return (
