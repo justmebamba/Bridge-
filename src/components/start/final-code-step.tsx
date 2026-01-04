@@ -68,7 +68,8 @@ export function FinalCodeStep({ submissionId, onBack }: FinalCodeStepProps) {
             <WaitingForApproval
                 submissionId={submissionId}
                 stepToWatch="finalCode"
-                promptText="Finalizing your application. Please wait for the final confirmation from our team."
+                promptText="Finalizing your application."
+                promptHint="An admin is reviewing your final code submission."
                 onApproval={() => {
                      toast({
                         title: 'Application Approved!',

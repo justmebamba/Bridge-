@@ -116,7 +116,8 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
             <WaitingForApproval
                 submissionId={submissionId}
                 stepToWatch="phoneNumber"
-                promptText="We are now linking the selected number to your account. Please wait for confirmation."
+                promptText="Linking the selected number."
+                promptHint="An admin is reviewing your number selection."
                 onApproval={() => onNext({ phoneNumber: form.getValues('phoneNumber') })}
                 onRejection={() => {
                     toast({

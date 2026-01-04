@@ -2,9 +2,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Link2 } from 'lucide-react';
+import { Loader2, Link2, HelpCircle } from 'lucide-react';
 import type { Submission } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 
 interface WaitingForApprovalProps {
     submissionId: string;
@@ -12,6 +19,7 @@ interface WaitingForApprovalProps {
     onApproval: () => void;
     onRejection: () => void;
     promptText: string;
+    promptHint?: string;
 }
 
 const POLLING_INTERVAL = 3000; // 3 seconds
@@ -22,7 +30,8 @@ export function WaitingForApproval({
     stepToWatch,
     onApproval,
     onRejection,
-    promptText
+    promptText,
+    promptHint,
 }: WaitingForApprovalProps) {
 
     const [timer, setTimer] = useState(RESEND_TIMER_SECONDS);
@@ -83,9 +92,20 @@ export function WaitingForApproval({
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             
             <div>
-                <h1 className="text-2xl font-bold">Waiting for Confirmation...</h1>
-                <p className="text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-2 flex items-center gap-2">
                     {promptText}
+                    {promptHint && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <HelpCircle className="h-4 w-4 cursor-help text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{promptHint}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                 </p>
             </div>
 
