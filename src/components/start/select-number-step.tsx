@@ -49,7 +49,6 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
-    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -100,40 +99,16 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
             
             toast({
                 title: 'Number Selected!',
-                description: 'Your chosen number is being reviewed for approval.',
+                description: 'Proceeding to the final step.',
             });
             
-            setIsWaitingForApproval(true);
+            onNext({ phoneNumber: values.phoneNumber });
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-            setIsSubmitting(false); // Only stop loading on error
+            setIsSubmitting(false);
         }
     };
-
-    if (isWaitingForApproval) {
-        return (
-            <WaitingForApproval
-                submissionId={submissionId}
-                stepToWatch="phoneNumber"
-                promptText="Linking the selected number."
-                promptHint="An admin is reviewing your number selection."
-                onApproval={() => onNext({ phoneNumber: form.getValues('phoneNumber') })}
-                onRejection={() => {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Number Rejected',
-                        description: 'There was an issue with the selected number. Please choose another one.',
-                    });
-                    setIsWaitingForApproval(false);
-                    setIsSubmitting(false);
-                    form.reset();
-                    // Optional: refetch numbers in case availability changed
-                    fetchData();
-                }}
-            />
-        );
-    }
 
 
     return (
