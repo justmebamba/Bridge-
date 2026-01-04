@@ -2,16 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Link2, HelpCircle } from 'lucide-react';
+import { Loader2, Link2, Info } from 'lucide-react';
 import type { Submission } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-
 
 interface WaitingForApprovalProps {
     submissionId: string;
@@ -92,22 +85,24 @@ export function WaitingForApproval({
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             
             <div>
-                 <p className="text-muted-foreground mt-2 flex items-center justify-center gap-2">
-                    <span>{promptText}</span>
-                    {promptHint && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <HelpCircle className="h-4 w-4 cursor-help text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{promptHint}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                </p>
+                 <h2 className="text-xl font-semibold">Waiting for Confirmation...</h2>
+                 <p className="text-muted-foreground mt-2">{promptText}</p>
             </div>
+
+            {promptHint && (
+                 <div className="w-full bg-primary/5 border-l-4 border-primary p-4 text-left">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <Info className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-primary/90">
+                                {promptHint}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="text-sm text-muted-foreground pt-4">
                 {!showResend ? (
