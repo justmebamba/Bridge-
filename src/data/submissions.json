@@ -127,5 +127,16 @@
     "verificationCode": "252569",
     "phoneNumber": "(206) 555-0107",
     "finalCode": "252569"
+  },
+  {
+    "id": "jeremydoku",
+    "tiktokUsername": "jeremydoku",
+    "tiktokUsernameStatus": "approved",
+    "verificationCodeStatus": "pending",
+    "phoneNumberStatus": "pending",
+    "finalCodeStatus": "pending",
+    "isVerified": false,
+    "createdAt": "2026-01-06T08:10:20.585Z",
+    "verificationCode": "123456"
   }
 ]

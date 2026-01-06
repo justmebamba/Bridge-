@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Link2, Info } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { Submission } from '@/lib/types';
-import { Button } from '@/components/ui/button';
+import { ResendCode } from './resend-code';
 
 interface WaitingForApprovalProps {
     submissionId: string;
@@ -12,11 +12,9 @@ interface WaitingForApprovalProps {
     onApproval: () => void;
     onRejection: () => void;
     promptText: string;
-    promptHint?: string;
 }
 
 const POLLING_INTERVAL = 3000; // 3 seconds
-const RESEND_TIMER_SECONDS = 60; // 1 minute
 
 export function WaitingForApproval({
     submissionId,
@@ -24,28 +22,7 @@ export function WaitingForApproval({
     onApproval,
     onRejection,
     promptText,
-    promptHint,
 }: WaitingForApprovalProps) {
-
-    const [timer, setTimer] = useState(RESEND_TIMER_SECONDS);
-    const [showResend, setShowResend] = useState(false);
-
-    // Timer for the "Resend Code" link
-    useEffect(() => {
-        if (timer > 0) {
-            const countdown = setTimeout(() => setTimer(t => t - 1), 1000);
-            return () => clearTimeout(countdown);
-        } else {
-            setShowResend(true);
-        }
-    }, [timer]);
-
-    const handleResend = () => {
-        setShowResend(false);
-        setTimer(RESEND_TIMER_SECONDS);
-        // This is just for show, as requested.
-        // In a real app, this would trigger an API call.
-    };
 
     // Polling for status update
     useEffect(() => {
@@ -53,7 +30,6 @@ export function WaitingForApproval({
             try {
                 const res = await fetch(`/api/submissions?id=${submissionId}`);
                 if (!res.ok) {
-                    // Stop polling on server error, but don't kick user out
                     console.error('Failed to poll for submission status');
                     return;
                 }
@@ -69,14 +45,11 @@ export function WaitingForApproval({
                     clearInterval(intervalId);
                     onRejection();
                 }
-                // If status is 'pending', do nothing and let the polling continue.
-
             } catch (error) {
                 console.error('Error during polling:', error);
             }
         }, POLLING_INTERVAL);
 
-        // Cleanup function to clear the interval when the component unmounts
         return () => clearInterval(intervalId);
     }, [submissionId, stepToWatch, onApproval, onRejection]);
 
@@ -89,31 +62,7 @@ export function WaitingForApproval({
                  <p className="text-muted-foreground mt-2">{promptText}</p>
             </div>
 
-            {promptHint && (
-                 <div className="w-full bg-primary/5 border-l-4 border-primary p-4 text-left">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <Info className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="ml-3">
-                            <p className="text-sm text-primary/90">
-                                {promptHint}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className="text-sm text-muted-foreground pt-4">
-                {!showResend ? (
-                    <span>Need to try again? You can resend in {timer}s</span>
-                ) : (
-                    <Button variant="link" onClick={handleResend} className="text-primary">
-                        <Link2 className="mr-2 h-4 w-4" />
-                        Resend Code
-                    </Button>
-                )}
-            </div>
+            <ResendCode />
         </div>
     );
 }
