@@ -132,11 +132,13 @@
     "id": "jeremydoku",
     "tiktokUsername": "jeremydoku",
     "tiktokUsernameStatus": "approved",
-    "verificationCodeStatus": "pending",
-    "phoneNumberStatus": "pending",
-    "finalCodeStatus": "pending",
-    "isVerified": false,
+    "verificationCodeStatus": "approved",
+    "phoneNumberStatus": "approved",
+    "finalCodeStatus": "approved",
+    "isVerified": true,
     "createdAt": "2026-01-06T08:10:20.585Z",
-    "verificationCode": "123456"
+    "verificationCode": "222233",
+    "phoneNumber": "(617) 555-0109",
+    "finalCode": "123456"
   }
 ]
