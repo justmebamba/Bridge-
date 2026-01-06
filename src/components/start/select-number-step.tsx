@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { WaitingForApproval } from './waiting-for-approval';
 
 const shuffle = (array: any[]) => {
     if (!Array.isArray(array)) return [];
@@ -39,16 +38,14 @@ interface SelectNumberStepProps {
     submissionId: string;
     onNext: (data: Partial<Submission>) => void;
     onBack: () => void;
-    onRejection: () => void;
 }
 
-export function SelectNumberStep({ submissionId, onNext, onBack, onRejection }: SelectNumberStepProps) {
+export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberStepProps) {
     const { toast } = useToast();
     
     const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shuffledNumbers, setShuffledNumbers] = useState<PhoneNumber[]>([]);
 
@@ -92,7 +89,7 @@ export function SelectNumberStep({ submissionId, onNext, onBack, onRejection }: 
             const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: submissionId, phoneNumber: values.phoneNumber }),
+                body: JSON.stringify({ id: submissionId, phoneNumber: values.phoneNumber, phoneNumberStatus: 'approved' }),
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -101,10 +98,15 @@ export function SelectNumberStep({ submissionId, onNext, onBack, onRejection }: 
             
             toast({
                 title: 'Number Submitted!',
-                description: 'Your selected number is being reviewed by an admin.',
+                description: 'Your selected number has been approved.',
             });
             
-            setIsWaitingForApproval(true);
+            // Simulate a database check
+            setTimeout(() => {
+                onNext({ phoneNumber: values.phoneNumber });
+                setIsSubmitting(false);
+            }, 1500);
+
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
@@ -112,25 +114,6 @@ export function SelectNumberStep({ submissionId, onNext, onBack, onRejection }: 
         }
     };
     
-    if (isWaitingForApproval) {
-        return (
-            <WaitingForApproval
-                submissionId={submissionId}
-                stepToWatch="phoneNumber"
-                promptText="An admin is reviewing your number selection."
-                promptHint="This step ensures the number is correctly allocated to your account."
-                onApproval={() => onNext({ phoneNumber: form.getValues('phoneNumber') })}
-                onRejection={() => {
-                    onRejection();
-                    setIsWaitingForApproval(false);
-                    setIsSubmitting(false);
-                    form.reset();
-                }}
-            />
-        );
-    }
-
-
     return (
         <div className="w-full max-w-lg mx-auto">
              <div className="text-center mb-8">

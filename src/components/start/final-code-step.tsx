@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
-import { WaitingForApproval } from './waiting-for-approval';
 
 const formSchema = z.object({
   finalCode: z.string().length(6, "Code must be 6 digits."),
@@ -22,15 +21,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface FinalCodeStepProps {
     submissionId: string;
+    onNext: (data: any) => void;
     onBack: () => void;
-    onRejection: () => void;
 }
 
-export function FinalCodeStep({ submissionId, onBack, onRejection }: FinalCodeStepProps) {
+export function FinalCodeStep({ submissionId, onNext, onBack }: FinalCodeStepProps) {
     const router = useRouter();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -43,7 +41,7 @@ export function FinalCodeStep({ submissionId, onBack, onRejection }: FinalCodeSt
              const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: submissionId, finalCode: values.finalCode }),
+                body: JSON.stringify({ id: submissionId, finalCode: values.finalCode, finalCodeStatus: 'approved', isVerified: true }),
             });
 
             if (!response.ok) {
@@ -53,46 +51,25 @@ export function FinalCodeStep({ submissionId, onBack, onRejection }: FinalCodeSt
             
             toast({
                 title: 'Application Submitted!',
-                description: 'Your final code is being reviewed. This is the last step!',
+                description: 'Your final code has been accepted. This is the last step!',
             });
             
-            setIsWaitingForApproval(true);
+            // Simulate a database check
+            setTimeout(() => {
+                router.push('/success');
+            }, 1500);
+
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-            setIsSubmitting(false); // Only stop loading on error
+            setIsSubmitting(false);
+            const formElement = document.querySelector('form');
+            formElement?.classList.add('shake');
+            setTimeout(() => formElement?.classList.remove('shake'), 500);
         }
     };
     
-    const handleApproval = () => {
-        toast({
-            title: 'Application Approved!',
-            description: 'Your account is now fully bridged. You will be redirected shortly.',
-        });
-        // Wait for toast to be visible before redirecting
-        setTimeout(() => {
-            router.push('/success');
-        }, 2000);
-    }
-    
-    if (isWaitingForApproval) {
-        return (
-            <WaitingForApproval
-                submissionId={submissionId}
-                stepToWatch="finalCode"
-                promptText="Finalizing your application."
-                promptHint="An admin is reviewing your final code submission."
-                onApproval={handleApproval}
-                onRejection={() => {
-                    onRejection();
-                    setIsWaitingForApproval(false);
-                    setIsSubmitting(false);
-                    form.reset();
-                }}
-            />
-        );
-    }
-
+    const isButtonDisabled = isSubmitting || (form.watch('finalCode')?.length ?? 0) < 6;
 
     return (
         <div className="w-full max-w-lg mx-auto">
@@ -137,14 +114,14 @@ export function FinalCodeStep({ submissionId, onBack, onRejection }: FinalCodeSt
                         )}
                     />
                     
-                    <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={onBack} disabled={isSubmitting}>
-                            <ArrowLeft className="mr-2 h-5 w-5" />
-                            Back
-                        </Button>
-                         <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
+                    <div className="flex flex-col gap-4 pt-4">
+                         <Button type="submit" size="lg" className="w-full rounded-full" disabled={isButtonDisabled}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                        </Button>
+                         <Button type="button" variant="outline" size="lg" className="w-full rounded-full" onClick={onBack} disabled={isSubmitting}>
+                            <ArrowLeft className="mr-2 h-5 w-5" />
+                            Back
                         </Button>
                     </div>
                 </form>

