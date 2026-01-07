@@ -46,6 +46,7 @@ export function SiteHeader() {
                         <Link href="/#features" className="flex w-full items-center py-2 text-lg font-semibold">Features</Link>
                         <Link href="/#about" className="flex w-full items-center py-2 text-lg font-semibold">About</Link>
                         <Link href="/#contact" className="flex w-full items-center py-2 text-lg font-semibold">Contact Us</Link>
+                        <Link href="https://www.tiktok.com/support" target="_blank" rel="noopener noreferrer" className="flex w-full items-center py-2 text-lg font-semibold">Support</Link>
                         <hr className="my-2"/>
                         <Button asChild size="lg"><Link href="/start">Get Started</Link></Button>
                     </div>

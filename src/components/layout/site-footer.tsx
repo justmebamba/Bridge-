@@ -29,6 +29,9 @@ export function SiteFooter({ className }: React.HTMLAttributes<HTMLElement>) {
                    <Link href="/#contact" className="hover:text-primary transition-colors">
                     Contact Us
                   </Link>
+                  <Link href="https://www.tiktok.com/support" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                    Support
+                  </Link>
                 </div>
 
                 <div className="flex space-x-2">
