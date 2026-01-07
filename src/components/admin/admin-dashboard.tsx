@@ -28,11 +28,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { SubmissionApprovalActions } from '@/components/admin/submission-approval-actions';
-import type { Submission, AdminUser } from '@/lib/types';
+import type { Submission } from '@/lib/types';
 import { useState, useEffect, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { deleteSubmissionAction } from './actions';
@@ -175,35 +186,53 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="icon" variant="ghost">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
-                                return;
-                              }
-                              startTransition(async () => {
-                                const result = await deleteSubmissionAction(sub.id);
-                                if (result.success) {
-                                  toast({ title: 'Success', description: 'Submission has been deleted.' });
-                                } else {
-                                  toast({ variant: 'destructive', title: 'Error', description: result.message });
-                                }
-                              });
-                            }}
-                            className="text-destructive focus:text-destructive"
-                            disabled={isPending}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <AlertDialog>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    onSelect={(e) => e.preventDefault()}
+                                    className="text-destructive focus:text-destructive"
+                                    disabled={isPending}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the submission
+                                for @{sub.tiktokUsername}.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={() => {
+                                    startTransition(async () => {
+                                        const result = await deleteSubmissionAction(sub.id);
+                                        if (result.success) {
+                                        toast({ title: 'Success', description: 'Submission has been deleted.' });
+                                        } else {
+                                        toast({ variant: 'destructive', title: 'Error', description: result.message });
+                                        }
+                                    });
+                                    }}
+                                >
+                                    {isPending ? 'Deleting...' : 'Delete'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))

@@ -11,7 +11,7 @@ export async function updateSubmissionStatusAction(
 ) {
   try {
     await updateStatus(id, step, status);
-    revalidatePath('/dashboard');
+    revalidatePath('/admin');
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message };
@@ -21,7 +21,7 @@ export async function updateSubmissionStatusAction(
 export async function deleteSubmissionAction(submissionId: string) {
     try {
         await deleteData(submissionId);
-        revalidatePath('/dashboard');
+        revalidatePath('/admin');
         return { success: true };
     } catch (error: any) {
         return { success: false, message: error.message };
