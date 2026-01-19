@@ -1,57 +1,33 @@
-[debug] [2026-01-11T18:58:05.609Z] ----------------------------------------------------------------------
-[debug] [2026-01-11T18:58:05.616Z] Command:       /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/bin/node /nix/store/c776mhyhgykcld7p90ajrka149ifn61a-firebase-tools-14.26.0/lib/node_modules/firebase-tools/lib/bin/firebase.js init hosting
-[debug] [2026-01-11T18:58:05.618Z] CLI Version:   14.26.0
-[debug] [2026-01-11T18:58:05.618Z] Platform:      linux
-[debug] [2026-01-11T18:58:05.620Z] Node Version:  v20.19.1
-[debug] [2026-01-11T18:58:05.620Z] Time:          Sun Jan 11 2026 18:58:05 GMT+0000 (Coordinated Universal Time)
-[debug] [2026-01-11T18:58:05.621Z] ----------------------------------------------------------------------
+[debug] [2026-01-15T18:50:23.624Z] ----------------------------------------------------------------------
+[debug] [2026-01-15T18:50:23.627Z] Command:       /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/bin/node /nix/store/c776mhyhgykcld7p90ajrka149ifn61a-firebase-tools-14.26.0/lib/node_modules/firebase-tools/lib/bin/firebase.js login
+[debug] [2026-01-15T18:50:23.628Z] CLI Version:   14.26.0
+[debug] [2026-01-15T18:50:23.628Z] Platform:      linux
+[debug] [2026-01-15T18:50:23.628Z] Node Version:  v20.19.1
+[debug] [2026-01-15T18:50:23.628Z] Time:          Thu Jan 15 2026 18:50:23 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-01-15T18:50:23.629Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2026-01-11T18:58:05.631Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2026-01-11T18:58:05.757Z] No OAuth tokens found
-[debug] [2026-01-11T18:58:05.760Z] No OAuth tokens found
+[debug] [2026-01-15T18:50:23.637Z] No OAuth tokens found
+[debug] [2026-01-15T18:50:23.638Z] No OAuth tokens found
 [error] Failed to fetch Firebase Project from current Studio Workspace: Unable to refresh auth: not yet authenticated.
+[info] i  The Firebase CLI’s MCP server feature can optionally make use of Gemini in Firebase. Learn more about Gemini in Firebase and how it uses your data: https://firebase.google.com/docs/gemini-in-firebase#how-gemini-in-firebase-uses-your-data 
 [info] 
-     ######## #### ########  ######## ########     ###     ######  ########
-     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
-     ######    ##  ########  ######   ########  #########  ######  ######
-     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
-     ##       #### ##     ## ######## ########  ##     ##  ######  ########
-
-You're about to initialize a Firebase project in this directory:
-
-  /home/user/studio
-
+[info] i  Firebase optionally collects CLI and Emulator Suite usage and error reporting information to help improve our products. Data is collected in accordance with Google's privacy policy (https://policies.google.com/privacy) and is not used to identify you. 
 [info] 
-=== Project Setup
+[info] i  To change your preferences at any time, run `firebase logout` and `firebase login` again. 
+[debug] [2026-01-15T18:53:43.206Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
+[debug] [2026-01-15T18:53:43.207Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"0becc755-d519-4822-8bb5-8c07aab4b603"}
+[debug] [2026-01-15T18:53:43.540Z] <<< [apiv2][status] POST https://auth.firebase.tools/attest 200
+[debug] [2026-01-15T18:53:43.540Z] <<< [apiv2][body] POST https://auth.firebase.tools/attest {"token":"NuFJIou5gRz--zGYB7pwNIFHbzJnUd6kbHjA2MY_psY"}
 [info] 
-[info] First, let's associate this project directory with a Firebase project.
-[info] You can create multiple project aliases by running firebase use --add, 
+[info] To sign in to the Firebase CLI:
 [info] 
-[debug] [2026-01-11T18:58:05.796Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
-[debug] [2026-01-11T18:58:06.150Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
-[debug] [2026-01-11T18:58:06.153Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
-[debug] [2026-01-11T18:58:30.938Z] Running auto auth
-[debug] [2026-01-11T18:58:30.977Z] No OAuth tokens found
-[debug] [2026-01-11T18:58:30.981Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/studio-6068240579-e9698 [none]
-[debug] [2026-01-11T18:58:31.231Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/studio-6068240579-e9698 200
-[debug] [2026-01-11T18:58:31.234Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/studio-6068240579-e9698 {"projectId":"studio-6068240579-e9698","projectNumber":"263259542582","displayName":"Firebase app","name":"projects/studio-6068240579-e9698","resources":{"hostingSite":"studio-6068240579-e9698"},"state":"ACTIVE","etag":"1_33d9a215-8d92-4a74-b280-831bdc420c59"}
-[info] i  Using project studio-6068240579-e9698 (Firebase app) . 
+[info] 1. Take note of your session ID:
 [info] 
-=== Hosting Setup
-[debug] [2026-01-11T18:58:31.262Z] No OAuth tokens found
-[debug] [2026-01-11T18:58:31.262Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/studio-6068240579-e9698 [none]
-[debug] [2026-01-11T18:58:31.444Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/studio-6068240579-e9698 200
-[debug] [2026-01-11T18:58:31.444Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/studio-6068240579-e9698 {"projectId":"studio-6068240579-e9698","projectNumber":"263259542582","displayName":"Firebase app","name":"projects/studio-6068240579-e9698","resources":{"hostingSite":"studio-6068240579-e9698"},"state":"ACTIVE","etag":"1_33d9a215-8d92-4a74-b280-831bdc420c59"}
+[info]    0BECC
 [info] 
-[info] Your public directory is the folder (relative to your project directory) that
-[info] will contain Hosting assets to be uploaded with firebase deploy. If you
-[info] have a build process for your assets, use your build's output directory.
+[info] 2. Visit the URL below on any device and follow the instructions to get your code:
 [info] 
+[info]    https://auth.firebase.tools/login?code_challenge=tQ2m3bd5GMPYNHIlctkR4uquucesa_GSP3VnqrAQI9M&session=0becc755-d519-4822-8bb5-8c07aab4b603&attest=NuFJIou5gRz--zGYB7pwNIFHbzJnUd6kbHjA2MY_psY
 [info] 
-[info] i  Detected a .git folder at /home/user/studio 
-[info] i  Authorizing with GitHub to upload your service account to a GitHub repository's secrets store. 
+[info] 3. Paste or enter the authorization code below once you have it:
 [info] 
-[info] Visit this URL on this device to log in:
-[info] https://github.com/login/oauth/authorize?client_id=89cf50f02ac6aaed3484&state=123449685&redirect_uri=http%3A%2F%2Flocalhost%3A9005&scope=read%3Auser%20repo%20public_repo
-[info] 
-[info] Waiting for authentication...
