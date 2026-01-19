@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -84,7 +83,7 @@ export default function StartPage() {
     setCurrentStep(prev => prev - 1);
   };
 
-  const handleRejection = (step: 'verificationCode' | 'phoneNumber' | 'finalCode') => {
+  const handleRejection = useCallback((step: 'verificationCode' | 'phoneNumber' | 'finalCode') => {
     toast({
       variant: 'destructive',
       title: 'Submission Rejected',
@@ -92,12 +91,20 @@ export default function StartPage() {
     });
     // This will cause the step component to re-render, allowing the user to try again.
     setSubmissionData(prev => ({...prev}));
-  };
+  }, [toast]);
 
-  const handleApproval = (data: Partial<Submission>) => {
+  const handleApproval = useCallback((data: Partial<Submission>) => {
     setSubmissionData(prev => ({...prev, ...data}));
     setCurrentStep(prev => prev + 1);
-  };
+  }, []);
+
+  // Memoize callbacks for VerifyCodeStep
+  const onVerifyCodeApproval = useCallback((data: Partial<Submission>) => handleApproval(data), [handleApproval]);
+  const onVerifyCodeRejection = useCallback(() => handleRejection('verificationCode'), [handleRejection]);
+
+  // Memoize callbacks for FinalCodeStep
+  const onFinalCodeApproval = useCallback(() => router.push('/success'), [router]);
+  const onFinalCodeRejection = useCallback(() => handleRejection('finalCode'), [handleRejection]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -107,8 +114,8 @@ export default function StartPage() {
         return (
           <VerifyCodeStep
             submissionId={submissionData.id!}
-            onApproval={(data) => handleApproval(data)}
-            onRejection={() => handleRejection('verificationCode')}
+            onApproval={onVerifyCodeApproval}
+            onRejection={onVerifyCodeRejection}
             onBack={handlePrevStep}
             key={`verify-step-${submissionData.id}`}
           />
@@ -125,8 +132,8 @@ export default function StartPage() {
         return (
           <FinalCodeStep
             submissionId={submissionData.id!}
-            onApproval={() => router.push('/success')}
-            onRejection={() => handleRejection('finalCode')}
+            onApproval={onFinalCodeApproval}
+            onRejection={onFinalCodeRejection}
             onBack={handlePrevStep}
             key={`final-step-${submissionData.id}`}
           />
