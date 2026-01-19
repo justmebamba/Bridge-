@@ -1,11 +1,11 @@
 import type { Submission } from '@/lib/types';
-import { db } from './firebaseAdmin';
-
-const submissionsCollection = db.collection('submissions');
+import { getDb } from './firebaseAdmin';
 
 // Submissions
 
 export async function getSubmissions(): Promise<Submission[]> {
+    const db = getDb();
+    const submissionsCollection = db.collection('submissions');
     const snapshot = await submissionsCollection.orderBy('createdAt', 'desc').get();
     if (snapshot.empty) {
         return [];
@@ -14,6 +14,8 @@ export async function getSubmissions(): Promise<Submission[]> {
 }
 
 export async function getSubmissionById(id: string): Promise<Submission | null> {
+    const db = getDb();
+    const submissionsCollection = db.collection('submissions');
     const doc = await submissionsCollection.doc(id).get();
     if (!doc.exists) {
         return null;
@@ -22,6 +24,8 @@ export async function getSubmissionById(id: string): Promise<Submission | null> 
 }
 
 export async function createOrUpdateSubmission(id: string, data: Partial<Submission>): Promise<Submission> {
+    const db = getDb();
+    const submissionsCollection = db.collection('submissions');
     const docRef = submissionsCollection.doc(id);
     const doc = await docRef.get();
 
@@ -59,6 +63,8 @@ export async function createOrUpdateSubmission(id: string, data: Partial<Submiss
 }
 
 export async function updateSubmissionStepStatus(submissionId: string, step: string, status: 'approved' | 'rejected'): Promise<Submission> {
+    const db = getDb();
+    const submissionsCollection = db.collection('submissions');
     const docRef = submissionsCollection.doc(submissionId);
     const doc = await docRef.get();
 
@@ -87,5 +93,7 @@ export async function updateSubmissionStepStatus(submissionId: string, step: str
 
 
 export async function deleteSubmission(submissionId: string): Promise<void> {
+    const db = getDb();
+    const submissionsCollection = db.collection('submissions');
     await submissionsCollection.doc(submissionId).delete();
 }
