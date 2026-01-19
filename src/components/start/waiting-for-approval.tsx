@@ -1,10 +1,13 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { Submission } from '@/lib/types';
 import { ResendCode } from './resend-code';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+
 
 interface WaitingForApprovalProps {
     submissionId: string;
@@ -14,8 +17,6 @@ interface WaitingForApprovalProps {
     promptText: string;
 }
 
-const POLLING_INTERVAL = 3000; // 3 seconds
-
 export function WaitingForApproval({
     submissionId,
     stepToWatch,
@@ -24,33 +25,33 @@ export function WaitingForApproval({
     promptText,
 }: WaitingForApprovalProps) {
 
-    // Polling for status update
     useEffect(() => {
-        const intervalId = setInterval(async () => {
-            try {
-                const res = await fetch(`/api/submissions?id=${submissionId}`);
-                if (!res.ok) {
-                    console.error('Failed to poll for submission status');
-                    return;
-                }
+        if (!submissionId) return;
 
-                const submission: Submission = await res.json();
+        const submissionRef = doc(db, 'submissions', submissionId);
+        
+        const unsubscribe = onSnapshot(submissionRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const submission = docSnap.data() as Submission;
                 const statusKey = `${stepToWatch}Status` as keyof Submission;
                 const status = submission[statusKey];
 
                 if (status === 'approved') {
-                    clearInterval(intervalId);
                     onApproval();
                 } else if (status === 'rejected') {
-                    clearInterval(intervalId);
                     onRejection();
                 }
-            } catch (error) {
-                console.error('Error during polling:', error);
+            } else {
+                console.error("Submission document not found in Firestore.");
             }
-        }, POLLING_INTERVAL);
+        }, (error) => {
+            console.error("Error listening to submission status:", error);
+            // Optionally, you could add a toast here to inform the user of a listener error
+        });
 
-        return () => clearInterval(intervalId);
+        // Cleanup: unsubscribe when the component unmounts
+        return () => unsubscribe();
+        
     }, [submissionId, stepToWatch, onApproval, onRejection]);
 
     return (
