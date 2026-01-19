@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         }
     } catch (error: any) {
         console.error('[API/SUBMISSIONS/GET] Error:', error);
-        return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
+        return NextResponse.json({ message: error.message || 'An unexpected server error occurred.' }, { status: 500 });
     }
 }
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("[API/SUBMISSIONS/POST] Error:", error);
-    return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
 
@@ -73,7 +73,7 @@ export async function PATCH(request: Request) {
     if (error.message.includes('not found')) {
         return NextResponse.json({ message: error.message }, { status: 404 });
     }
-    return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
 
@@ -92,6 +92,6 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ message: 'Submission deleted successfully' }, { status: 200 });
   } catch (error: any) {
     console.error("[API/SUBMISSIONS/DELETE] Error:", error);
-    return NextResponse.json({ message: 'An unexpected server error occurred.' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
