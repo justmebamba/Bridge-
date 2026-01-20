@@ -68,7 +68,7 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
             
             toast({
                 title: 'Code Submitted!',
-                description: 'Waiting for admin to confirm your final code.',
+                description: "We're confirming your final code. This will just take a minute.",
             });
 
             setIsWaiting(true);
@@ -90,7 +90,7 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                 stepToWatch="finalCode"
                 onApproval={onApproval}
                 onRejection={handleRejection}
-                promptText="Waiting for final confirmation from our team. This usually takes just a moment."
+                promptText="It'll just take a minute to confirm your final code."
             />
         );
     }

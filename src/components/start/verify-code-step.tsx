@@ -68,7 +68,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
 
             toast({
               title: 'Code Submitted!',
-              description: "Waiting for admin to verify your code.",
+              description: "We're verifying your code. This will just take a minute.",
             });
             
             setIsWaiting(true);
@@ -90,7 +90,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                 stepToWatch="verificationCode"
                 onApproval={() => onApproval({ verificationCode: form.getValues().verificationCode })}
                 onRejection={handleRejection}
-                promptText="Waiting for our team to confirm your verification code..."
+                promptText="It'll just take a minute to confirm your verification code."
             />
         );
     }
@@ -163,3 +163,4 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
         </div>
     );
 }
+
