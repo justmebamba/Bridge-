@@ -30,7 +30,7 @@ export function WaitingForApproval({
         // 1. Point to the specific document the user just submitted
         const submissionRef = doc(db, 'submissions', submissionId);
         
-        // 2. Start the "Live Listener"
+        // 2. Start the "Live Listener" to watch for real-time changes
         const unsubscribe = onSnapshot(submissionRef, (docSnap) => {
             if (docSnap.exists()) {
                 const submission = docSnap.data() as Submission;
@@ -53,7 +53,7 @@ export function WaitingForApproval({
             console.error("Error listening to submission status:", error);
         });
 
-        // 3. Clean up the listener if the user leaves the page
+        // 3. Clean up the listener when the component unmounts to prevent memory leaks
         return () => unsubscribe();
         
     }, [submissionId, stepToWatch, onApproval, onRejection]);
