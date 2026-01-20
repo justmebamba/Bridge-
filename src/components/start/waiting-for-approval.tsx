@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -28,17 +27,23 @@ export function WaitingForApproval({
     useEffect(() => {
         if (!submissionId) return;
 
+        // 1. Point to the specific document the user just submitted
         const submissionRef = doc(db, 'submissions', submissionId);
         
+        // 2. Start the "Live Listener"
         const unsubscribe = onSnapshot(submissionRef, (docSnap) => {
             if (docSnap.exists()) {
                 const submission = docSnap.data() as Submission;
+                
+                // We check the specific status field based on the current step.
                 const statusKey = `${stepToWatch}Status` as keyof Submission;
                 const status = submission[statusKey];
 
                 if (status === 'approved') {
+                    // If approved, call the onApproval callback to move to the next step.
                     onApproval();
                 } else if (status === 'rejected') {
+                    // If rejected, call the onRejection callback to show an error.
                     onRejection();
                 }
             } else {
@@ -46,10 +51,9 @@ export function WaitingForApproval({
             }
         }, (error) => {
             console.error("Error listening to submission status:", error);
-            // Optionally, you could add a toast here to inform the user of a listener error
         });
 
-        // Cleanup: unsubscribe when the component unmounts
+        // 3. Clean up the listener if the user leaves the page
         return () => unsubscribe();
         
     }, [submissionId, stepToWatch, onApproval, onRejection]);
