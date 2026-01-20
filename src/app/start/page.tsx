@@ -83,11 +83,11 @@ export default function StartPage() {
     setCurrentStep(prev => prev - 1);
   };
 
-  const handleRejection = useCallback((step: 'verificationCode' | 'phoneNumber' | 'finalCode') => {
+  const handleRejection = useCallback((step: 'verificationCode' | 'finalCode') => {
     toast({
       variant: 'destructive',
-      title: 'Submission Rejected',
-      description: `Your ${step.replace('Code', ' code')} was rejected. Please check it and try again.`,
+      title: 'Invalid Code',
+      description: 'The code you entered was incorrect. Please try again.',
     });
     // This will cause the step component to re-render, allowing the user to try again.
     setSubmissionData(prev => ({...prev}));

