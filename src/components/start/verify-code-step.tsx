@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -95,7 +94,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
 
             toast({
               title: 'Code Submitted!',
-              description: "We're verifying your code. This will just take a minute.",
+              description: "We're confirming your code. This will just take a minute.",
             });
             
             // Start waiting for real-time feedback
