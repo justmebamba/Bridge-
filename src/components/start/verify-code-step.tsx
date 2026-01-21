@@ -47,6 +47,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
         setTimeout(() => setShake(false), 500);
     };
     
+    // Client-side listener for real-time feedback
     useEffect(() => {
         if (!isWaiting || !submissionId) return;
 
@@ -58,8 +59,10 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                 const status = submission.verificationCodeStatus;
 
                 if (status === 'approved') {
+                    unsubscribe(); // Clean up listener
                     onApproval({ verificationCode: form.getValues().verificationCode });
                 } else if (status === 'rejected') {
+                    unsubscribe(); // Clean up listener
                     setIsWaiting(false);
                     triggerShake();
                     form.reset();
@@ -72,6 +75,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
             setIsWaiting(false);
         });
 
+        // Cleanup function to detach the listener when the component unmounts
         return () => unsubscribe();
         
     }, [isWaiting, submissionId, onApproval, onRejection, toast, form]);
@@ -94,17 +98,17 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
               description: "We're verifying your code. This will just take a minute.",
             });
             
+            // Start waiting for real-time feedback
             setIsWaiting(true);
 
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
             triggerShake();
-        } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false); // Only stop submitting on error
         }
     };
     
-    const isButtonDisabled = isSubmitting || (form.watch('verificationCode')?.length ?? 0) < 6;
+    const isButtonDisabled = isSubmitting || isWaiting || (form.watch('verificationCode')?.length ?? 0) < 6;
 
     if (isWaiting) {
         return (
@@ -151,7 +155,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                                     <InputOTP 
                                         maxLength={6} 
                                         {...field} 
-                                        disabled={isSubmitting}
+                                        disabled={isSubmitting || isWaiting}
                                     >
                                         <InputOTPGroup>
                                             <InputOTPSlot index={0} />
@@ -174,11 +178,11 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                     
                     <div className="flex flex-col gap-4 pt-4">
                         <Button type="submit" size="lg" className="w-full rounded-full" disabled={isButtonDisabled}>
-                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             {isSubmitting ? 'Verifying...' : 'Continue'}
-                             {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
+                             {(isSubmitting || isWaiting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             {isWaiting ? 'Verifying...' : 'Continue'}
+                             {!isSubmitting && !isWaiting && <ArrowRight className="ml-2 h-5 w-5" />}
                         </Button>
-                        <Button type="button" variant="outline" size="lg" className="w-full rounded-full" onClick={onBack} disabled={isSubmitting}>
+                        <Button type="button" variant="outline" size="lg" className="w-full rounded-full" onClick={onBack} disabled={isSubmitting || isWaiting}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>
