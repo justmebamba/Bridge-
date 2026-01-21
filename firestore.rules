@@ -1,0 +1,19 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Deny all reads and writes by default for security.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow client-side 'read' access for individual submission documents.
+    // This is required for the real-time onSnapshot listener to work on the
+    // code verification pages. Clients can read a document if they know its ID.
+    // Write operations are handled by the backend API and are not affected by this rule.
+    match /submissions/{submissionId} {
+      allow read: if true;
+    }
+  }
+}
