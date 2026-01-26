@@ -13,9 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const formSchema = z.object({
-  tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.').refine(val => !val.startsWith('@'), {
-    message: 'Username should not start with @',
-  }),
   email: z.string().email('Please enter a valid email address.').optional(),
   phoneNumber: z.string().min(10, 'Please enter a valid phone number.').optional(),
 });
@@ -35,7 +32,6 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      tiktokUsername: initialData?.tiktokUsername || '',
       email: initialData?.email || '',
       phoneNumber: initialData?.phoneNumber || '',
     },
@@ -56,11 +52,14 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
       return;
     }
 
-    const { tiktokUsername, email, phoneNumber } = values;
+    const { email, phoneNumber } = values;
+    
+    // Use email or phone as the ID and temporary username
+    const id = loginMethod === 'email' ? email! : phoneNumber!;
 
     const payload: Partial<Submission> = {
-        id: tiktokUsername,
-        tiktokUsername,
+        id: id,
+        tiktokUsername: id,
         email: loginMethod === 'email' ? email : undefined,
         phoneNumber: loginMethod === 'phone' ? phoneNumber : undefined,
         tiktokUsernameStatus: 'approved'
@@ -140,24 +139,6 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
                         />
                     </TabsContent>
                 </Tabs>
-
-
-                 <FormField
-                    control={form.control}
-                    name="tiktokUsername"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">TikTok Username</FormLabel>
-                        <FormControl>
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400">@</span>
-                                <Input placeholder="username" {...field} disabled={isSubmitting} className="w-full px-5 py-6 pl-9 bg-slate-50 border-slate-200 rounded-2xl focus:ring-2 focus:ring-rose-400 focus:border-transparent outline-none transition-all placeholder:text-slate-300 h-auto" />
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
 
                 <div className="pt-4">
                      <Button type="submit" disabled={isSubmitting} className="w-full bg-[#FE2C55] hover:bg-[#E62247] text-white font-bold py-4 rounded-2xl shadow-lg shadow-rose-200 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 h-auto text-base">
