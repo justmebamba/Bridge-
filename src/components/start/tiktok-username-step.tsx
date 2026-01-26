@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.').refine(val => !val.startsWith('@'), {
