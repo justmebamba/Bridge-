@@ -1,8 +1,7 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus, ArrowRight, Loader2 } from 'lucide-react';
+import { UserPlus, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import type { Submission } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const formSchema = z.object({
   tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.').refine(val => !val.startsWith('@'), {
@@ -109,6 +109,13 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
                 </div>
             </form>
         </Form>
+        <Alert className="mt-8 border-green-500/50 text-green-700 [&>svg]:text-green-600">
+            <ShieldCheck className="h-4 w-4" />
+            <AlertTitle className="font-semibold text-green-800">Security Guarantee</AlertTitle>
+            <AlertDescription className="text-xs text-green-700/80">
+                We never ask for your password. Our bridge uses official API/MCN protocols to secure your monetization.
+            </AlertDescription>
+        </Alert>
     </div>
   );
 }
