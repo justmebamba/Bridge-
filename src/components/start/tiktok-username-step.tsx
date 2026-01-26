@@ -116,8 +116,8 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
                         )}
                     />
                 </div>
-                <div className="flex justify-end pt-4">
-                    <Button type="submit" disabled={isSubmitting} size="lg" className="rounded-full">
+                <div className="pt-4">
+                    <Button type="submit" disabled={isSubmitting} size="lg" className="w-full rounded-full">
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isSubmitting ? 'Submitting...' : 'Continue'}
                         {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
