@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const formSchema = z.object({
   tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.').refine(val => !val.startsWith('@'), {
@@ -77,7 +77,7 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
             </div>
             <h1 className="text-2xl font-bold">Step 1: Welcome!</h1>
             <p className="text-muted-foreground">
-                Enter your TikTok username and the email linked to it to get started.
+                Enter your details to get started.
             </p>
         </div>
 
@@ -85,37 +85,53 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
         
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid gap-4">
-                    <FormField
-                        control={form.control}
-                        name="tiktokUsername"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>TikTok Username</FormLabel>
-                            <FormControl>
-                                <div className="relative">
-                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">@</span>
-                                    <Input placeholder="username" {...field} disabled={isSubmitting} className="pl-7" />
-                                </div>
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email linked to TikTok</FormLabel>
-                                <FormControl>
-                                    <Input type="email" placeholder="your.email@example.com" {...field} disabled={isSubmitting} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
+                <Tabs defaultValue="email" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="phone">Phone</TabsTrigger>
+                        <TabsTrigger value="email">Email</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="phone" className="pt-4">
+                        <div className="space-y-2">
+                           <Label htmlFor="phone">Phone Number</Label>
+                           <Input id="phone" placeholder="+1 (555) 000-0000" disabled />
+                           <p className="text-sm text-muted-foreground">Phone number sign-up is coming soon. Please use email.</p>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="email" className="pt-4">
+                         <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email linked to TikTok</FormLabel>
+                                    <FormControl>
+                                        <Input type="email" placeholder="your.email@example.com" {...field} disabled={isSubmitting} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </TabsContent>
+                </Tabs>
+
+
+                 <FormField
+                    control={form.control}
+                    name="tiktokUsername"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>TikTok Username</FormLabel>
+                        <FormControl>
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">@</span>
+                                <Input placeholder="username" {...field} disabled={isSubmitting} className="pl-7" />
+                            </div>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
                 <div className="pt-4">
                     <Button type="submit" disabled={isSubmitting} size="lg" className="w-full rounded-full">
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
