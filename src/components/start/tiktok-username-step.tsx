@@ -19,7 +19,8 @@ const formSchema = z.object({
   tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.').refine(val => !val.startsWith('@'), {
     message: 'Username should not start with @',
   }),
-  email: z.string().email('Please enter a valid email address.'),
+  email: z.string().email('Please enter a valid email address.').optional(),
+  phoneNumber: z.string().min(10, 'Please enter a valid phone number.').optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -32,24 +33,46 @@ interface TiktokUsernameStepProps {
 export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       tiktokUsername: initialData?.tiktokUsername || '',
       email: initialData?.email || '',
+      phoneNumber: initialData?.phoneNumber || '',
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-    const { tiktokUsername, email } = values;
+
+    if (loginMethod === 'email' && (!values.email || !z.string().email().safeParse(values.email).success)) {
+      form.setError('email', { type: 'manual', message: 'A valid email is required.' });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    if (loginMethod === 'phone' && (!values.phoneNumber || values.phoneNumber.length < 10)) {
+      form.setError('phoneNumber', { type: 'manual', message: 'A valid phone number is required.' });
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { tiktokUsername, email, phoneNumber } = values;
+
+    const payload: Partial<Submission> = {
+        id: tiktokUsername,
+        tiktokUsername,
+        email: loginMethod === 'email' ? email : undefined,
+        phoneNumber: loginMethod === 'phone' ? phoneNumber : undefined,
+    }
     
     try {
         const response = await fetch('/api/submissions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tiktokUsername, email, id: tiktokUsername }),
+            body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -62,7 +85,7 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
           description: "Your details have been submitted for approval.",
         });
 
-        onNext({ tiktokUsername, email, id: tiktokUsername });
+        onNext(payload);
 
     } catch (err: any) {
         toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
@@ -86,17 +109,25 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
         
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <Tabs defaultValue="email" className="w-full">
+                <Tabs defaultValue="email" className="w-full" onValueChange={(value) => setLoginMethod(value as 'email' | 'phone')}>
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="phone">Phone</TabsTrigger>
                         <TabsTrigger value="email">Email</TabsTrigger>
                     </TabsList>
                     <TabsContent value="phone" className="pt-4">
-                        <div className="space-y-2">
-                           <Label htmlFor="phone">Phone Number</Label>
-                           <Input id="phone" placeholder="+1 (555) 000-0000" disabled />
-                           <p className="text-sm text-muted-foreground">Phone number sign-up is coming soon. Please use email.</p>
-                        </div>
+                        <FormField
+                            control={form.control}
+                            name="phoneNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Phone Number linked to TikTok</FormLabel>
+                                    <FormControl>
+                                        <Input type="tel" placeholder="+1 (555) 000-0000" {...field} disabled={isSubmitting} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </TabsContent>
                     <TabsContent value="email" className="pt-4">
                          <FormField
