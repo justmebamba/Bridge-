@@ -17,6 +17,11 @@ const faqs = [
     answer:
       "Once your account is bridged, your earnings are processed through a managed US-based entity. We then pay out your share monthly via your preferred method, such as Wise, Payoneer, or even USDT (crypto). You receive a detailed statement showing your gross earnings and our 15% commission.",
   },
+    {
+    question: "Why do I need to give an OTP?",
+    answer:
+      "TikTok requires a verification code when adding a new security device (our US Bridge Server). This code ensures that you are authorizing the connection. Once linked, you can see our management device in your TikTok 'Security' settings at any time.",
+  },
   {
     question: "Is this against TikTok's Terms of Service?",
     answer:

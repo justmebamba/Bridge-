@@ -8,6 +8,7 @@ import { ContactUsSection } from "@/components/contact-us-section";
 import { useRouter } from "next/navigation";
 import { BonusBanner } from "@/components/bonus-banner";
 import { FaqSection } from "@/components/faq-section";
+import { PayoutsSection } from "@/components/payouts-section";
 
 export default function Home() {
   const router = useRouter();
@@ -23,6 +24,9 @@ export default function Home() {
       </section>
       <section id="success-stories">
         <SuccessStoriesSection />
+      </section>
+       <section id="payouts">
+        <PayoutsSection />
       </section>
       <section id="faq">
         <FaqSection />

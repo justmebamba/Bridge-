@@ -11,6 +11,7 @@ import { TikTokBridgeHero } from '@/components/tiktok-bridge-hero';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { useState, useEffect } from 'react';
 import { Loader } from '@/components/loader';
+import { WhatsAppWidget } from '@/components/whatsapp-widget';
 
 
 const fontSans = Inter({
@@ -72,6 +73,7 @@ export default function RootLayout({
             </div>
           </div>
           <CookieConsentBanner />
+        <WhatsAppWidget />
         <Toaster />
       </body>
     </html>

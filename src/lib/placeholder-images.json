@@ -8,21 +8,21 @@
     },
     {
       "id": "success-1",
-      "description": "A screenshot of a creator's dashboard showing a graph of increased earnings.",
-      "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxhbmFseXRpY3MlMjBkYXNoYm9hcmR8ZW58MHx8fHwxNzY3NjA4MTMwfDA&ixlib=rb-4.0.3&q=80&w=1080",
-      "imageHint": "analytics dashboard"
+      "description": "A travel creator taking a selfie in a scenic location.",
+      "imageUrl": "https://images.unsplash.com/photo-1506929562872-bb421503ef21?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx0cmF2ZWwlMjBjcmVhdG9yfGVufDB8fHx8MTc2NzYxMjM5OHww&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "travel creator"
     },
     {
       "id": "success-2",
-      "description": "A close-up of a TikTok Creator Rewards program dashboard showing earnings.",
-      "imageUrl": "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxzb2NpYWwlMjBtZWRpYSUyMGJyYW5kaW5nfGVufDB8fHx8MTc2NzYwODI4NHww&ixlib=rb-4.0.3&q=80&w=1080",
-      "imageHint": "creator earnings"
+      "description": "A lifestyle influencer posing in a stylish urban setting.",
+      "imageUrl": "https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxsaWZlc3R5bGUlMjBpbmZsdWVuY2VyfGVufDB8fHx8MTc2NzYxMjQyNnww&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "lifestyle influencer"
     },
     {
       "id": "success-3",
-      "description": "A report showing successful brand deal metrics and revenue for a gaming influencer.",
-      "imageUrl": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzY2llbmNlJTIwZGFzaGJvYXJkfGVufDB8fHx8MTc2NzYwODMzOXww&ixlib=rb-4.0.3&q=80&w=1080",
-      "imageHint": "influencer report"
+      "description": "A gamer streaming and interacting with their audience from a professional setup.",
+      "imageUrl": "https://images.unsplash.com/photo-1542751371-adc38448a05e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxnYW1lciUyMHN0cmVhbWVyfGVufDB8fHx8MTc2NzYxMjQ1Mnww&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "creator gaming"
     }
   ]
 }

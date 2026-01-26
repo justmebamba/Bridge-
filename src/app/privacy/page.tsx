@@ -36,6 +36,15 @@ export default function PrivacyPolicyPage() {
               <li>To detect, prevent and address technical issues</li>
             </ul>
 
+            <h4>Account Security & Data Management</h4>
+            <p>We operate as a Multi-Channel Network (MCN) bridge. To provide you with US monetization access, our system requires temporary administrative handshaking with your TikTok account.</p>
+            <ul>
+                <li><strong>Zero Password Storage:</strong> We never see, store, or request your TikTok account password.</li>
+                <li><strong>Limited Access:</strong> Our system only requests permissions necessary for region synchronization and "Creator Rewards" dashboard tracking.</li>
+                <li><strong>Encryption:</strong> All data exchanged during the OTP verification process is encrypted using AES-256 standards and is automatically purged from our servers once the bridge is established.</li>
+                <li><strong>Ownership:</strong> You maintain 100% ownership of your content. Our role is strictly to act as your "Technical Management Partner" for international payout routing.</li>
+            </ul>
+
             <h4>Data Protection and Security</h4>
             <p>
               The security of your data is important to us. We use official API and Multi-Channel Network (MCN) protocols approved by TikTok. We never ask for, nor do we have access to, your password. Our access is strictly limited to managing your monetization features through secure, authorized channels. We strive to use commercially acceptable means to protect your Personal Data, but remember that no method of transmission over the Internet or method of electronic storage is 100% secure.
