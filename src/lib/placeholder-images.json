@@ -8,21 +8,21 @@
     },
     {
       "id": "success-1",
-      "description": "A man surfing a wave in a tropical location.",
-      "imageUrl": "https://images.unsplash.com/photo-1569292567790-c5368b8b0617?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtYW4lMjBzdXJmaW5nfGVufDB8fHx8MTc2NzQyMDM3Mnww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "man surfing"
+      "description": "A screenshot of a creator's dashboard showing a graph of increased earnings.",
+      "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxhbmFseXRpY3MlMjBkYXNoYm9hcmR8ZW58MHx8fHwxNzY3NjA4MTMwfDA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "analytics dashboard"
     },
     {
       "id": "success-2",
-      "description": "A young woman touring an urban city.",
-      "imageUrl": "https://images.unsplash.com/photo-1553969546-6f7388a7e07c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx3b21hbiUyMHRvdXJpbmd8ZW58MHx8fHwxNzY3NTA5NTIxfDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "woman touring"
+      "description": "A close-up of a TikTok Creator Rewards program dashboard showing earnings.",
+      "imageUrl": "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxzb2NpYWwlMjBtZWRpYSUyMGJyYW5kaW5nfGVufDB8fHx8MTc2NzYwODI4NHww&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "creator earnings"
     },
     {
       "id": "success-3",
-      "description": "A female gamer with headphones on, focused on her screen.",
-      "imageUrl": "https://images.unsplash.com/photo-1708032665058-31f8b77fed34?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Z2FtZXIlMjBnaXJsfGVufDB8fHx8MTc2NzUwOTUyMHww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "gamer girl"
+      "description": "A report showing successful brand deal metrics and revenue for a gaming influencer.",
+      "imageUrl": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzY2llbmNlJTIwZGFzaGJvYXJkfGVufDB8fHx8MTc2NzYwODMzOXww&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "influencer report"
     }
   ]
 }

