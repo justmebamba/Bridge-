@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +18,7 @@ const formSchema = z.object({
   tiktokUsername: z.string().min(2, 'Username must be at least 2 characters.').refine(val => !val.startsWith('@'), {
     message: 'Username should not start with @',
   }),
+  email: z.string().email('Please enter a valid email address.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -34,35 +36,36 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
     resolver: zodResolver(formSchema),
     defaultValues: {
       tiktokUsername: initialData?.tiktokUsername || '',
+      email: initialData?.email || '',
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-    const username = values.tiktokUsername;
+    const { tiktokUsername, email } = values;
     
     try {
         const response = await fetch('/api/submissions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tiktokUsername: username, id: username }),
+            body: JSON.stringify({ tiktokUsername, email, id: tiktokUsername }),
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to submit username.');
+            throw new Error(errorData.message || 'Failed to submit details.');
         }
 
         toast({
-          title: 'Username Submitted!',
-          description: "Your username has been submitted for approval.",
+          title: 'Details Submitted!',
+          description: "Your details have been submitted for approval.",
         });
 
-        onNext({ tiktokUsername: username, id: username });
+        onNext({ tiktokUsername, email, id: tiktokUsername });
 
     } catch (err: any) {
         toast({ variant: 'destructive', title: 'Submission Failed', description: err.message });
-        setIsSubmitting(false); // Only set to false on error, so user can retry
+        setIsSubmitting(false);
     }
   };
 
@@ -74,7 +77,7 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
             </div>
             <h1 className="text-2xl font-bold">Step 1: Welcome!</h1>
             <p className="text-muted-foreground">
-                Enter your TikTok username to get started.
+                Enter your TikTok username and the email linked to it to get started.
             </p>
         </div>
 
@@ -96,6 +99,19 @@ export function TiktokUsernameStep({ onNext, initialData }: TiktokUsernameStepPr
                                 </div>
                             </FormControl>
                             <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email linked to TikTok</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="your.email@example.com" {...field} disabled={isSubmitting} />
+                                </FormControl>
+                                <FormMessage />
                             </FormItem>
                         )}
                     />
