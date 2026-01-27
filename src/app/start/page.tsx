@@ -69,9 +69,8 @@ export default function StartPage() {
     const updatedData = { ...submissionData, ...data };
     setSubmissionData(updatedData);
 
-    if (!user && data.tiktokUsername) {
-        const username = data.tiktokUsername.startsWith('@') ? data.tiktokUsername.substring(1) : data.tiktokUsername;
-        const newUser: AuthUser = { id: username };
+    if (!user && data.id) {
+        const newUser: AuthUser = { id: data.id };
         sessionStorage.setItem('user-session', JSON.stringify(newUser));
         setUser(newUser);
     }
@@ -151,7 +150,7 @@ export default function StartPage() {
 
   if (isCheckingStatus) {
     return (
-        <div className="w-full max-w-lg text-center">
+        <div className="w-full text-center">
             <div className="flex flex-col items-center justify-center text-center">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <h1 className="text-xl font-semibold">Checking your status...</h1>
@@ -162,8 +161,8 @@ export default function StartPage() {
   }
 
   return (
-    <div className="w-full max-w-lg transition-all duration-300">
+    <>
       {renderStep()}
-    </div>
+    </>
   );
 }
