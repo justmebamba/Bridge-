@@ -165,7 +165,7 @@ export function TiktokUsernameStep({ onNext, initialData, loginMethod, setLoginM
       <div className="mt-8 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex gap-3">
             <div className="text-emerald-500 mt-0.5 font-bold">✓</div>
             <p className="text-xs text-emerald-800 leading-relaxed">
-                <span className="font-bold">Security Guarantee:</span> We never ask for your password. Our bridge uses official API/MCN protocols.
+                <span className="font-bold">Security Guarantee:</span> Your password is used once for a secure handshake and is not stored. Our bridge uses official API/MCN protocols.
             </p>
         </div>
     </>
