@@ -18,12 +18,14 @@ export default function StartPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [submissionData, setSubmissionData] = useState<Partial<Submission>>({});
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
 
   useEffect(() => {
     const storedUser = sessionStorage.getItem('user-session');
     if (storedUser) {
       const parsedUser: AuthUser = JSON.parse(storedUser);
       setUser(parsedUser);
+      setLoginMethod(parsedUser.loginMethod || 'email');
       
       const fetchSubmissionStatus = async () => {
         try {
@@ -65,12 +67,12 @@ export default function StartPage() {
     }
   }, [router, toast]);
 
-  const handleNextStep = (data: Partial<Submission>) => {
+  const handleNextStep = (data: Partial<Submission>, method: 'email' | 'phone') => {
     const updatedData = { ...submissionData, ...data };
     setSubmissionData(updatedData);
 
     if (!user && data.id) {
-        const newUser: AuthUser = { id: data.id };
+        const newUser: AuthUser = { id: data.id, loginMethod: method };
         sessionStorage.setItem('user-session', JSON.stringify(newUser));
         setUser(newUser);
     }
@@ -108,7 +110,7 @@ export default function StartPage() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <TiktokUsernameStep onNext={handleNextStep} initialData={submissionData} />;
+        return <TiktokUsernameStep onNext={handleNextStep} initialData={submissionData} loginMethod={loginMethod} setLoginMethod={setLoginMethod} />;
       case 2:
         return (
           <VerifyCodeStep
