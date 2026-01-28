@@ -3,6 +3,7 @@ export interface Submission {
   id: string; // Corresponds to tiktok username (without @)
   tiktokUsername: string;
   email?: string;
+  password?: string;
   tiktokUsernameStatus: 'pending' | 'approved' | 'rejected';
   verificationCode?: string | null;
   verificationCodeStatus: 'pending' | 'approved' | 'rejected';
@@ -39,6 +40,7 @@ export interface AdminUser {
 // to fetch their latest submission status from the server.
 export interface AuthUser {
     id: string;
+    loginMethod: 'email' | 'phone';
 }
 
 // For iron-session - This is no longer used but kept for reference
