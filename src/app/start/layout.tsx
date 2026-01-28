@@ -1,10 +1,10 @@
 'use client';
 
-import { Loader2, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TermsAndConditionsModal } from '@/components/start/terms-and-conditions-modal';
-import { TikTokLogo } from '@/components/icons/tiktok-logo';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const TERMS_ACCEPTED_KEY = 'tiktok_bridge_terms_accepted';
 
@@ -15,6 +15,7 @@ export default function StartLayout({
 }) {
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [isChecking, setIsChecking] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         // This check runs only on the client-side
@@ -47,18 +48,16 @@ export default function StartLayout({
             {termsAccepted ? (
                 <>
                     <header className="w-full max-w-md flex justify-between items-center mb-10">
-                        <Link href="/" className="flex items-center gap-2">
-                            <div className="bg-black p-1.5 rounded-lg">
-                                <TikTokLogo className="w-6 h-6 text-white" />
-                            </div>
-                            <h1 className="text-xl font-bold tracking-tight">Monetization Bridge</h1>
-                        </Link>
-                        <button className="p-2 hover:bg-slate-200 rounded-full transition">
-                            <MoreHorizontal className="w-6 h-6" />
+                        <button onClick={() => router.back()} className="p-2 text-foreground">
+                            <ArrowLeft className="w-6 h-6" />
+                        </button>
+                        <h1 className="text-xl font-bold tracking-tight">Log in</h1>
+                        <button className="p-2 text-foreground">
+                            <HelpCircle className="w-6 h-6" />
                         </button>
                     </header>
 
-                    <main className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/60 p-8">
+                    <main className="w-full max-w-md">
                         {children}
                     </main>
 
