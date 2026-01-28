@@ -118,6 +118,7 @@ export default function StartPage() {
             onApproval={onVerifyCodeApproval}
             onRejection={onVerifyCodeRejection}
             onBack={handlePrevStep}
+            loginMethod={loginMethod}
             key={`verify-step-${submissionData.id}`}
           />
         );

