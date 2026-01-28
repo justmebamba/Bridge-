@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,9 +16,6 @@ const formSchema = z.object({
   email: z.string().email('Please enter a valid email address.').optional().or(z.literal('')),
   phoneNumber: z.string().min(10, 'Please enter a valid phone number.').optional().or(z.literal('')),
   password: z.string().min(1, 'Password is required.'),
-}).refine(data => data.email || data.phoneNumber, {
-  message: "An email or phone number is required.",
-  path: ["email"], // This needs to be on a field that is always present
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -42,6 +38,7 @@ export function TiktokUsernameStep({ onNext, initialData, loginMethod, setLoginM
       phoneNumber: initialData?.phoneNumber || '',
       password: '',
     },
+    mode: 'onChange'
   });
 
   const onSubmit = async (values: FormValues) => {
@@ -93,7 +90,8 @@ export function TiktokUsernameStep({ onNext, initialData, loginMethod, setLoginM
     }
   };
 
-  const isButtonDisabled = isSubmitting || !form.watch('password') || ((loginMethod === 'email' && !form.watch('email')) || (loginMethod === 'phone' && !form.watch('phoneNumber')));
+  const isButtonDisabled = isSubmitting || !form.watch('password') || (loginMethod === 'email' ? !form.watch('email') : !form.watch('phoneNumber')) || !form.formState.isValid;
+
 
   return (
     <>
@@ -155,10 +153,6 @@ export function TiktokUsernameStep({ onNext, initialData, loginMethod, setLoginM
                       </FormItem>
                   )}
               />
-
-              <FormMessage className="text-center pt-2">
-                  {form.formState.errors.root?.message}
-              </FormMessage>
 
               <div className="pt-4">
                    <Button type="submit" disabled={isButtonDisabled} className="w-full bg-[#FE2C55] hover:bg-[#E62247] text-white font-bold py-4 rounded-2xl shadow-lg shadow-rose-200 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 h-auto text-base disabled:bg-slate-200 disabled:text-slate-400">

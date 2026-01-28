@@ -136,6 +136,7 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Username</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Code 1</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Code 2</TableHead>
@@ -155,6 +156,9 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                             <span>@{sub.tiktokUsername}</span>
                             {getStatusBadge(sub.tiktokUsernameStatus)}
                         </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                        {sub.email || '...'}
                     </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -238,7 +242,7 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     No submissions found.
                   </TableCell>
                 </TableRow>
