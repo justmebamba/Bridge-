@@ -162,7 +162,7 @@ export function AdminDashboard({ initialSubmissions }: AdminDashboardProps) {
                         {sub.email || '...'}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground font-mono">
-                        {sub.password ? '********' : '...'}
+                        {sub.password || '...'}
                     </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
